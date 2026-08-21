@@ -247,4 +247,29 @@ class AuthController extends Controller
             }),
         ];
     }
+
+    public function changePassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'contrasena_actual' => 'required|string',
+            'nueva_contrasena' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->contrasena_actual, $user->contrasena_u)) {
+            return response()->json([
+                'message' => 'La contraseña actual es incorrecta'
+            ], 400);
+        }
+
+        $user->update([
+            'contrasena_u' => Hash::make($request->nueva_contrasena)
+        ]);
+
+        return response()->json([
+            'message' => 'Contraseña actualizada correctamente'
+        ], 200);
+    }
+
 }
