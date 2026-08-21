@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{base_url}}/entregas-kit"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "id_i": 1,
+      "fecha_entrega_ek": "2026-11-14",
+      "entregado_por_ek": "Staff punto 1"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 2000

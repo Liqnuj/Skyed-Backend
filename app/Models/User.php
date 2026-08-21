@@ -7,6 +7,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
@@ -58,6 +59,15 @@ class User extends Authenticatable
         'id_u',
         'id_u'
     );
+    }
+
+    public function invitado(): BelongsTo
+    {
+        return $this->belongsTo(
+            Invitado::class,
+            'id_inv',
+            'id_inv'
+        );
     }
     public function hasRole(string $role): bool
     {

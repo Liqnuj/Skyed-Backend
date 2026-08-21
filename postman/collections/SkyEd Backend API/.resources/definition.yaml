@@ -1,0 +1,5 @@
+$kind: collection
+description: Colección completa de endpoints del backend Laravel de SkyEd (deportivo + social). Usa la variable {{base_url}} (por defecto http://127.0.0.1:8000/api) y {{token}} (se llena solo al correr 'Login', o pégalo a mano en las variables de la colección).
+variables:
+  base_url: http://127.0.0.1:8000/api
+  token: ""

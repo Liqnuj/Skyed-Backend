@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{base_url}}/eventos/1/inscripciones"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "cupo_i": 1,
+      "precio_pagado_i": 80000,
+      "contacto_emergencia_nombre": "María Pérez",
+      "contacto_emergencia_telefono": "3001234567",
+      "contacto_emergencia_parentesco": "Madre",
+      "metodo_pago_p": "tarjeta",
+      "referencia_p": "REF-0001",
+      "comprobante_p": "https://ejemplo.com/comprobante.png"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 2000

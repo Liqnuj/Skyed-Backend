@@ -35,4 +35,13 @@ class Kit extends Model
             'id_k'
         );
     }
+
+    public function entregas(): HasMany
+    {
+        return $this->hasMany(
+            EntregaKit::class,
+            'id_k',
+            'id_k'
+        );
+    }
 }

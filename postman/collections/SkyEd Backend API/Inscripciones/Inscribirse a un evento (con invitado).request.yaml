@@ -1,0 +1,29 @@
+$kind: http-request
+url: "{{base_url}}/eventos/1/inscripciones"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "cupo_i": 1,
+      "precio_pagado_i": 80000,
+      "contacto_emergencia_nombre": "María Pérez",
+      "contacto_emergencia_telefono": "3001234567",
+      "contacto_emergencia_parentesco": "Madre",
+      "invitado": {
+        "tipo_documento": "CC",
+        "documento_inv": 123456789,
+        "nombre_inv": "Juan",
+        "apellido_inv": "Pérez",
+        "rh_inv": "O+",
+        "telefono_inv": "3001234567",
+        "fecha_nacimiento_inv": "1995-05-10"
+      }
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

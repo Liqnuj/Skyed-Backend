@@ -1,0 +1,26 @@
+$kind: http-request
+description: Requiere rol adminDeportivo o adminSocial.
+url: "{{base_url}}/users"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "tipo_documento_u": "CC",
+      "documento_u": 900000001,
+      "nombre_u": "Nuevo",
+      "apellido_u": "Staff",
+      "rh_u": "O+",
+      "telefono_u": "3001112233",
+      "correo_u": "staff@skyed.test",
+      "contrasena_u": "clave12345",
+      "fecha_nacimiento_u": "1995-01-01",
+      "estado_u": "activo"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

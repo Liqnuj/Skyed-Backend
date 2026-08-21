@@ -1,0 +1,9 @@
+$kind: http-request
+description: Dueño de la inscripción o adminDeportivo.
+url: "{{base_url}}/inscripciones/1"
+method: DELETE
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 5000

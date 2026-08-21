@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{base_url}}/patrocinadores"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre_p": "Bicicletas Boyacá S.A.S",
+      "tipo_patrocinio_p": "oro",
+      "contacto_p": "contacto@bicibo.com"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000
