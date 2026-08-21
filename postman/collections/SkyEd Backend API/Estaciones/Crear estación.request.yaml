@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/eventos/1/estaciones"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre_est": "Estación de hidratación km 20",
+      "ubicacion_est": "Km 20"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 2000

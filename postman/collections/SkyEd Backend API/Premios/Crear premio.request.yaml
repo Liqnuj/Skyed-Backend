@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/premios"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre_premio": "Trofeo primer lugar",
+      "descripcion_premio": "Categoría Élite"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/tipos-evento"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre_tipo_eves": "Ciclomontañismo",
+      "descripcion_eves": "Rutas de MTB por terreno montañoso"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

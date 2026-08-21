@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{base_url}}/resultados"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "id_i": 1,
+      "tiempo_r": "02:35:10",
+      "posicion_r": 1
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

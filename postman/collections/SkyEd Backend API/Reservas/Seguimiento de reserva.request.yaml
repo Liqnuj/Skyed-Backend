@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/reservas/1/seguimiento"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "estado_seguimiento": "confirmada",
+      "nota": "Cliente confirmó por teléfono"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 6000

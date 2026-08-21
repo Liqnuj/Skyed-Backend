@@ -235,7 +235,7 @@ class InscripcionController extends Controller
         }
 
         $esDueno = $inscripcion->id_u === $request->user()->id_u;
-        $esAdminDeportivo = $request->user()->hasRoleInContext('Administrador', 'deportivo');
+        $esAdminDeportivo = $request->user()->hasRole('adminDeportivo');
 
         if (!$esDueno && !$esAdminDeportivo) {
             return response()->json([

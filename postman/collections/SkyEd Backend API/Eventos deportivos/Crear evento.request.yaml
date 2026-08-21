@@ -1,0 +1,23 @@
+$kind: http-request
+description: Requiere rol adminDeportivo. Ajusta los campos según lo que pida tu EventoDeportivoController.
+url: "{{base_url}}/eventos"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre_e": "Vuelta a Boyacá 2026",
+      "descripcion_e": "Competencia ciclística por etapas",
+      "fecha_e": "2026-11-15",
+      "ubicacion_e": "Tunja, Boyacá",
+      "cupos_disponibles_e": 200,
+      "precio_e": 80000,
+      "id_tipo_eves": 1
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{base_url}}/invitados"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "tipo_documento": "CC",
+      "documento_inv": 555666777,
+      "nombre_inv": "Ana",
+      "apellido_inv": "Martínez",
+      "rh_inv": "B+",
+      "telefono_inv": "3005556677",
+      "fecha_nacimiento_inv": "1997-08-20"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

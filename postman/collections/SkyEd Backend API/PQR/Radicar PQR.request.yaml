@@ -1,0 +1,18 @@
+$kind: http-request
+description: "Autoservicio: cualquier usuario autenticado puede radicar."
+url: "{{base_url}}/pqr"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "tipo_pqr": "queja",
+      "descripcion_pqr": "El servicio de catering llegó tarde"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

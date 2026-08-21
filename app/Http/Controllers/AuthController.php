@@ -71,8 +71,9 @@ class AuthController extends Controller
 
         $user = User::create($validated);
 
-        $rolParticipante = Role::firstOrCreate(['nombre_rol' => 'Participante']);
-        $user->roles()->attach($rolParticipante->id_rol, ['contexto' => $contexto]);
+        $rolNombre = $contexto === 'social' ? 'cliente' : 'participante';
+        $rol = Role::firstOrCreate(['nombre_rol' => $rolNombre]);
+        $user->roles()->attach($rol->id_rol, ['contexto' => $contexto]);
 
         $user->load('roles');
 

@@ -32,14 +32,19 @@ class AdminUserSeeder extends Seeder
             ]
         );
 
-        $rolAdmin = Role::where('nombre_rol', 'Administrador')->first();
+        $rolAdminDeportivo = Role::where('nombre_rol', 'adminDeportivo')->first();
+        $rolAdminSocial = Role::where('nombre_rol', 'adminSocial')->first();
 
-        if ($rolAdmin) {
-            foreach (['deportivo', 'social'] as $contexto) {
-                $admin->roles()->syncWithoutDetaching([
-                    $rolAdmin->id_rol => ['contexto' => $contexto],
-                ]);
-            }
+        if ($rolAdminDeportivo) {
+            $admin->roles()->syncWithoutDetaching([
+                $rolAdminDeportivo->id_rol => ['contexto' => 'deportivo'],
+            ]);
+        }
+
+        if ($rolAdminSocial) {
+            $admin->roles()->syncWithoutDetaching([
+                $rolAdminSocial->id_rol => ['contexto' => 'social'],
+            ]);
         }
     }
 }

@@ -23,19 +23,20 @@ use App\Http\Controllers\PagoController;
 use App\Http\Controllers\QrEntradaController;
 use App\Http\Controllers\PremioController;
 use App\Http\Controllers\InvitadoController;
+use App\Http\Controllers\KitController;
 
 /*
 |--------------------------------------------------------------------------
 | Nota sobre protección por rol
 |--------------------------------------------------------------------------
-| 'role.context:Administrador,deportivo' y 'role.context:Administrador,social'
+| 'role.context:adminDeportivo' y 'role.context:adminSocial'
 | se aplican a los recursos administrativos de cada dominio (ciclismo vs.
 | eventos sociales), siguiendo el mismo patrón ya usado en /eventos.
+| Para rutas globales (usuarios, copias de seguridad) se acepta
+| cualquiera de los dos con 'role.context:adminDeportivo|adminSocial'.
 | Las acciones de autoservicio de un usuario autenticado normal
 | (inscribirse a un evento, reservar un ambiente, radicar un PQR) se
 | dejan solo con 'auth:sanctum', sin restricción de rol.
-| Si algún nombre de rol o contexto real es distinto, solo hay que
-| ajustar los strings pasados al middleware.
 */
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -53,15 +54,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post(
         '/users',
         [UserController::class, 'store']
-    )->middleware('role.context:Administrador');
+    )->middleware('role.context:adminDeportivo|adminSocial');
     Route::put(
         '/users/{id}',
         [UserController::class, 'update']
-    )->middleware('role.context:Administrador');
+    )->middleware('role.context:adminDeportivo|adminSocial');
     Route::delete(
         '/users/{id}',
         [UserController::class, 'destroy']
-    )->middleware('role.context:Administrador');
+    )->middleware('role.context:adminDeportivo|adminSocial');
 
     // Eventos deportivos
     Route::get('/eventos', [EventoDeportivoController::class, 'index']);
@@ -69,35 +70,35 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post(
         '/eventos',
         [EventoDeportivoController::class, 'store']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::put(
         '/eventos/{id}',
         [EventoDeportivoController::class, 'update']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::patch(
         '/eventos/{id}/estado',
         [EventoDeportivoController::class, 'cambiarEstado']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::delete(
         '/eventos/{id}',
         [EventoDeportivoController::class, 'destroy']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
 
     // Categorías de competencia
     Route::get('/eventos/{eventoId}/categorias', [CategoriaCompetenciaController::class, 'index']);
     Route::post(
         '/eventos/{eventoId}/categorias',
         [CategoriaCompetenciaController::class, 'store']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::get('/categorias/{id}', [CategoriaCompetenciaController::class, 'show']);
     Route::put(
         '/categorias/{id}',
         [CategoriaCompetenciaController::class, 'update']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::delete(
         '/categorias/{id}',
         [CategoriaCompetenciaController::class, 'destroy']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
 
     // Patrocinadores
     Route::get('/patrocinadores', [PatrocinadorController::class, 'index']);
@@ -105,19 +106,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post(
         '/patrocinadores',
         [PatrocinadorController::class, 'store']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::put(
         '/patrocinadores/{id}',
         [PatrocinadorController::class, 'update']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::delete(
         '/patrocinadores/{id}',
         [PatrocinadorController::class, 'destroy']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::post(
         '/patrocinadores/{id}/eventos',
         [PatrocinadorController::class, 'asignarEvento']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
 
     // Inscripciones (autoservicio del participante para inscribirse/consultar/cancelar)
     Route::get(
@@ -145,7 +146,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post(
         '/entregas-kit',
         [EntregaKitController::class, 'store']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::get(
         '/entregas-kit/{id}',
         [EntregaKitController::class, 'show']
@@ -153,7 +154,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put(
         '/entregas-kit/{id}',
         [EntregaKitController::class, 'update']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
 
     // Historial de participación
     Route::get(
@@ -167,11 +168,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post(
         '/historial-participacion',
         [HistorialParticipacionController::class, 'store']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::put(
         '/historial-participacion/{id}',
         [HistorialParticipacionController::class, 'update']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
 
     // Estaciones
     Route::get(
@@ -181,7 +182,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post(
         '/eventos/{eventoId}/estaciones',
         [EstacionController::class, 'store']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::get(
         '/estaciones/{id}',
         [EstacionController::class, 'show']
@@ -189,11 +190,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put(
         '/estaciones/{id}',
         [EstacionController::class, 'update']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::delete(
         '/estaciones/{id}',
         [EstacionController::class, 'destroy']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
 
     // Rutas de evento
     Route::get(
@@ -203,7 +204,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post(
         '/eventos/{eventoId}/rutas',
         [RutaEventoController::class, 'store']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::get(
         '/rutas/{id}',
         [RutaEventoController::class, 'show']
@@ -211,11 +212,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put(
         '/rutas/{id}',
         [RutaEventoController::class, 'update']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::delete(
         '/rutas/{id}',
         [RutaEventoController::class, 'destroy']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
 
     // Resultados
     Route::get('/resultados', [ResultadoController::class, 'index']);
@@ -223,15 +224,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post(
         '/resultados',
         [ResultadoController::class, 'store']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::put(
         '/resultados/{id}',
         [ResultadoController::class, 'update']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::delete(
         '/resultados/{id}',
         [ResultadoController::class, 'destroy']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
 
     // Tipos de evento (catálogo deportivo)
     Route::get('/tipos-evento', [TipoEventoController::class, 'index']);
@@ -239,15 +240,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post(
         '/tipos-evento',
         [TipoEventoController::class, 'store']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::put(
         '/tipos-evento/{id}',
         [TipoEventoController::class, 'update']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::delete(
         '/tipos-evento/{id}',
         [TipoEventoController::class, 'destroy']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
 
     // Ambientes (catálogo eventos sociales)
     Route::get('/ambientes', [AmbienteController::class, 'index']);
@@ -255,19 +256,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post(
         '/ambientes',
         [AmbienteController::class, 'store']
-    )->middleware('role.context:Administrador,social');
+    )->middleware('role.context:adminSocial');
     Route::put(
         '/ambientes/{id}',
         [AmbienteController::class, 'update']
-    )->middleware('role.context:Administrador,social');
+    )->middleware('role.context:adminSocial');
     Route::delete(
         '/ambientes/{id}',
         [AmbienteController::class, 'destroy']
-    )->middleware('role.context:Administrador,social');
+    )->middleware('role.context:adminSocial');
     Route::post(
         '/ambientes/{id}/servicios',
         [AmbienteController::class, 'asignarServicio']
-    )->middleware('role.context:Administrador,social');
+    )->middleware('role.context:adminSocial');
 
     // Servicios (catálogo eventos sociales)
     Route::get('/servicios', [ServicioController::class, 'index']);
@@ -275,15 +276,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post(
         '/servicios',
         [ServicioController::class, 'store']
-    )->middleware('role.context:Administrador,social');
+    )->middleware('role.context:adminSocial');
     Route::put(
         '/servicios/{id}',
         [ServicioController::class, 'update']
-    )->middleware('role.context:Administrador,social');
+    )->middleware('role.context:adminSocial');
     Route::delete(
         '/servicios/{id}',
         [ServicioController::class, 'destroy']
-    )->middleware('role.context:Administrador,social');
+    )->middleware('role.context:adminSocial');
 
     // Eventos sociales realizados
     Route::get('/eventos-sociales', [EventoRealizadoController::class, 'index']);
@@ -291,15 +292,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post(
         '/eventos-sociales',
         [EventoRealizadoController::class, 'store']
-    )->middleware('role.context:Administrador,social');
+    )->middleware('role.context:adminSocial');
     Route::put(
         '/eventos-sociales/{id}',
         [EventoRealizadoController::class, 'update']
-    )->middleware('role.context:Administrador,social');
+    )->middleware('role.context:adminSocial');
     Route::delete(
         '/eventos-sociales/{id}',
         [EventoRealizadoController::class, 'destroy']
-    )->middleware('role.context:Administrador,social');
+    )->middleware('role.context:adminSocial');
 
     // Reservas (autoservicio del cliente: crear/consultar su reserva)
     Route::get('/reservas', [ReservaController::class, 'index']);
@@ -308,15 +309,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put(
         '/reservas/{id}',
         [ReservaController::class, 'update']
-    )->middleware('role.context:Administrador,social');
+    )->middleware('role.context:adminSocial');
     Route::delete(
         '/reservas/{id}',
         [ReservaController::class, 'destroy']
-    )->middleware('role.context:Administrador,social');
+    )->middleware('role.context:adminSocial');
     Route::post(
         '/reservas/{id}/seguimiento',
         [ReservaController::class, 'seguimiento']
-    )->middleware('role.context:Administrador,social');
+    )->middleware('role.context:adminSocial');
 
     // PQR (autoservicio: cualquiera radica, solo staff actualiza estado/respuesta)
     Route::get('/pqr', [PqrController::class, 'index']);
@@ -325,21 +326,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put(
         '/pqr/{id}',
         [PqrController::class, 'update']
-    )->middleware('role.context:Administrador,social');
+    )->middleware('role.context:adminSocial');
 
     // Copias de seguridad (siempre administrativo, global)
     Route::get(
         '/copias-seguridad',
         [CopiaSeguridadController::class, 'index']
-    )->middleware('role.context:Administrador');
+    )->middleware('role.context:adminDeportivo|adminSocial');
     Route::get(
         '/copias-seguridad/{id}',
         [CopiaSeguridadController::class, 'show']
-    )->middleware('role.context:Administrador');
+    )->middleware('role.context:adminDeportivo|adminSocial');
     Route::post(
         '/copias-seguridad',
         [CopiaSeguridadController::class, 'store']
-    )->middleware('role.context:Administrador');
+    )->middleware('role.context:adminDeportivo|adminSocial');
 
     // Pagos (cambiar estado es labor de staff/admin deportivo)
     Route::get('/pagos', [PagoController::class, 'index']);
@@ -347,14 +348,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch(
         '/pagos/{id}/estado',
         [PagoController::class, 'cambiarEstado']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
 
     // QR de entrada (validar es labor de staff en el punto de control)
     Route::get('/qr/{id}', [QrEntradaController::class, 'show']);
     Route::post(
         '/qr/validar',
         [QrEntradaController::class, 'validar']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
 
     // Premios (catálogo deportivo)
     Route::get('/premios', [PremioController::class, 'index']);
@@ -362,15 +363,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post(
         '/premios',
         [PremioController::class, 'store']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::put(
         '/premios/{id}',
         [PremioController::class, 'update']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
     Route::delete(
         '/premios/{id}',
         [PremioController::class, 'destroy']
-    )->middleware('role.context:Administrador,deportivo');
+    )->middleware('role.context:adminDeportivo');
 
     // Invitados (registro de acompañantes vinculados a un usuario)
     Route::get('/invitados', [InvitadoController::class, 'index']);
@@ -378,4 +379,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/invitados', [InvitadoController::class, 'store']);
     Route::put('/invitados/{id}', [InvitadoController::class, 'update']);
     Route::delete('/invitados/{id}', [InvitadoController::class, 'destroy']);
+
+    // Kits (catálogo deportivo, referenciado por eventos y entregas)
+    Route::get('/kits', [KitController::class, 'index']);
+    Route::get('/kits/{id}', [KitController::class, 'show']);
+    Route::post(
+        '/kits',
+        [KitController::class, 'store']
+    )->middleware('role.context:adminDeportivo');
+    Route::put(
+        '/kits/{id}',
+        [KitController::class, 'update']
+    )->middleware('role.context:adminDeportivo');
+    Route::delete(
+        '/kits/{id}',
+        [KitController::class, 'destroy']
+    )->middleware('role.context:adminDeportivo');
 });

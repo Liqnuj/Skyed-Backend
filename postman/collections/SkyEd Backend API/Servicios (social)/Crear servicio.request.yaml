@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/servicios"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre_serv": "Catering",
+      "precio_serv": 50000
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

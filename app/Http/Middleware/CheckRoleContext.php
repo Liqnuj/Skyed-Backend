@@ -22,9 +22,15 @@ class CheckRoleContext
             ], 401);
         }
 
-        $permitido = $contexto !== null
-            ? $user->hasRoleInContext($role, $contexto)
-            : $user->hasRole($role);
+        // Permite pasar varios roles separados por "|" para lógica OR,
+        // ej: role.context:adminDeportivo|adminSocial
+        $rolesPermitidos = explode('|', $role);
+
+        $permitido = collect($rolesPermitidos)->contains(function ($rol) use ($user, $contexto) {
+            return $contexto !== null
+                ? $user->hasRoleInContext($rol, $contexto)
+                : $user->hasRole($rol);
+        });
 
         if (!$permitido) {
             return response()->json([

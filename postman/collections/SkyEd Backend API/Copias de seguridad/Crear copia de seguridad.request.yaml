@@ -1,0 +1,14 @@
+$kind: http-request
+description: Revisa qué campos pide tu CopiaSeguridadController::store.
+url: "{{base_url}}/copias-seguridad"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: "{}"
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000
