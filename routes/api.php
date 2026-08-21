@@ -382,4 +382,16 @@ Route::middleware('auth:sanctum')->group(function () {
         '/kits/{id}',
         [KitController::class, 'destroy']
     )->middleware('role.context:adminDeportivo');
+    Route::middleware('auth:sanctum')->group(function () {
+        
+        Route::post('/logout', [AuthController::class, 'logout']);
+        
+    });
+    Route::middleware('auth:sanctum')->group(function () {
+        
+        Route::post('/logout', [AuthController::class, 'logout']);
+        
+        Route::put('/cambiar-contrasena', [AuthController::class, 'changePassword']);
+        
+    });
 });
