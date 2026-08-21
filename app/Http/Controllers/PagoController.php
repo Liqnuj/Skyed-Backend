@@ -16,6 +16,7 @@ class PagoController extends Controller
         $pagos = Pago::with([
             'inscripcion.usuario',
             'inscripcion.evento',
+            'inscripcion.qr',
         ])->get();
 
         return response()->json([
@@ -31,6 +32,7 @@ class PagoController extends Controller
         $pago = Pago::with([
             'inscripcion.usuario',
             'inscripcion.evento',
+            'inscripcion.qr',
         ])->find($id);
 
         if (!$pago) {
@@ -47,21 +49,31 @@ class PagoController extends Controller
     /**
      * Cambiar el estado de un pago.
      *
-     * Si el pago se confirma:
-     * - La inscripción pasa a confirmada.
-     * - El QR pasa a activo.
+     * confirmado:
+     * - Pago -> confirmado
+     * - Inscripción -> confirmada
+     * - QR -> activo
      *
-     * Si el pago se rechaza o cancela:
-     * - La inscripción pasa a cancelada.
-     * - El QR pasa a cancelado.
+     * rechazado/cancelado:
+     * - Pago -> rechazado/cancelado
+     * - Inscripción -> cancelada
+     * - QR -> cancelado
+     * - Se devuelve el cupo al evento
      */
     public function cambiarEstado(Request $request, $id)
     {
         $validated = $request->validate([
-            'estado_p' => 'required|string|in:pendiente,confirmado,rechazado,cancelado',
+            'estado_p' => [
+                'required',
+                'string',
+                'in:pendiente,confirmado,rechazado,cancelado'
+            ],
         ]);
 
-        $pago = Pago::with('inscripcion')->find($id);
+        $pago = Pago::with([
+            'inscripcion.evento',
+            'inscripcion.qr',
+        ])->find($id);
 
         if (!$pago) {
             return response()->json([
@@ -69,30 +81,64 @@ class PagoController extends Controller
             ], 404);
         }
 
-        DB::transaction(function () use ($pago, $validated) {
+        $nuevoEstado = $validated['estado_p'];
+        $estadoAnterior = $pago->estado_p;
 
-            $nuevoEstado = $validated['estado_p'];
+        /*
+         * No hacer nada si se intenta colocar
+         * exactamente el mismo estado.
+         */
+        if ($estadoAnterior === $nuevoEstado) {
+            return response()->json([
+                'message' => 'El pago ya tiene este estado',
+                'estado_p' => $estadoAnterior,
+            ], 422);
+        }
 
-            // Actualizar estado del pago
+        /*
+         * Evitar modificar un pago que ya terminó
+         * su proceso.
+         */
+        if (in_array($estadoAnterior, ['rechazado', 'cancelado'])) {
+            return response()->json([
+                'message' => 'No se puede modificar un pago rechazado o cancelado',
+                'estado_p' => $estadoAnterior,
+            ], 422);
+        }
+
+        DB::transaction(function () use (
+            $pago,
+            $nuevoEstado,
+            $estadoAnterior
+        ) {
+
+            $inscripcion = $pago->inscripcion;
+
+            /*
+             * Actualizar el pago.
+             */
             $pago->update([
                 'estado_p' => $nuevoEstado,
             ]);
-
-            // Obtener la inscripción relacionada
-            $inscripcion = $pago->inscripcion;
 
             if (!$inscripcion) {
                 return;
             }
 
-            // Si el pago fue confirmado
+            /*
+             * ==========================================
+             * PAGO CONFIRMADO
+             * ==========================================
+             */
             if ($nuevoEstado === 'confirmado') {
 
                 $inscripcion->update([
                     'estado_i' => 'confirmada',
                 ]);
 
-                // Activar el QR
+                /*
+                 * Activar QR.
+                 */
                 if ($inscripcion->qr) {
                     $inscripcion->qr->update([
                         'estado_qr' => 'activo',
@@ -100,14 +146,36 @@ class PagoController extends Controller
                 }
             }
 
-            // Si el pago fue rechazado o cancelado
+            /*
+             * ==========================================
+             * PAGO RECHAZADO O CANCELADO
+             * ==========================================
+             */
             if (in_array($nuevoEstado, ['rechazado', 'cancelado'])) {
+
+                /*
+                 * Si la inscripción estaba confirmada,
+                 * significa que el cupo ya estaba ocupado.
+                 *
+                 * En ese caso debemos devolverlo.
+                 */
+                if (
+                    $inscripcion->estado_i === 'confirmada' &&
+                    $inscripcion->evento
+                ) {
+                    $inscripcion->evento->increment(
+                        'cupos_disponibles_e',
+                        $inscripcion->cupo_i
+                    );
+                }
 
                 $inscripcion->update([
                     'estado_i' => 'cancelada',
                 ]);
 
-                // Cancelar el QR
+                /*
+                 * Cancelar QR.
+                 */
                 if ($inscripcion->qr) {
                     $inscripcion->qr->update([
                         'estado_qr' => 'cancelado',
@@ -116,8 +184,11 @@ class PagoController extends Controller
             }
         });
 
+        /*
+         * Devolver respuesta completa para React.
+         */
         return response()->json([
-            'message' => 'Estado del pago actualizado',
+            'message' => 'Estado del pago actualizado correctamente',
             'pago' => $pago->fresh()->load([
                 'inscripcion.usuario',
                 'inscripcion.evento',
