@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{base_url}}/patrocinadores/1/eventos"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "id_e": 1
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 6000

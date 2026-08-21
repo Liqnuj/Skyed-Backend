@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{base_url}}/ambientes/1/servicios"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "id_serv": 1
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 6000

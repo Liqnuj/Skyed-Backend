@@ -1,0 +1,19 @@
+$kind: http-request
+name: Actualizar PQR (responder/cerrar)
+description: Requiere rol adminSocial.
+url: "{{base_url}}/pqr/1"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "estado_pqr": "resuelto",
+      "respuesta_pqr": "Se ofreció descuento en próximo evento"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 4000

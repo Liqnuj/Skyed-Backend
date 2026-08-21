@@ -1,0 +1,19 @@
+$kind: http-request
+description: "Autoservicio: cualquier usuario autenticado puede reservar."
+url: "{{base_url}}/reservas"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "id_amb": 1,
+      "fecha_reserva": "2026-12-05",
+      "id_u": 1
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

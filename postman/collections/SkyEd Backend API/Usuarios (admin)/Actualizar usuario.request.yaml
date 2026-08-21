@@ -1,0 +1,17 @@
+$kind: http-request
+description: Todos los campos son opcionales (sometimes). Requiere rol admin.
+url: "{{base_url}}/users/1"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre_u": "Kevin Actualizado"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 4000
