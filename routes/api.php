@@ -25,6 +25,7 @@ use App\Http\Controllers\PremioController;
 
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/enviar-codigo', [AuthController::class, 'enviarCodigoRecuperacion']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -32,6 +33,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/users/{id}', [UserController::class, 'show']);
     Route::post('/users', [UserController::class, 'store']);
+    Route::put('/users/{id}', [UserController::class, 'update']);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
         // Eventos deportivos
     Route::get('/eventos', [EventoDeportivoController::class, 'index']);
     Route::get('/eventos/{id}', [EventoDeportivoController::class, 'show']);
