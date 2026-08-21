@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/eventos-sociales"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre_evr": "Matrimonio López-Vega",
+      "fecha_evr": "2026-12-05"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

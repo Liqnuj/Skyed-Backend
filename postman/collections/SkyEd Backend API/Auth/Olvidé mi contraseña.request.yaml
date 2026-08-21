@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{base_url}}/forgot-password"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "correo_u": "admin@skyed.test"
+    }
+auth:
+  type: noauth
+order: 3000

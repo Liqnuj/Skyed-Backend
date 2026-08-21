@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{base_url}}/rutas/1"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "distancia_km": 90
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 4000

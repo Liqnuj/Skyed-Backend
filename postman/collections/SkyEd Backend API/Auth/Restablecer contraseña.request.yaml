@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/reset-password"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "correo_u": "admin@skyed.test",
+      "token": "PEGA_AQUI_EL_TOKEN_DEL_CORREO_O_LOG",
+      "contrasena_u": "nuevaClave123",
+      "contrasena_u_confirmation": "nuevaClave123"
+    }
+auth:
+  type: noauth
+order: 4000

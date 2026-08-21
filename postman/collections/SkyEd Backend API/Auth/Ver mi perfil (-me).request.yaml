@@ -1,0 +1,9 @@
+$kind: http-request
+name: Ver mi perfil (/me)
+url: "{{base_url}}/me"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 5000
