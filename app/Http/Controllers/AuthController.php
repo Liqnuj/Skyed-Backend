@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Role;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\CodigoVerificacionMail;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+
 
 class AuthController extends Controller
 {
@@ -232,4 +234,28 @@ class AuthController extends Controller
             }),
         ];
     }
+}
+public function enviarCodigoRecuperacion(Request $request)
+{
+    $request->validate([
+        'correo_u' => 'required|email'
+    ]);
+
+    $user = User::where('correo_u', $request->correo_u)->first();
+
+    if (!$user) {
+        return response()->json(['message' => 'El correo no está registrado en Skyed'], 404);
+    }
+
+    $codigoGenerado = rand(100000, 999999);
+
+    $user->codigo = $codigoGenerado;
+    $user->save();
+    
+    Mail::to($user->correo_u)->send(new CodigoVerificacionMail((string)$codigoGenerado));
+
+    return response()->json([
+        'message' => 'Código de verificación enviado con éxito'
+    ], 200);
+}
 }
