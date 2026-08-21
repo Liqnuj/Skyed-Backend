@@ -94,4 +94,87 @@ class UserController extends Controller
             'user' => $user
         ], 201);
     }
+
+    /**
+     * Actualizar un usuario existente.
+     */
+    public function update(Request $request, $id)
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'Usuario no encontrado'
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'tipo_documento_u' => 'sometimes|required|string',
+            'documento_u' => 'sometimes|required|integer|unique:usuario,documento_u,' . $id . ',id_u',
+            'nombre_u' => 'sometimes|required|string',
+            'apellido_u' => 'sometimes|required|string',
+            'rh_u' => 'sometimes|required|string',
+            'telefono_u' => 'sometimes|required|string',
+            'correo_u' => 'sometimes|required|email|unique:usuario,correo_u,' . $id . ',id_u',
+            'contrasena_u' => 'sometimes|required|string|min:8',
+            'fecha_nacimiento_u' => 'sometimes|required|date',
+            'estado_u' => 'sometimes|required|string',
+
+            // Rol y contexto (opcionales: solo si se quiere reasignar)
+            'id_rol' => 'sometimes|required|exists:roles,id_rol',
+            'contexto' => 'sometimes|required|string',
+        ]);
+
+        // Encriptar contraseña solo si viene en la petición
+        if (isset($validated['contrasena_u'])) {
+            $validated['contrasena_u'] = Hash::make(
+                $validated['contrasena_u']
+            );
+        }
+
+        // Separamos rol/contexto porque no pertenecen a la tabla usuario
+        $idRol = $validated['id_rol'] ?? null;
+        $contexto = $validated['contexto'] ?? null;
+        unset($validated['id_rol'], $validated['contexto']);
+
+        $user->update($validated);
+
+        // Si se envió rol + contexto, se reemplaza la asignación
+        // (evita duplicar filas para el mismo usuario/rol/contexto)
+        if ($idRol !== null && $contexto !== null) {
+            $user->roles()->syncWithoutDetaching([
+                $idRol => ['contexto' => $contexto]
+            ]);
+        }
+
+        $user->load('roles');
+
+        return response()->json([
+            'message' => 'Usuario actualizado correctamente',
+            'user' => $user
+        ]);
+    }
+
+    /**
+     * Eliminar un usuario.
+     */
+    public function destroy($id)
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'Usuario no encontrado'
+            ], 404);
+        }
+
+        // Revoca todos los tokens de acceso del usuario antes de borrarlo
+        $user->tokens()->delete();
+        $user->roles()->detach();
+        $user->delete();
+
+        return response()->json([
+            'message' => 'Usuario eliminado correctamente'
+        ]);
+    }
 }
