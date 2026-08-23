@@ -33,7 +33,7 @@ return new class extends Migration
     }
 
     /**
-     * Revertir la migración.
+     * Revertir 
      */
     public function down(): void
     {

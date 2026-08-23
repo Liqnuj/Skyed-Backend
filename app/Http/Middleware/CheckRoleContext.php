@@ -22,11 +22,6 @@ class CheckRoleContext
             ], 401);
         }
 
-<<<<<<< Updated upstream
-        $permitido = $contexto !== null
-            ? $user->hasRoleInContext($role, $contexto)
-            : $user->hasRole($role);
-=======
         // Soporta 'adminDeportivo|adminSocial' -> pasa si el usuario
         // tiene AL MENOS UNO de los roles separados por '|'.
         $rolesPermitidos = explode('|', $role);
@@ -42,7 +37,6 @@ class CheckRoleContext
                 break;
             }
         }
->>>>>>> Stashed changes
 
         if (!$permitido) {
             return response()->json([

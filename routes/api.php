@@ -269,11 +269,6 @@ Route::middleware('auth:sanctum')->group(function () {
     );
     Route::get('/premios', [PremioController::class, 'index']);
     Route::get('/premios/{id}', [PremioController::class, 'show']);
-<<<<<<< Updated upstream
-    Route::post('/premios', [PremioController::class, 'store']);
-    Route::put('/premios/{id}', [PremioController::class, 'update']);
-    Route::delete('/premios/{id}', [PremioController::class, 'destroy']);
-=======
     Route::post(
         '/premios',
         [PremioController::class, 'store']
@@ -309,5 +304,4 @@ Route::middleware('auth:sanctum')->group(function () {
         '/kits/{id}',
         [KitController::class, 'destroy']
     )->middleware('role.context:adminDeportivo');
->>>>>>> Stashed changes
 });
