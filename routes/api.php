@@ -23,16 +23,54 @@ use App\Http\Controllers\PagoController;
 use App\Http\Controllers\QrEntradaController;
 use App\Http\Controllers\PremioController;
 
+<<<<<<< Updated upstream
 
 Route::post('/login', [AuthController::class, 'login']);
+=======
+/*
+|--------------------------------------------------------------------------
+| Nota sobre protección por rol
+|--------------------------------------------------------------------------
+| 'role.context:adminDeportivo' y 'role.context:adminSocial'
+| se aplican a los recursos administrativos de cada dominio (deportivo vs.
+| eventos sociales), siguiendo el mismo patrón ya usado en /eventos.
+| Para rutas globales (usuarios, copias de seguridad) se acepta
+| cualquiera de los dos con 'role.context:adminDeportivo|adminSocial'
+| (requiere el middleware CheckRoleContext actualizado con soporte de '|').
+| Las acciones de autoservicio de un usuario autenticado normal
+| (inscribirse a un evento, reservar un ambiente, radicar un PQR) se
+| dejan solo con 'auth:sanctum', sin restricción de rol.
+*/
+
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/enviar-codigo', [AuthController::class, 'enviarCodigoRecuperacion']);
+
+>>>>>>> Stashed changes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::put('/cambiar-contrasena', [AuthController::class, 'changePassword']);
 
+<<<<<<< Updated upstream
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/users/{id}', [UserController::class, 'show']);
     Route::post('/users', [UserController::class, 'store']);
         // Eventos deportivos
+=======
+    // Usuarios (gestión global, solo Administrador)
+    Route::get('/users', [UserController::class, 'index'])
+        ->middleware('role.context:adminDeportivo|adminSocial');
+    Route::get('/users/{id}', [UserController::class, 'show'])
+        ->middleware('role.context:adminDeportivo|adminSocial');
+    Route::post('/users', [UserController::class, 'store'])
+        ->middleware('role.context:adminDeportivo|adminSocial');
+    Route::put('/users/{id}', [UserController::class, 'update'])
+        ->middleware('role.context:adminDeportivo|adminSocial');
+    Route::delete('/users/{id}', [UserController::class, 'destroy'])
+        ->middleware('role.context:adminDeportivo|adminSocial');
+
+    // Eventos deportivos
+>>>>>>> Stashed changes
     Route::get('/eventos', [EventoDeportivoController::class, 'index']);
     Route::get('/eventos/{id}', [EventoDeportivoController::class, 'show']);
     Route::post(
@@ -231,7 +269,45 @@ Route::middleware('auth:sanctum')->group(function () {
     );
     Route::get('/premios', [PremioController::class, 'index']);
     Route::get('/premios/{id}', [PremioController::class, 'show']);
+<<<<<<< Updated upstream
     Route::post('/premios', [PremioController::class, 'store']);
     Route::put('/premios/{id}', [PremioController::class, 'update']);
     Route::delete('/premios/{id}', [PremioController::class, 'destroy']);
+=======
+    Route::post(
+        '/premios',
+        [PremioController::class, 'store']
+    )->middleware('role.context:adminDeportivo');
+    Route::put(
+        '/premios/{id}',
+        [PremioController::class, 'update']
+    )->middleware('role.context:adminDeportivo');
+    Route::delete(
+        '/premios/{id}',
+        [PremioController::class, 'destroy']
+    )->middleware('role.context:adminDeportivo');
+
+    // Invitados (registro de acompañantes vinculados a un usuario)
+    Route::get('/invitados', [InvitadoController::class, 'index']);
+    Route::get('/invitados/{id}', [InvitadoController::class, 'show']);
+    Route::post('/invitados', [InvitadoController::class, 'store']);
+    Route::put('/invitados/{id}', [InvitadoController::class, 'update']);
+    Route::delete('/invitados/{id}', [InvitadoController::class, 'destroy']);
+
+    // Kits (catálogo deportivo, referenciado por eventos y entregas)
+    Route::get('/kits', [KitController::class, 'index']);
+    Route::get('/kits/{id}', [KitController::class, 'show']);
+    Route::post(
+        '/kits',
+        [KitController::class, 'store']
+    )->middleware('role.context:adminDeportivo');
+    Route::put(
+        '/kits/{id}',
+        [KitController::class, 'update']
+    )->middleware('role.context:adminDeportivo');
+    Route::delete(
+        '/kits/{id}',
+        [KitController::class, 'destroy']
+    )->middleware('role.context:adminDeportivo');
+>>>>>>> Stashed changes
 });
