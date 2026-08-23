@@ -22,11 +22,8 @@ use App\Http\Controllers\CopiaSeguridadController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\QrEntradaController;
 use App\Http\Controllers\PremioController;
+use App\Http\Controllers\NotificacionController;
 
-<<<<<<< Updated upstream
-
-Route::post('/login', [AuthController::class, 'login']);
-=======
 /*
 |--------------------------------------------------------------------------
 | Nota sobre protección por rol
@@ -45,18 +42,28 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/enviar-codigo', [AuthController::class, 'enviarCodigoRecuperacion']);
 
->>>>>>> Stashed changes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::put('/cambiar-contrasena', [AuthController::class, 'changePassword']);
 
-<<<<<<< Updated upstream
-    Route::get('/users', [UserController::class, 'index']);
-    Route::get('/users/{id}', [UserController::class, 'show']);
-    Route::post('/users', [UserController::class, 'store']);
-        // Eventos deportivos
-=======
+
+// Notificaciones
+    Route::get(
+    '/notificaciones',
+    [NotificacionController::class, 'index']
+);
+
+Route::get(
+    '/notificaciones/{id}',
+    [NotificacionController::class, 'show']
+);
+
+Route::patch(
+    '/notificaciones/{id}/leer',
+    [NotificacionController::class, 'marcarLeida']
+);
+
     // Usuarios (gestión global, solo Administrador)
     Route::get('/users', [UserController::class, 'index'])
         ->middleware('role.context:adminDeportivo|adminSocial');
@@ -70,7 +77,6 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('role.context:adminDeportivo|adminSocial');
 
     // Eventos deportivos
->>>>>>> Stashed changes
     Route::get('/eventos', [EventoDeportivoController::class, 'index']);
     Route::get('/eventos/{id}', [EventoDeportivoController::class, 'show']);
     Route::post(
