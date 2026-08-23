@@ -22,15 +22,21 @@ class CheckRoleContext
             ], 401);
         }
 
-        // Permite pasar varios roles separados por "|" para lógica OR,
-        // ej: role.context:adminDeportivo|adminSocial
+        // Soporta 'adminDeportivo|adminSocial' -> pasa si el usuario
+        // tiene AL MENOS UNO de los roles separados por '|'.
         $rolesPermitidos = explode('|', $role);
 
-        $permitido = collect($rolesPermitidos)->contains(function ($rol) use ($user, $contexto) {
-            return $contexto !== null
-                ? $user->hasRoleInContext($rol, $contexto)
-                : $user->hasRole($rol);
-        });
+        $permitido = false;
+
+        foreach ($rolesPermitidos as $rolPermitido) {
+            $permitido = $contexto !== null
+                ? $user->hasRoleInContext($rolPermitido, $contexto)
+                : $user->hasRole($rolPermitido);
+
+            if ($permitido) {
+                break;
+            }
+        }
 
         if (!$permitido) {
             return response()->json([

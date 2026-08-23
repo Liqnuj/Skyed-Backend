@@ -83,4 +83,14 @@ class User extends Authenticatable
             ->wherePivot('contexto', $contexto)
             ->exists();
     }
+    
+    // se agrega validacion para notificaciones
+public function notificaciones(): HasMany
+{
+    return $this->hasMany(
+        Notificacion::class,
+        'user_id'
+    );
+}
+
 }
