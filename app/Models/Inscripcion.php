@@ -22,6 +22,7 @@ class Inscripcion extends Model
         'contacto_emergencia_parentesco',
         'id_u',
         'id_e',
+        'id_inv',
     ];
 
     protected $casts = [
@@ -30,13 +31,13 @@ class Inscripcion extends Model
     ];
 
     public function usuario(): BelongsTo
-    {
-        return $this->belongsTo(
-            User::class,
-            'id_u',
-            'id_u'
-        );
-    }
+{
+    return $this->belongsTo(
+        User::class,
+        'id_u',
+        'id_u'
+    );
+}
 
     public function evento(): BelongsTo
     {
@@ -44,6 +45,15 @@ class Inscripcion extends Model
             EventoDeportivo::class,
             'id_e',
             'id_e'
+        );
+    }
+
+    public function invitado(): BelongsTo
+    {
+        return $this->belongsTo(
+            Invitado::class,
+            'id_inv',
+            'id_inv'
         );
     }
 

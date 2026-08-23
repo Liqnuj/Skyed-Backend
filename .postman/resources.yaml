@@ -2,6 +2,10 @@
 workspace:
   id: 05532779-36eb-4647-8741-b771b092b097
 
+cloudResources:
+  collections:
+    ../postman/collections/SkyEd Backend API: 04bf36cd-ee60-4bcb-a3a3-52d1fe4a9a44
+
 # All resources in the `postman/` folder are automatically registered in Local View.
 # Point to additional files outside the `postman/` folder to register them individually. Example:
 #localResources:

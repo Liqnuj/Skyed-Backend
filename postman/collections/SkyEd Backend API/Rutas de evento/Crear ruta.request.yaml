@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/eventos/1/rutas"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre_ruta": "Ruta principal",
+      "distancia_km": 85.5
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 2000

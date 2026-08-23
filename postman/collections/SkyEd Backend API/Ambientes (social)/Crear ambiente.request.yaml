@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/ambientes"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre_amb": "Salón principal",
+      "capacidad_amb": 150
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

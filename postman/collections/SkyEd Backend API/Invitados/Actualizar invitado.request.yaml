@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{base_url}}/invitados/1"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "telefono_inv": "3009998877"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 4000

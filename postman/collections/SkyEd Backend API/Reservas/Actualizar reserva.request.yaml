@@ -1,0 +1,17 @@
+$kind: http-request
+description: Requiere rol adminSocial.
+url: "{{base_url}}/reservas/1"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fecha_reserva": "2026-12-06"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 4000

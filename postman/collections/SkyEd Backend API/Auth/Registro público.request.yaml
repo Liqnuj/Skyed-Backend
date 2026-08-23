@@ -1,0 +1,24 @@
+$kind: http-request
+description: "Sin 'contexto' asigna rol participante. Con 'contexto: social' asigna rol cliente."
+url: "{{base_url}}/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "tipo_documento_u": "CC",
+      "documento_u": 1020304050,
+      "nombre_u": "Laura",
+      "apellido_u": "Gómez",
+      "rh_u": "A+",
+      "telefono_u": "3109876543",
+      "correo_u": "laura.gomez@example.com",
+      "contrasena_u": "clave12345",
+      "contrasena_u_confirmation": "clave12345",
+      "fecha_nacimiento_u": "1998-04-12"
+    }
+auth:
+  type: noauth
+order: 2000

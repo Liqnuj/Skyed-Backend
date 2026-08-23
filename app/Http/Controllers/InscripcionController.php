@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\EventoDeportivo;
 use App\Models\Inscripcion;
+use App\Models\Invitado;
 use App\Models\Pago;
 use App\Models\QrEntrada;
 use Illuminate\Http\Request;
@@ -29,6 +30,7 @@ class InscripcionController extends Controller
             'usuario',
             'pago',
             'qr',
+            'invitado',
         ])
             ->where('id_e', $eventoId)
             ->get();
@@ -49,6 +51,7 @@ class InscripcionController extends Controller
             'evento',
             'pago',
             'qr',
+            'invitado',
         ])->find($id);
 
         if (!$inscripcion) {
@@ -78,6 +81,19 @@ class InscripcionController extends Controller
             'metodo_pago_p' => 'nullable|string|max:50',
             'referencia_p' => 'nullable|string|max:100',
             'comprobante_p' => 'nullable|string|max:255',
+
+            // Invitado opcional (acompañante que asiste con el titular).
+            // Envía "invitado" solo si aplica; si no, la inscripción
+            // queda solo a nombre del usuario autenticado.
+            'invitado' => 'nullable|array',
+            'invitado.tipo_documento' => 'required_with:invitado|string|max:30',
+            'invitado.documento_inv' => 'required_with:invitado|integer|unique:invitados,documento_inv',
+            'invitado.nombre_inv' => 'required_with:invitado|string|max:50',
+            'invitado.apellido_inv' => 'required_with:invitado|string|max:50',
+            'invitado.rh_inv' => 'required_with:invitado|string|max:5',
+            'invitado.telefono_inv' => 'required_with:invitado|string|max:50|unique:invitados,telefono_inv',
+            'invitado.fecha_nacimiento_inv' => 'required_with:invitado|date',
+            'invitado.correo_inv' => 'nullable|email|max:80|unique:invitados,correo_inv',
         ]);
 
         $user = $request->user();
@@ -124,6 +140,14 @@ class InscripcionController extends Controller
                 ], 422);
             }
 
+            // Invitado opcional: se crea primero para poder vincularlo
+            // a la inscripción.
+            $invitadoId = null;
+            if (!empty($validated['invitado'])) {
+                $invitado = Invitado::create($validated['invitado']);
+                $invitadoId = $invitado->id_inv;
+            }
+
             // Crear inscripción.
             $inscripcion = Inscripcion::create([
                 'cupo_i' => $validated['cupo_i'],
@@ -142,6 +166,7 @@ class InscripcionController extends Controller
 
                 'id_u' => $user->id_u,
                 'id_e' => $evento->id_e,
+                'id_inv' => $invitadoId,
             ]);
 
             // Descontar un cupo.
@@ -181,6 +206,7 @@ class InscripcionController extends Controller
                 'evento',
                 'pago',
                 'qr',
+                'invitado',
             ]);
         });
 
@@ -208,7 +234,10 @@ class InscripcionController extends Controller
             ], 404);
         }
 
-        if ($inscripcion->id_u !== $request->user()->id_u) {
+        $esDueno = $inscripcion->id_u === $request->user()->id_u;
+        $esAdminDeportivo = $request->user()->hasRole('adminDeportivo');
+
+        if (!$esDueno && !$esAdminDeportivo) {
             return response()->json([
                 'message' => 'No tienes permiso para cancelar esta inscripción'
             ], 403);
