@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Mail;
 use App\Mail\CodigoVerificacionMail;
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
-
 
 class AuthController extends Controller
 {
@@ -45,10 +44,6 @@ class AuthController extends Controller
 
     /**
      * Registro público (autoservicio de participantes/clientes).
-     *
-     * Por defecto asigna el rol "Participante" en contexto "deportivo".
-     * Si el frontend necesita registrar clientes del módulo social,
-     * envía "contexto": "social" en el body.
      */
     public function register(Request $request): JsonResponse
     {
@@ -90,12 +85,6 @@ class AuthController extends Controller
 
     /**
      * Solicitar enlace/código de recuperación de contraseña.
-     *
-     * Genera un token, lo guarda en password_reset_tokens y lo envía
-     * por correo. Con MAIL_MAILER=log (valor por defecto en .env.example)
-     * el correo no se envía de verdad, solo queda escrito en
-     * storage/logs/laravel.log — útil para probar en desarrollo antes
-     * de configurar un mailer real.
      */
     public function forgotPassword(Request $request): JsonResponse
     {
@@ -105,8 +94,6 @@ class AuthController extends Controller
 
         $user = User::where('correo_u', $request->correo_u)->first();
 
-        // Respuesta genérica aunque el correo no exista, para no revelar
-        // qué correos están registrados.
         if (!$user) {
             return response()->json([
                 'message' => 'Si el correo existe, se enviaron instrucciones de recuperación'
@@ -184,7 +171,6 @@ class AuthController extends Controller
             'contrasena_u' => Hash::make($validated['contrasena_u']),
         ]);
 
-        // Invalida el token y todas las sesiones activas del usuario
         DB::table('password_reset_tokens')->where('email', $validated['correo_u'])->delete();
         $user->tokens()->delete();
 
@@ -216,6 +202,33 @@ class AuthController extends Controller
     }
 
     /**
+     * Enviar código de recuperación
+     */
+    public function enviarCodigoRecuperacion(Request $request)
+    {
+        $request->validate([
+            'correo_u' => 'required|email'
+        ]);
+
+        $user = User::where('correo_u', $request->correo_u)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'El correo no está registrado en Skyed'], 404);
+        }
+
+        $codigoGenerado = rand(100000, 999999);
+
+        $user->codigo = $codigoGenerado;
+        $user->save();
+        
+        Mail::to($user->correo_u)->send(new CodigoVerificacionMail((string)$codigoGenerado));
+
+        return response()->json([
+            'message' => 'Código de verificación enviado con éxito'
+        ], 200);
+    }
+
+    /**
      * Formato consistente del usuario para las respuestas de auth.
      */
     private function formatUser(User $user): array
@@ -234,28 +247,29 @@ class AuthController extends Controller
             }),
         ];
     }
-}
-public function enviarCodigoRecuperacion(Request $request)
-{
-    $request->validate([
-        'correo_u' => 'required|email'
-    ]);
 
-    $user = User::where('correo_u', $request->correo_u)->first();
+    public function changePassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'contrasena_actual' => 'required|string',
+            'nueva_contrasena' => 'required|string|min:8|confirmed',
+        ]);
 
-    if (!$user) {
-        return response()->json(['message' => 'El correo no está registrado en Skyed'], 404);
+        $user = $request->user();
+
+        if (!Hash::check($request->contrasena_actual, $user->contrasena_u)) {
+            return response()->json([
+                'message' => 'La contraseña actual es incorrecta'
+            ], 400);
+        }
+
+        $user->update([
+            'contrasena_u' => Hash::make($request->nueva_contrasena)
+        ]);
+
+        return response()->json([
+            'message' => 'Contraseña actualizada correctamente'
+        ], 200);
     }
 
-    $codigoGenerado = rand(100000, 999999);
-
-    $user->codigo = $codigoGenerado;
-    $user->save();
-    
-    Mail::to($user->correo_u)->send(new CodigoVerificacionMail((string)$codigoGenerado));
-
-    return response()->json([
-        'message' => 'Código de verificación enviado con éxito'
-    ], 200);
-}
 }
