@@ -9,18 +9,31 @@ use Illuminate\Support\Facades\DB;
 
 class ReservaController extends Controller
 {
-    public function index()
+    /**
+     * Listar reservas. Un admin social ve todas; un usuario normal
+     * solo ve las suyas.
+     */
+    public function index(Request $request)
     {
+        $query = Reserva::with([
+            'usuario',
+            'evento',
+            'seguimientos',
+        ]);
+
+        if (!$request->user()->hasRole('adminSocial')) {
+            $query->where('id_u', $request->user()->id_u);
+        }
+
         return response()->json([
-            'reservas' => Reserva::with([
-                'usuario',
-                'evento',
-                'seguimientos',
-            ])->get()
+            'reservas' => $query->get()
         ]);
     }
 
-    public function show($id)
+    /**
+     * Mostrar una reserva. Un usuario normal solo puede ver la suya.
+     */
+    public function show(Request $request, $id)
     {
         $reserva = Reserva::with([
             'usuario',
@@ -32,6 +45,15 @@ class ReservaController extends Controller
             return response()->json([
                 'message' => 'Reserva no encontrada'
             ], 404);
+        }
+
+        $esDueno = $reserva->id_u === $request->user()->id_u;
+        $esAdmin = $request->user()->hasRole('adminSocial');
+
+        if (!$esDueno && !$esAdmin) {
+            return response()->json([
+                'message' => 'No tienes permisos para ver esta reserva'
+            ], 403);
         }
 
         return response()->json([
