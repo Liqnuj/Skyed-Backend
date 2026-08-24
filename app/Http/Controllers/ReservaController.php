@@ -6,6 +6,7 @@ use App\Models\Reserva;
 use App\Models\EventoRealizado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Services\NotificacionService;
 
 class ReservaController extends Controller
 {
@@ -136,6 +137,13 @@ class ReservaController extends Controller
                 'fecha_actualizacion' => now(),
                 'comentario' => 'Estado cambiado a: ' . $validated['estado_rese'],
             ]);
+
+            NotificacionService::crear(
+                $reserva->id_u,
+                'Actualización de tu reserva',
+                'El estado de tu reserva cambió a: ' . $validated['estado_rese'],
+                'reserva'
+            );
         }
 
         return response()->json([
