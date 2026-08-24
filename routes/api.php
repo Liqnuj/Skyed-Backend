@@ -314,6 +314,10 @@ Route::patch(
         '/eventos-sociales/{id}',
         [EventoRealizadoController::class, 'update']
     )->middleware('role.context:adminSocial');
+        Route::patch(
+        '/eventos-sociales/{id}/estado',
+        [EventoRealizadoController::class, 'cambiarEstado']
+    )->middleware('role.context:adminSocial');
     Route::delete(
         '/eventos-sociales/{id}',
         [EventoRealizadoController::class, 'destroy']
