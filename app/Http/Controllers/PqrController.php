@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Pqr;
 use Illuminate\Http\Request;
+use App\Services\NotificacionService;
 
 class PqrController extends Controller
 {
@@ -104,6 +105,16 @@ class PqrController extends Controller
         }
 
         $pqr->update($datos);
+
+        // Notificar al usuario si se ha respondido a la PQR.
+                if (array_key_exists('respuesta_pqr', $validated)) {
+            NotificacionService::crear(
+                $pqr->id_u,
+                'Respuesta a tu PQR',
+                'Tu PQR "' . $pqr->asunto_pqr . '" fue respondida.',
+                'pqr'
+            );
+        }
 
         return response()->json([
             'message' => 'PQR actualizada correctamente',

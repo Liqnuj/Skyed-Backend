@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Pago;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Services\NotificacionService;
 
 class PagoController extends Controller
 {
@@ -183,6 +184,27 @@ class PagoController extends Controller
                 }
             }
         });
+
+
+        $mensajesPorEstado = [
+            'confirmado' => 'Tu pago fue confirmado. ¡Tu inscripción quedó lista!',
+            'rechazado' => 'Tu pago fue rechazado. Por favor verifica tu comprobante.',
+            'cancelado' => 'Tu pago fue cancelado.',
+        ];
+
+        if (
+            isset($mensajesPorEstado[$nuevoEstado]) &&
+            $pago->inscripcion
+        ) {
+            NotificacionService::crear(
+                $pago->inscripcion->id_u,
+                'Actualización de tu pago',
+                $mensajesPorEstado[$nuevoEstado],
+                'pago'
+            );
+        }
+
+
 
         /*
          * Devolver respuesta completa para React.
