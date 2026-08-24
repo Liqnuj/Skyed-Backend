@@ -12,6 +12,7 @@ class EventoRealizadoController extends Controller
         $eventos = EventoRealizado::with([
             'tipoEvento',
             'ambiente',
+            'creador',
             'reservas',
         ])->get();
 
@@ -25,6 +26,7 @@ class EventoRealizadoController extends Controller
         $evento = EventoRealizado::with([
             'tipoEvento',
             'ambiente',
+            'creador',
             'reservas',
         ])->find($id);
 
@@ -49,6 +51,9 @@ class EventoRealizadoController extends Controller
             'id_a' => 'required|exists:ambiente,id_a',
         ]);
 
+        $validated['estado_er'] = 'activo';
+        $validated['id_u'] = $request->user()->id_u;
+
         $evento = EventoRealizado::create($validated);
 
         return response()->json([
@@ -56,6 +61,7 @@ class EventoRealizadoController extends Controller
             'evento' => $evento->load([
                 'tipoEvento',
                 'ambiente',
+                'creador',
             ])
         ], 201);
     }
@@ -76,6 +82,7 @@ class EventoRealizadoController extends Controller
             'fecha_er' => 'sometimes|nullable|date',
             'id_tipo_eves' => 'sometimes|exists:tipo_evento,id_tipo_eves',
             'id_a' => 'sometimes|exists:ambiente,id_a',
+            'estado_er' => 'sometimes|in:activo,inactivo',
         ]);
 
         $evento->update($validated);
@@ -85,7 +92,35 @@ class EventoRealizadoController extends Controller
             'evento' => $evento->fresh()->load([
                 'tipoEvento',
                 'ambiente',
+                'creador',
             ])
+        ]);
+    }
+
+    /**
+     * Cambiar estado del evento social (activo/inactivo) sin borrarlo.
+     */
+    public function cambiarEstado(Request $request, $id)
+    {
+        $evento = EventoRealizado::find($id);
+
+        if (!$evento) {
+            return response()->json([
+                'message' => 'Evento social no encontrado'
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'estado_er' => 'required|in:activo,inactivo',
+        ]);
+
+        $evento->update([
+            'estado_er' => $validated['estado_er']
+        ]);
+
+        return response()->json([
+            'message' => 'Estado del evento social actualizado',
+            'evento' => $evento
         ]);
     }
 

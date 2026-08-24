@@ -22,18 +22,19 @@ use App\Http\Controllers\CopiaSeguridadController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\QrEntradaController;
 use App\Http\Controllers\PremioController;
+use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\InvitadoController;
 use App\Http\Controllers\KitController;
-
 /*
 |--------------------------------------------------------------------------
 | Nota sobre protección por rol
 |--------------------------------------------------------------------------
 | 'role.context:adminDeportivo' y 'role.context:adminSocial'
-| se aplican a los recursos administrativos de cada dominio (ciclismo vs.
+| se aplican a los recursos administrativos de cada dominio (deportivo vs.
 | eventos sociales), siguiendo el mismo patrón ya usado en /eventos.
 | Para rutas globales (usuarios, copias de seguridad) se acepta
-| cualquiera de los dos con 'role.context:adminDeportivo|adminSocial'.
+| cualquiera de los dos con 'role.context:adminDeportivo|adminSocial'
+| (requiere el middleware CheckRoleContext actualizado con soporte de '|').
 | Las acciones de autoservicio de un usuario autenticado normal
 | (inscribirse a un evento, reservar un ambiente, radicar un PQR) se
 | dejan solo con 'auth:sanctum', sin restricción de rol.
@@ -41,17 +42,46 @@ use App\Http\Controllers\KitController;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/enviar-codigo', [AuthController::class, 'enviarCodigoRecuperacion']);
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::put('/cambiar-contrasena', [AuthController::class, 'changePassword']);
+
+
+// Notificaciones
+    Route::get(
+    '/notificaciones',
+    [NotificacionController::class, 'index']
+);
+
+Route::get(
+    '/notificaciones/{id}',
+    [NotificacionController::class, 'show']
+);
+
+Route::patch(
+    '/notificaciones/{id}/leer',
+    [NotificacionController::class, 'marcarLeida']
+);
 
     // Usuarios (gestión global, solo Administrador)
-    Route::get('/users', [UserController::class, 'index']);
-    Route::get('/users/{id}', [UserController::class, 'show']);
-    Route::post('/users', [UserController::class, 'store']);
-    Route::put('/users/{id}', [UserController::class, 'update']);
-    Route::delete('/users/{id}', [UserController::class, 'destroy']);
-        // Eventos deportivos
+    Route::get('/users', [UserController::class, 'index'])
+        ->middleware('role.context:adminDeportivo|adminSocial');
+    Route::get('/users/{id}', [UserController::class, 'show'])
+        ->middleware('role.context:adminDeportivo|adminSocial');
+    Route::post('/users', [UserController::class, 'store'])
+        ->middleware('role.context:adminDeportivo|adminSocial');
+    Route::put('/users/{id}', [UserController::class, 'update'])
+        ->middleware('role.context:adminDeportivo|adminSocial');
+    Route::delete('/users/{id}', [UserController::class, 'destroy'])
+        ->middleware('role.context:adminDeportivo|adminSocial');
+
+    // Eventos deportivos
     Route::get('/eventos', [EventoDeportivoController::class, 'index']);
     Route::get('/eventos/{id}', [EventoDeportivoController::class, 'show']);
     Route::post(
@@ -284,6 +314,10 @@ Route::middleware('auth:sanctum')->group(function () {
         '/eventos-sociales/{id}',
         [EventoRealizadoController::class, 'update']
     )->middleware('role.context:adminSocial');
+        Route::patch(
+        '/eventos-sociales/{id}/estado',
+        [EventoRealizadoController::class, 'cambiarEstado']
+    )->middleware('role.context:adminSocial');
     Route::delete(
         '/eventos-sociales/{id}',
         [EventoRealizadoController::class, 'destroy']
@@ -382,16 +416,4 @@ Route::middleware('auth:sanctum')->group(function () {
         '/kits/{id}',
         [KitController::class, 'destroy']
     )->middleware('role.context:adminDeportivo');
-    Route::middleware('auth:sanctum')->group(function () {
-        
-        Route::post('/logout', [AuthController::class, 'logout']);
-        
-    });
-    Route::middleware('auth:sanctum')->group(function () {
-        
-        Route::post('/logout', [AuthController::class, 'logout']);
-        
-        Route::put('/cambiar-contrasena', [AuthController::class, 'changePassword']);
-        
-    });
 });

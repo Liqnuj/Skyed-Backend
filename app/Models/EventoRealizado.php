@@ -18,6 +18,8 @@ class EventoRealizado extends Model
         'fecha_er',
         'id_tipo_eves',
         'id_a',
+        'id_u',
+        'estado_er',
     ];
 
     protected $casts = [
@@ -39,6 +41,15 @@ class EventoRealizado extends Model
             Ambiente::class,
             'id_a',
             'id_a'
+        );
+    }
+
+    public function creador(): BelongsTo
+    {
+        return $this->belongsTo(
+            User::class,
+            'id_u',
+            'id_u'
         );
     }
 
