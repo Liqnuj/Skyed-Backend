@@ -94,19 +94,44 @@ class UserController extends Controller
             'user' => $user
         ], 201);
     }
+
+    /**
+     * Actualizar un usuario existente.
+     */
     public function update(Request $request, $id)
     {
         $user = User::find($id);
 
         if (!$user) {
-            return response()->json(['message' => 'Usuario no encontrado'], 404);
+            return response()->json([
+                'message' => 'Usuario no encontrado'
+            ], 404);
         }
 
-        $user->update($request->all());
+        $validated = $request->validate([
+            'tipo_documento_u' => 'sometimes|string',
+            'documento_u' => 'sometimes|integer|unique:usuario,documento_u,' . $user->id_u . ',id_u',
+            'nombre_u' => 'sometimes|string',
+            'apellido_u' => 'sometimes|string',
+            'rh_u' => 'sometimes|string',
+            'telefono_u' => 'sometimes|string|unique:usuario,telefono_u,' . $user->id_u . ',id_u',
+            'correo_u' => 'sometimes|email|unique:usuario,correo_u,' . $user->id_u . ',id_u',
+            'contrasena_u' => 'sometimes|string|min:8',
+            'fecha_nacimiento_u' => 'sometimes|date',
+            'estado_u' => 'sometimes|in:activo,inactivo',
+        ]);
+
+        // Si viene contraseña nueva, la encriptamos.
+        // Si no viene, no la tocamos.
+        if (array_key_exists('contrasena_u', $validated)) {
+            $validated['contrasena_u'] = Hash::make($validated['contrasena_u']);
+        }
+
+        $user->update($validated);
 
         return response()->json([
             'message' => 'Usuario actualizado correctamente',
-            'user' => $user
-        ], 200);
+            'user' => $user->fresh()->load('roles')
+        ]);
     }
 }
