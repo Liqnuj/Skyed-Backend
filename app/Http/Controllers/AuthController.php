@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\ForgotPasswordRequest;
+use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Mail\CodigoVerificacionMail;
 use App\Models\User;
 use App\Models\Role;
@@ -18,13 +22,8 @@ class AuthController extends Controller
     /**
      * Iniciar sesión
      */
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
-        $request->validate([
-            'correo_u' => 'required|email',
-            'contrasena_u' => 'required|string',
-        ]);
-
         $user = User::where('correo_u', $request->correo_u)->first();
 
         if (!$user || !Hash::check($request->contrasena_u, $user->contrasena_u)) {
@@ -45,20 +44,9 @@ class AuthController extends Controller
     /**
      * Registro público (autoservicio de participantes/clientes).
      */
-    public function register(Request $request): JsonResponse
+    public function register(RegisterRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'tipo_documento_u' => 'required|string',
-            'documento_u' => 'required|integer|unique:usuario,documento_u',
-            'nombre_u' => 'required|string',
-            'apellido_u' => 'required|string',
-            'rh_u' => 'required|string',
-            'telefono_u' => 'required|string|unique:usuario,telefono_u',
-            'correo_u' => 'required|email|unique:usuario,correo_u',
-            'contrasena_u' => 'required|string|min:8|confirmed',
-            'fecha_nacimiento_u' => 'required|date',
-            'contexto' => 'sometimes|string|in:deportivo,social',
-        ]);
+        $validated = $request->validated();
 
         $contexto = $validated['contexto'] ?? 'deportivo';
         unset($validated['contexto']);
@@ -86,12 +74,8 @@ class AuthController extends Controller
     /**
      * Solicitar enlace/código de recuperación de contraseña.
      */
-    public function forgotPassword(Request $request): JsonResponse
+    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
-        $request->validate([
-            'correo_u' => 'required|email',
-        ]);
-
         $user = User::where('correo_u', $request->correo_u)->first();
 
         if (!$user) {
@@ -132,13 +116,9 @@ class AuthController extends Controller
     /**
      * Restablecer la contraseña con el token recibido por correo.
      */
-    public function resetPassword(Request $request): JsonResponse
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'correo_u' => 'required|email',
-            'token' => 'required|string',
-            'contrasena_u' => 'required|string|min:8|confirmed',
-        ]);
+        $validated = $request->validated();
 
         $record = DB::table('password_reset_tokens')
             ->where('email', $validated['correo_u'])
@@ -204,12 +184,8 @@ class AuthController extends Controller
     /**
      * Enviar código de recuperación
      */
-    public function enviarCodigoRecuperacion(Request $request)
+    public function enviarCodigoRecuperacion(ForgotPasswordRequest $request)
     {
-        $request->validate([
-            'correo_u' => 'required|email'
-        ]);
-
         $user = User::where('correo_u', $request->correo_u)->first();
 
         if (!$user) {
@@ -217,7 +193,6 @@ class AuthController extends Controller
         }
 
         $codigoGenerado = rand(100000, 999999);
-
         $user->codigo = $codigoGenerado;
         $user->save();
         
