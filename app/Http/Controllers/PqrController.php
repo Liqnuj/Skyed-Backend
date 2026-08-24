@@ -8,23 +8,26 @@ use Illuminate\Http\Request;
 class PqrController extends Controller
 {
     /**
-     * Listar PQR.
+     * Listar PQR. Un admin social ve todas; un usuario normal
+     * solo ve las suyas.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $pqr = Pqr::with('usuario')
-            ->orderByDesc('created_at')
-            ->get();
+        $query = Pqr::with('usuario')->orderByDesc('created_at');
+
+        if (!$request->user()->hasRole('adminSocial')) {
+            $query->where('id_u', $request->user()->id_u);
+        }
 
         return response()->json([
-            'pqr' => $pqr
+            'pqr' => $query->get()
         ]);
     }
 
     /**
-     * Mostrar una PQR.
+     * Mostrar una PQR. Un usuario normal solo puede ver la suya.
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $pqr = Pqr::with('usuario')->find($id);
 
@@ -32,6 +35,15 @@ class PqrController extends Controller
             return response()->json([
                 'message' => 'PQR no encontrada'
             ], 404);
+        }
+
+        $esDueno = $pqr->id_u === $request->user()->id_u;
+        $esAdmin = $request->user()->hasRole('adminSocial');
+
+        if (!$esDueno && !$esAdmin) {
+            return response()->json([
+                'message' => 'No tienes permisos para ver esta PQR'
+            ], 403);
         }
 
         return response()->json([
