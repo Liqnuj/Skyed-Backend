@@ -23,7 +23,8 @@ use App\Http\Controllers\PagoController;
 use App\Http\Controllers\QrEntradaController;
 use App\Http\Controllers\PremioController;
 use App\Http\Controllers\NotificacionController;
-
+use App\Http\Controllers\InvitadoController;
+use App\Http\Controllers\KitController;
 /*
 |--------------------------------------------------------------------------
 | Nota sobre protección por rol
@@ -41,6 +42,10 @@ use App\Http\Controllers\NotificacionController;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/enviar-codigo', [AuthController::class, 'enviarCodigoRecuperacion']);
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
