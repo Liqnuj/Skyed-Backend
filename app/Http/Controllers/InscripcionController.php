@@ -14,9 +14,10 @@ use Illuminate\Support\Str;
 class InscripcionController extends Controller
 {
     /**
-     * Listar las inscripciones de un evento.
+     * Listar las inscripciones de un evento. Un admin deportivo ve
+     * todas; un usuario normal solo ve las suyas.
      */
-    public function index($eventoId)
+    public function index(Request $request, $eventoId)
     {
         $evento = EventoDeportivo::find($eventoId);
 
@@ -26,25 +27,28 @@ class InscripcionController extends Controller
             ], 404);
         }
 
-        $inscripciones = Inscripcion::with([
+        $query = Inscripcion::with([
             'usuario',
             'pago',
             'qr',
             'invitado',
-        ])
-            ->where('id_e', $eventoId)
-            ->get();
+        ])->where('id_e', $eventoId);
+
+        if (!$request->user()->hasRole('adminDeportivo')) {
+            $query->where('id_u', $request->user()->id_u);
+        }
 
         return response()->json([
             'evento' => $evento,
-            'inscripciones' => $inscripciones,
+            'inscripciones' => $query->get(),
         ]);
     }
 
     /**
-     * Mostrar una inscripción específica.
+     * Mostrar una inscripción específica. Un usuario normal solo
+     * puede ver la suya.
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $inscripcion = Inscripcion::with([
             'usuario',
@@ -58,6 +62,15 @@ class InscripcionController extends Controller
             return response()->json([
                 'message' => 'Inscripción no encontrada'
             ], 404);
+        }
+
+        $esDueno = $inscripcion->id_u === $request->user()->id_u;
+        $esAdminDeportivo = $request->user()->hasRole('adminDeportivo');
+
+        if (!$esDueno && !$esAdminDeportivo) {
+            return response()->json([
+                'message' => 'No tienes permisos para ver esta inscripción'
+            ], 403);
         }
 
         return response()->json([
