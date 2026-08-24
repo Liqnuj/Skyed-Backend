@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\EventoDeportivo;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage; 
 
 class EventoDeportivoController extends Controller
 {
@@ -61,16 +61,19 @@ class EventoDeportivoController extends Controller
             'ubicacion_e' => 'required|string|max:120',
             'descripcion_e' => 'required|string|max:255',
             'requisitos_e' => 'required|string|max:255',
-            'imagen_e' => 'required|string|max:120',
+            'imagen' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
             'cupos_disponibles_e' => 'required|integer|min:0',
             'id_k' => 'nullable|exists:kit,id_k',
         ]);
 
         $validated['estado_e'] = 'activo';
         $validated['creado_e'] = now();
+        $validated['id_u'] = $request->user()->id_u; // Requiere que el usuario esté autenticado (Bearer Token)
 
-        $validated['id_u'] = $request->user()->id_u;
-
+        if ($request->hasFile('imagen')) {
+            $validated['imagen'] = $request->file('imagen')->store('img/events', 'public');
+        }
+        
         $evento = EventoDeportivo::create($validated);
 
         return response()->json([
@@ -105,11 +108,18 @@ class EventoDeportivoController extends Controller
             'ubicacion_e' => 'sometimes|string|max:120',
             'descripcion_e' => 'sometimes|string|max:255',
             'requisitos_e' => 'sometimes|string|max:255',
-            'imagen_e' => 'sometimes|string|max:120',
+            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', // Cambiado de 'imagen_e' a 'imagen' para que coincida
             'cupos_disponibles_e' => 'sometimes|integer|min:0',
             'estado_e' => 'sometimes|in:activo,inactivo,inhabilitado',
             'id_k' => 'nullable|exists:kit,id_k',
         ]);
+
+        if ($request->hasFile('imagen')) {
+            if ($evento->imagen) {
+                Storage::disk('public')->delete($evento->imagen);
+            }
+            $validated['imagen'] = $request->file('imagen')->store('img/events', 'public');
+        }
 
         $evento->update($validated);
 
@@ -162,6 +172,10 @@ class EventoDeportivoController extends Controller
             return response()->json([
                 'message' => 'Evento no encontrado'
             ], 404);
+        }
+
+        if ($evento->imagen) {
+            Storage::disk('public')->delete($evento->imagen);
         }
 
         $evento->delete();
