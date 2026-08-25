@@ -10,13 +10,13 @@ class InvitadoController extends Controller
     /**
      * Listar invitados.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $invitados = Invitado::all();
+        $invitados = Invitado::paginate(
+            $request->input('per_page', 15)
+        );
 
-        return response()->json([
-            'invitados' => $invitados
-        ]);
+        return response()->json($invitados);
     }
 
     /**

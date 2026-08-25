@@ -10,11 +10,11 @@ class KitController extends Controller
     /**
      * Listar kits.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json([
-            'kits' => Kit::all()
-        ]);
+        $kits = Kit::paginate($request->input('per_page', 15));
+
+        return response()->json($kits);
     }
 
     /**

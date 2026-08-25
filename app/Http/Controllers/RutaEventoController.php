@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class RutaEventoController extends Controller
 {
-    public function index($eventoId)
+    public function index(Request $request, $eventoId)
     {
         if (!EventoDeportivo::find($eventoId)) {
             return response()->json([
@@ -16,9 +16,10 @@ class RutaEventoController extends Controller
             ], 404);
         }
 
-        return response()->json([
-            'rutas' => RutaEvento::where('id_e', $eventoId)->get()
-        ]);
+        $rutas = RutaEvento::where('id_e', $eventoId)
+            ->paginate($request->input('per_page', 15));
+
+        return response()->json($rutas);
     }
 
     public function show($id)

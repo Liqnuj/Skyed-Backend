@@ -9,13 +9,13 @@ use Illuminate\Http\Request;
 
 class ResultadoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $resultados = Resultado::with([
             'inscripcion.usuario',
             'inscripcion.evento',
             'categoriaResultado.categoria',
-        ])->get();
+        ])->paginate($request->input('per_page', 15));
 
         return response()->json([
             'resultados' => $resultados

@@ -7,11 +7,12 @@ use Illuminate\Http\Request;
 
 class TipoEventoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json([
-            'tipos_evento' => TipoEvento::with('eventos')->get()
-        ]);
+        $tipos = TipoEvento::with('eventos')
+            ->paginate($request->input('per_page', 15));
+
+        return response()->json($tipos);
     }
 
     public function show($id)

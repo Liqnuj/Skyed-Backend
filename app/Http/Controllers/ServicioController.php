@@ -7,11 +7,12 @@ use Illuminate\Http\Request;
 
 class ServicioController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json([
-            'servicios' => Servicio::with('ambientes')->get()
-        ]);
+        $servicios = Servicio::with('ambientes')
+            ->paginate($request->input('per_page', 15));
+
+        return response()->json($servicios);
     }
 
     public function show($id)

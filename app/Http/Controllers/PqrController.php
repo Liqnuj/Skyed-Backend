@@ -20,9 +20,9 @@ class PqrController extends Controller
             $query->where('id_u', $request->user()->id_u);
         }
 
-        return response()->json([
-            'pqr' => $query->get()
-        ]);
+        return response()->json(
+            $query->paginate($request->input('per_page', 15))
+        );
     }
 
     /**

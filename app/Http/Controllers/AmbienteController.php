@@ -7,11 +7,12 @@ use Illuminate\Http\Request;
 
 class AmbienteController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json([
-            'ambientes' => Ambiente::with('servicios')->get()
-        ]);
+        $ambientes = Ambiente::with('servicios')
+            ->paginate($request->input('per_page', 15));
+
+        return response()->json($ambientes);
     }
 
     public function show($id)

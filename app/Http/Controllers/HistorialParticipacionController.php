@@ -7,16 +7,14 @@ use Illuminate\Http\Request;
 
 class HistorialParticipacionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $historial = HistorialParticipacion::with([
             'usuario',
             'evento'
-        ])->get();
+        ])->paginate($request->input('per_page', 15));
 
-        return response()->json([
-            'historial' => $historial
-        ]);
+        return response()->json($historial);
     }
 
     public function porUsuario($usuarioId)

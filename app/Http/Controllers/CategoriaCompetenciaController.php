@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class CategoriaCompetenciaController extends Controller
 {
-    public function index($eventoId)
+    public function index(Request $request, $eventoId)
     {
         $evento = EventoDeportivo::find($eventoId);
 
@@ -18,12 +18,12 @@ class CategoriaCompetenciaController extends Controller
             ], 404);
         }
 
-        return response()->json([
-            'categorias' => CategoriaCompetencia::where(
-                'id_e',
-                $eventoId
-            )->get()
-        ]);
+        $categorias = CategoriaCompetencia::where(
+            'id_e',
+            $eventoId
+        )->paginate($request->input('per_page', 15));
+
+        return response()->json($categorias);
     }
 
     public function store(Request $request, $eventoId)

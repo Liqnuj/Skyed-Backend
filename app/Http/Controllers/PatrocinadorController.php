@@ -7,11 +7,12 @@ use Illuminate\Http\Request;
 
 class PatrocinadorController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json([
-            'patrocinadores' => Patrocinador::with('eventos')->get()
-        ]);
+        $patrocinadores = Patrocinador::with('eventos')
+            ->paginate($request->input('per_page', 15));
+
+        return response()->json($patrocinadores);
     }
 
     public function show($id)

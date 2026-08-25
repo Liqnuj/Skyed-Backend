@@ -11,18 +11,16 @@ class EventoDeportivoController extends Controller
     /**
      * Listar eventos.
      */
-    public function index()
+    public function index(Request $request)
     {
         $eventos = EventoDeportivo::with([
             'kit',
             'creador',
             'categorias',
             'patrocinadores',
-        ])->get();
+        ])->paginate($request->input('per_page', 15));
 
-        return response()->json([
-            'eventos' => $eventos
-        ]);
+        return response()->json($eventos);
     }
 
     /**

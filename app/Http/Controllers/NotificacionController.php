@@ -14,10 +14,10 @@ class NotificacionController extends Controller
     {
         $notificaciones = Notificacion::where(
             'user_id',
-            $request->user()->id
+            $request->user()->id_u
         )
         ->orderByDesc('created_at')
-        ->get();
+        ->paginate($request->input('per_page', 15));
 
         return response()->json([
             'message' => 'Notificaciones obtenidas correctamente',

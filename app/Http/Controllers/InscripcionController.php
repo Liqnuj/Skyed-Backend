@@ -40,10 +40,9 @@ class InscripcionController extends Controller
 
         return response()->json([
             'evento' => $evento,
-            'inscripciones' => $query->get(),
+            'inscripciones' => $query->paginate($request->input('per_page', 15)),
         ]);
     }
-
     /**
      * Mostrar una inscripción específica. Un usuario normal solo
      * puede ver la suya.
