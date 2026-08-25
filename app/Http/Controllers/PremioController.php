@@ -8,12 +8,12 @@ use Illuminate\Http\Request;
 
 class PremioController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $premios = Premio::with([
             'resultado.inscripcion.usuario',
             'resultado.inscripcion.evento',
-        ])->get();
+        ])->paginate($request->input('per_page', 15));
 
         return response()->json([
             'premios' => $premios

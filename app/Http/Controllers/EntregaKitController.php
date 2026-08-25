@@ -12,7 +12,7 @@ class EntregaKitController extends Controller
     /**
      * Listar las entregas de kit de un evento.
      */
-    public function index($eventoId)
+    public function index(Request $request, $eventoId)
     {
         $evento = EventoDeportivo::find($eventoId);
 
@@ -28,14 +28,13 @@ class EntregaKitController extends Controller
             'evento'
         ])
             ->where('id_e', $eventoId)
-            ->get();
+            ->paginate($request->input('per_page', 15));
 
         return response()->json([
             'evento' => $evento,
             'entregas' => $entregas
         ]);
     }
-
     /**
      * Mostrar una entrega específica.
      */

@@ -11,11 +11,12 @@ class CopiaSeguridadController extends Controller
     /**
      * Listar copias de seguridad.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json([
-            'copias' => CopiaSeguridad::orderByDesc('fecha_cs')->get()
-        ]);
+        $copias = CopiaSeguridad::orderByDesc('fecha_cs')
+            ->paginate($request->input('per_page', 15));
+
+        return response()->json($copias);
     }
 
     /**

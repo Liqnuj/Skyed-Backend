@@ -11,13 +11,12 @@ class UserController extends Controller
     /**
      * Mostrar todos los usuarios.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::with('roles')->get();
+        $users = User::with('roles')
+            ->paginate($request->input('per_page', 15));
 
-        return response()->json([
-            'users' => $users
-        ]);
+        return response()->json($users);
     }
 
     /**

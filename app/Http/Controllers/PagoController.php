@@ -12,14 +12,14 @@ class PagoController extends Controller
     /**
      * Listar todos los pagos.
      */
-    public function index()
+    public function index(Request $request)
     {
         $pagos = Pago::with([
             'inscripcion.usuario',
             'inscripcion.evento',
             'inscripcion.qr',
-        ])->get();
-
+        ])->paginate($request->input('per_page', 15));
+        
         return response()->json([
             'pagos' => $pagos,
         ]);

@@ -7,18 +7,16 @@ use Illuminate\Http\Request;
 
 class EventoRealizadoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $eventos = EventoRealizado::with([
             'tipoEvento',
             'ambiente',
             'creador',
             'reservas',
-        ])->get();
+        ])->paginate($request->input('per_page', 15));
 
-        return response()->json([
-            'eventos' => $eventos
-        ]);
+        return response()->json($eventos);
     }
 
     public function show($id)
