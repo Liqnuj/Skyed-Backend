@@ -28,7 +28,7 @@ class EventoDeportivoController extends Controller
     /**
      * Mostrar un evento.
      */
-    public function show($id)
+    public function show(int $id)
     {
         $evento = EventoDeportivo::with([
             'kit',
@@ -74,7 +74,7 @@ class EventoDeportivoController extends Controller
     /**
      * Actualizar evento.
      */
-    public function update(UpdateEventoDeportivoRequest $request, $id)
+    public function update(UpdateEventoDeportivoRequest $request, int $id)
     {
         $evento = EventoDeportivo::find($id);
 
@@ -100,7 +100,7 @@ class EventoDeportivoController extends Controller
     /**
      * Cambiar estado del evento.
      */
-    public function cambiarEstado(Request $request, $id)
+    public function cambiarEstado(Request $request, int $id)
     {
         $evento = EventoDeportivo::find($id);
 
@@ -127,7 +127,7 @@ class EventoDeportivoController extends Controller
     /**
      * Eliminar evento.
      */
-    public function destroy($id)
+    public function destroy(int $id)
     {
         $evento = EventoDeportivo::find($id);
 
