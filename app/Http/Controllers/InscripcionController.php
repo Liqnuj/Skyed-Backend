@@ -17,7 +17,7 @@ class InscripcionController extends Controller
      * Listar las inscripciones de un evento. Un admin deportivo ve
      * todas; un usuario normal solo ve las suyas.
      */
-    public function index(Request $request, $eventoId)
+    public function index(Request $request, int $eventoId)
     {
         $evento = EventoDeportivo::find($eventoId);
 
@@ -47,7 +47,7 @@ class InscripcionController extends Controller
      * Mostrar una inscripción específica. Un usuario normal solo
      * puede ver la suya.
      */
-    public function show(Request $request, $id)
+    public function show(Request $request,int $id)
     {
         $inscripcion = Inscripcion::with([
             'usuario',
@@ -80,7 +80,7 @@ class InscripcionController extends Controller
     /**
      * Crear una inscripción.
      */
-    public function store(Request $request, $eventoId)
+    public function store(Request $request, int $eventoId)
     {
         $validated = $request->validate([
             'cupo_i' => 'required|integer|min:1',
@@ -236,7 +236,7 @@ class InscripcionController extends Controller
     /**
      * Cancelar una inscripción.
      */
-    public function destroy(Request $request, $id)
+    public function destroy(Request $request,int $id)
     {
         $inscripcion = Inscripcion::find($id);
 
