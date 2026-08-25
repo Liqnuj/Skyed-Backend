@@ -83,7 +83,7 @@ class InscripcionController extends Controller
     public function store(Request $request, int $eventoId)
     {
         $validated = $request->validate([
-            'cupo_i' => 'required|integer|min:1',
+            'cupo_i' => 'prohibited',
             'precio_pagado_i' => 'nullable|numeric|min:0',
 
             'contacto_emergencia_nombre' => 'required|string|max:100',
@@ -162,7 +162,7 @@ class InscripcionController extends Controller
 
             // Crear inscripción.
             $inscripcion = Inscripcion::create([
-                'cupo_i' => $validated['cupo_i'],
+                'cupo_i' => 1,
                 'estado_i' => 'pendiente',
                 'fecha_i' => now(),
                 'precio_pagado_i' => $validated['precio_pagado_i'] ?? null,
