@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 
 class PatrocinadorController extends Controller
 {
+    /**
+     * Listar patrocinadores.
+     */
     public function index(Request $request)
     {
         $patrocinadores = Patrocinador::with('eventos')
@@ -15,6 +18,9 @@ class PatrocinadorController extends Controller
         return response()->json($patrocinadores);
     }
 
+    /**
+     * Mostrar un patrocinador.
+     */
     public function show($id)
     {
         $patrocinador = Patrocinador::with('eventos')->find($id);
@@ -30,6 +36,9 @@ class PatrocinadorController extends Controller
         ]);
     }
 
+    /**
+     * Crear un patrocinador.
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -52,6 +61,9 @@ class PatrocinadorController extends Controller
         ], 201);
     }
 
+    /**
+     * Actualizar un patrocinador.
+     */
     public function update(Request $request, $id)
     {
         $patrocinador = Patrocinador::find($id);
@@ -80,6 +92,9 @@ class PatrocinadorController extends Controller
         ]);
     }
 
+    /**
+     * Eliminar un patrocinador.
+     */
     public function destroy($id)
     {
         $patrocinador = Patrocinador::find($id);
@@ -97,6 +112,9 @@ class PatrocinadorController extends Controller
         ]);
     }
 
+    /**
+     * Asignar un patrocinador a un evento deportivo.
+     */
     public function asignarEvento(Request $request, $id)
     {
         $patrocinador = Patrocinador::find($id);

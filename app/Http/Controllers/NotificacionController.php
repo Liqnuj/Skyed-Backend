@@ -32,7 +32,7 @@ class NotificacionController extends Controller
     {
         $notificacion = Notificacion::where(
             'user_id',
-            $request->user()->id
+            $request->user()->id_u
         )->find($id);
 
         if (!$notificacion) {
@@ -54,7 +54,7 @@ class NotificacionController extends Controller
     {
         $notificacion = Notificacion::where(
             'user_id',
-            $request->user()->id
+            $request->user()->id_u
         )->find($id);
 
         if (!$notificacion) {
