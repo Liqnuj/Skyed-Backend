@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\EventoDeportivo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage; 
+use App\Http\Requests\StoreEventoDeportivoRequest;
+use App\Http\Requests\UpdateEventoDeportivoRequest;
 
 class EventoDeportivoController extends Controller
 {
@@ -49,29 +51,14 @@ class EventoDeportivoController extends Controller
     /**
      * Crear evento.
      */
-    public function store(Request $request)
+    public function store(StoreEventoDeportivoRequest $request)
     {
-        $validated = $request->validate([
-            'nombre_e' => 'required|string|max:120',
-            'categoria_e' => 'required|in:atletismo,senderismo,ciclismo',
-            'fecha_e' => 'required|date',
-            'hora_e' => 'required',
-            'ubicacion_e' => 'required|string|max:120',
-            'descripcion_e' => 'required|string|max:255',
-            'requisitos_e' => 'required|string|max:255',
-            'imagen' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'cupos_disponibles_e' => 'required|integer|min:0',
-            'id_k' => 'nullable|exists:kit,id_k',
-        ]);
+        $validated = $request->validated();
 
         $validated['estado_e'] = 'activo';
         $validated['creado_e'] = now();
-        $validated['id_u'] = $request->user()->id_u; // Requiere que el usuario esté autenticado (Bearer Token)
+        $validated['id_u'] = $request->user()->id_u;
 
-        if ($request->hasFile('imagen')) {
-            $validated['imagen'] = $request->file('imagen')->store('img/events', 'public');
-        }
-        
         $evento = EventoDeportivo::create($validated);
 
         return response()->json([
@@ -84,11 +71,10 @@ class EventoDeportivoController extends Controller
             ])
         ], 201);
     }
-
     /**
      * Actualizar evento.
      */
-    public function update(Request $request, $id)
+    public function update(UpdateEventoDeportivoRequest $request, $id)
     {
         $evento = EventoDeportivo::find($id);
 
@@ -98,28 +84,7 @@ class EventoDeportivoController extends Controller
             ], 404);
         }
 
-        $validated = $request->validate([
-            'nombre_e' => 'sometimes|string|max:120',
-            'categoria_e' => 'sometimes|in:atletismo,senderismo,ciclismo',
-            'fecha_e' => 'sometimes|date',
-            'hora_e' => 'sometimes',
-            'ubicacion_e' => 'sometimes|string|max:120',
-            'descripcion_e' => 'sometimes|string|max:255',
-            'requisitos_e' => 'sometimes|string|max:255',
-            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', // Cambiado de 'imagen_e' a 'imagen' para que coincida
-            'cupos_disponibles_e' => 'sometimes|integer|min:0',
-            'estado_e' => 'sometimes|in:activo,inactivo,inhabilitado',
-            'id_k' => 'nullable|exists:kit,id_k',
-        ]);
-
-        if ($request->hasFile('imagen')) {
-            if ($evento->imagen) {
-                Storage::disk('public')->delete($evento->imagen);
-            }
-            $validated['imagen'] = $request->file('imagen')->store('img/events', 'public');
-        }
-
-        $evento->update($validated);
+        $evento->update($request->validated());
 
         return response()->json([
             'message' => 'Evento actualizado correctamente',
