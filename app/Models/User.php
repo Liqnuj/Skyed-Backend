@@ -36,6 +36,7 @@ class User extends Authenticatable
 
     protected $hidden = [
         'contrasena_u',
+        'codigo',
     ];
 
     public function getAuthPassword()
