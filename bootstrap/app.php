@@ -3,7 +3,6 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\CheckRoleContext;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,19 +11,12 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->redirectGuestsTo(function ($request) {
-            if ($request->is('api/*')) {
-                return null;
-            }
-
-            return '/login';
-        });
-
+    ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'role.context' => CheckRoleContext::class,
+            'role' => \App\Http\Middleware\CheckRoleContext::class,
         ]);
+
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
+    ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
