@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class CategoriaCompetenciaController extends Controller
 {
-    public function index(Request $request, $eventoId)
+    public function index($eventoId)
     {
         $evento = EventoDeportivo::find($eventoId);
 
@@ -18,12 +18,12 @@ class CategoriaCompetenciaController extends Controller
             ], 404);
         }
 
-        $categorias = CategoriaCompetencia::where(
-            'id_e',
-            $eventoId
-        )->paginate($request->input('per_page', 15));
-
-        return response()->json($categorias);
+        return response()->json([
+            'categorias' => CategoriaCompetencia::where(
+                'id_e',
+                $eventoId
+            )->get()
+        ]);
     }
 
     public function store(Request $request, $eventoId)
@@ -38,10 +38,15 @@ class CategoriaCompetenciaController extends Controller
 
         $validated = $request->validate([
             'nombre_cc' => 'required|string|max:50',
+
             'edad_minima_cc' => 'nullable|integer|min:0',
-            'edad_maxima_cc' => 'nullable|integer|min:0',
+
+            'edad_maxima_cc' => 'nullable|integer|min:0|gte:edad_minima_cc',
+
             'genero_cc' => 'nullable|in:masculino,femenino,mixto',
+
             'distancia_cc' => 'nullable|string|max:45',
+
             'descripcion_cc' => 'nullable|string|max:255',
         ]);
 
@@ -82,10 +87,15 @@ class CategoriaCompetenciaController extends Controller
 
         $validated = $request->validate([
             'nombre_cc' => 'sometimes|string|max:50',
+
             'edad_minima_cc' => 'sometimes|integer|min:0',
-            'edad_maxima_cc' => 'sometimes|integer|min:0',
+
+            'edad_maxima_cc' => 'sometimes|integer|min:0|gte:edad_minima_cc',
+
             'genero_cc' => 'sometimes|in:masculino,femenino,mixto',
+
             'distancia_cc' => 'sometimes|string|max:45',
+
             'descripcion_cc' => 'sometimes|string|max:255',
         ]);
 
@@ -105,6 +115,13 @@ class CategoriaCompetenciaController extends Controller
             return response()->json([
                 'message' => 'Categoría no encontrada'
             ], 404);
+        }
+
+        // Verificar si la categoría tiene resultados asociados
+        if ($categoria->resultados()->exists()) {
+            return response()->json([
+                'message' => 'No se puede eliminar la categoría porque tiene resultados asociados'
+            ], 409);
         }
 
         $categoria->delete();
