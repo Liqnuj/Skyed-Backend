@@ -23,7 +23,7 @@ return new class extends Migration
 
             $table->string('archivo_gpx_re', 255)->nullable();
 
-            $table->decimal('precio_re', 10, 7)->nullable();
+            $table->decimal('precio_re', 12, 2)->nullable();
 
             $table->foreignId('id_e')
                 ->constrained('eventoDeportivo', 'id_e')

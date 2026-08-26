@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CategoriaCompetencia extends Model
 {
@@ -27,6 +28,15 @@ class CategoriaCompetencia extends Model
             EventoDeportivo::class,
             'id_e',
             'id_e'
+        );
+    }
+
+    public function resultados(): HasMany
+    {
+        return $this->hasMany(
+            CategoriaResultado::class,
+            'id_cc',
+            'id_cc'
         );
     }
 }
