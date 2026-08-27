@@ -6,6 +6,7 @@ use App\Models\Servicio;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreServicioRequest;
 use App\Http\Requests\UpdateServicioRequest;
+use App\Http\Resources\ServicioResource;
 
 class ServicioController extends Controller
 {
@@ -14,7 +15,7 @@ class ServicioController extends Controller
         $servicios = Servicio::with('ambientes')
             ->paginate($request->input('per_page', 15));
 
-        return response()->json($servicios);
+        return ServicioResource::collection($servicios);
     }
 
     public function show($id)
@@ -28,7 +29,7 @@ class ServicioController extends Controller
         }
 
         return response()->json([
-            'servicio' => $servicio
+            'servicio' => new ServicioResource($servicio)
         ]);
     }
 
@@ -38,7 +39,7 @@ class ServicioController extends Controller
 
         return response()->json([
             'message' => 'Servicio creado correctamente',
-            'servicio' => $servicio
+            'servicio' => new ServicioResource($servicio)
         ], 201);
     }
 
@@ -57,7 +58,7 @@ class ServicioController extends Controller
 
         return response()->json([
             'message' => 'Servicio actualizado correctamente',
-            'servicio' => $servicio->fresh()->load('ambientes')
+            'servicio' => new ServicioResource($servicio->fresh()->load('ambientes'))
         ]);
     }
 

@@ -2,6 +2,8 @@
 workspace:
   id: 05532779-36eb-4647-8741-b771b092b097
 
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
 cloudResources:
   collections:
     ../postman/collections/SkyEd Backend API: 04bf36cd-ee60-4bcb-a3a3-52d1fe4a9a44

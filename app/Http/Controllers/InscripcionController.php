@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Http\Requests\StoreInscripcionRequest;
 use App\Http\Requests\UpdateInscripcionRequest;
+use App\Http\Resources\InscripcionResource;
+use App\Http\Resources\EventoDeportivoResource;
 
 class InscripcionController extends Controller
 {
@@ -41,8 +43,10 @@ class InscripcionController extends Controller
         }
 
         return response()->json([
-            'evento' => $evento,
-            'inscripciones' => $query->paginate($request->input('per_page', 15)),
+            'evento' => new EventoDeportivoResource($evento),
+            'inscripciones' => InscripcionResource::collection(
+                $query->paginate($request->input('per_page', 15))
+            ),
         ]);
     }
     /**
@@ -65,17 +69,10 @@ class InscripcionController extends Controller
             ], 404);
         }
 
-        $esDueno = $inscripcion->id_u === $request->user()->id_u;
-        $esAdminDeportivo = $request->user()->hasRole('adminDeportivo');
-
-        if (!$esDueno && !$esAdminDeportivo) {
-            return response()->json([
-                'message' => 'No tienes permisos para ver esta inscripción'
-            ], 403);
-        }
+        $this->authorize('view', $inscripcion);
 
         return response()->json([
-            'inscripcion' => $inscripcion,
+            'inscripcion' => new InscripcionResource($inscripcion),
         ]);
     }
 
@@ -207,7 +204,7 @@ class InscripcionController extends Controller
 
         return response()->json([
             'message' => 'Inscripción creada correctamente',
-            'inscripcion' => $resultado,
+            'inscripcion' => new InscripcionResource($resultado),
         ], 201);
     }
 
@@ -231,26 +228,19 @@ class InscripcionController extends Controller
             ], 404);
         }
 
-        $esDueno = $inscripcion->id_u === $request->user()->id_u;
-        $esAdminDeportivo = $request->user()->hasRole('adminDeportivo');
-
-        if (!$esDueno && !$esAdminDeportivo) {
-            return response()->json([
-                'message' => 'No tienes permiso para editar esta inscripción'
-            ], 403);
-        }
+        $this->authorize('update', $inscripcion);
 
         $inscripcion->update($request->validated());
 
         return response()->json([
             'message' => 'Datos de contacto actualizados correctamente',
-            'inscripcion' => $inscripcion->fresh()->load([
+            'inscripcion' => new InscripcionResource($inscripcion->fresh()->load([
                 'usuario',
                 'evento',
                 'pago',
                 'qr',
                 'invitado',
-            ])
+            ]))
         ]);
     }
     
@@ -268,14 +258,7 @@ class InscripcionController extends Controller
             ], 404);
         }
 
-        $esDueno = $inscripcion->id_u === $request->user()->id_u;
-        $esAdminDeportivo = $request->user()->hasRole('adminDeportivo');
-
-        if (!$esDueno && !$esAdminDeportivo) {
-            return response()->json([
-                'message' => 'No tienes permiso para cancelar esta inscripción'
-            ], 403);
-        }
+        $this->authorize('delete', $inscripcion);
 
         DB::transaction(function () use ($inscripcion) {
             $evento = EventoDeportivo::where('id_e', $inscripcion->id_e)
