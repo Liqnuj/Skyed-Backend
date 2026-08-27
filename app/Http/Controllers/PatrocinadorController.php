@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Patrocinador;
 use Illuminate\Http\Request;
+use App\Http\Requests\StorePatrocinadorRequest;
+use App\Http\Requests\UpdatePatrocinadorRequest;
 
 class PatrocinadorController extends Controller
 {
@@ -39,18 +41,9 @@ class PatrocinadorController extends Controller
     /**
      * Crear un patrocinador.
      */
-    public function store(Request $request)
+    public function store(StorePatrocinadorRequest $request)
     {
-        $validated = $request->validate([
-            'nombre_p' => 'required|string|max:100',
-            'logo_p' => 'nullable|string|max:255',
-            'telefono_p' => 'nullable|string|max:15',
-            'correo_p' => 'nullable|email|max:80',
-            'pagina_web_p' => 'nullable|string|max:120',
-            'aporte_p' => 'nullable|string|max:100',
-            'estado_p' => 'nullable|in:activo,inactivo,inhabilitado',
-        ]);
-
+        $validated = $request->validated();
         $validated['estado_p'] ??= 'activo';
 
         $patrocinador = Patrocinador::create($validated);
@@ -64,7 +57,7 @@ class PatrocinadorController extends Controller
     /**
      * Actualizar un patrocinador.
      */
-    public function update(Request $request, $id)
+    public function update(UpdatePatrocinadorRequest $request, $id)
     {
         $patrocinador = Patrocinador::find($id);
 
@@ -74,17 +67,7 @@ class PatrocinadorController extends Controller
             ], 404);
         }
 
-        $validated = $request->validate([
-            'nombre_p' => 'sometimes|string|max:100',
-            'logo_p' => 'sometimes|nullable|string|max:255',
-            'telefono_p' => 'sometimes|nullable|string|max:15',
-            'correo_p' => 'sometimes|nullable|email|max:80',
-            'pagina_web_p' => 'sometimes|nullable|string|max:120',
-            'aporte_p' => 'sometimes|nullable|string|max:100',
-            'estado_p' => 'sometimes|in:activo,inactivo,inhabilitado',
-        ]);
-
-        $patrocinador->update($validated);
+        $patrocinador->update($request->validated());
 
         return response()->json([
             'message' => 'Patrocinador actualizado correctamente',

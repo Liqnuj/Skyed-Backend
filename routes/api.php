@@ -67,6 +67,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/eventos/{eventoId}/inscripciones', [InscripcionController::class, 'store']);
     Route::get('/inscripciones/{id}', [InscripcionController::class, 'show']);
     Route::delete('/inscripciones/{id}', [InscripcionController::class, 'destroy']);
+    Route::put('/inscripciones/{id}',[InscripcionController::class, 'update']);
 
     // Historial y Lecturas Generales
     Route::get('/historial-participacion', [HistorialParticipacionController::class, 'index']);

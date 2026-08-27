@@ -10,6 +10,8 @@ use App\Models\QrEntrada;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Http\Requests\StoreInscripcionRequest;
+use App\Http\Requests\UpdateInscripcionRequest;
 
 class InscripcionController extends Controller
 {
@@ -80,33 +82,9 @@ class InscripcionController extends Controller
     /**
      * Crear una inscripción.
      */
-    public function store(Request $request, int $eventoId)
+    public function store(StoreInscripcionRequest $request, $eventoId)
     {
-        $validated = $request->validate([
-            'cupo_i' => 'prohibited',
-            'precio_pagado_i' => 'nullable|numeric|min:0',
-
-            'contacto_emergencia_nombre' => 'required|string|max:100',
-            'contacto_emergencia_telefono' => 'required|string|max:15',
-            'contacto_emergencia_parentesco' => 'required|string|max:50',
-
-            'metodo_pago_p' => 'nullable|string|max:50',
-            'referencia_p' => 'nullable|string|max:100',
-            'comprobante_p' => 'nullable|string|max:255',
-
-            // Invitado opcional (acompañante que asiste con el titular).
-            // Envía "invitado" solo si aplica; si no, la inscripción
-            // queda solo a nombre del usuario autenticado.
-            'invitado' => 'nullable|array',
-            'invitado.tipo_documento' => 'required_with:invitado|string|max:30',
-            'invitado.documento_inv' => 'required_with:invitado|integer|unique:invitados,documento_inv',
-            'invitado.nombre_inv' => 'required_with:invitado|string|max:50',
-            'invitado.apellido_inv' => 'required_with:invitado|string|max:50',
-            'invitado.rh_inv' => 'required_with:invitado|string|max:5',
-            'invitado.telefono_inv' => 'required_with:invitado|string|max:50|unique:invitados,telefono_inv',
-            'invitado.fecha_nacimiento_inv' => 'required_with:invitado|date',
-            'invitado.correo_inv' => 'nullable|email|max:80|unique:invitados,correo_inv',
-        ]);
+        $validated = $request->validated();
 
         $user = $request->user();
 
@@ -232,6 +210,50 @@ class InscripcionController extends Controller
             'inscripcion' => $resultado,
         ], 201);
     }
+
+
+
+
+        /**
+     * Actualizar los datos de contacto de emergencia de una
+     * inscripción. Solo el dueño o un adminDeportivo pueden hacerlo.
+     * No se puede tocar estado_i aquí a propósito: ese cambia
+     * únicamente a través de PagoController, QrEntradaController
+     * y ResultadoController, que validan el proceso completo.
+     */
+    public function update(UpdateInscripcionRequest $request, $id)
+    {
+        $inscripcion = Inscripcion::find($id);
+
+        if (!$inscripcion) {
+            return response()->json([
+                'message' => 'Inscripción no encontrada'
+            ], 404);
+        }
+
+        $esDueno = $inscripcion->id_u === $request->user()->id_u;
+        $esAdminDeportivo = $request->user()->hasRole('adminDeportivo');
+
+        if (!$esDueno && !$esAdminDeportivo) {
+            return response()->json([
+                'message' => 'No tienes permiso para editar esta inscripción'
+            ], 403);
+        }
+
+        $inscripcion->update($request->validated());
+
+        return response()->json([
+            'message' => 'Datos de contacto actualizados correctamente',
+            'inscripcion' => $inscripcion->fresh()->load([
+                'usuario',
+                'evento',
+                'pago',
+                'qr',
+                'invitado',
+            ])
+        ]);
+    }
+    
 
     /**
      * Cancelar una inscripción.
