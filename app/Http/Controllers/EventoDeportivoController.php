@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage; 
 use App\Http\Requests\StoreEventoDeportivoRequest;
 use App\Http\Requests\UpdateEventoDeportivoRequest;
+use App\Http\Resources\EventoDeportivoResource;
 
 class EventoDeportivoController extends Controller
 {
@@ -22,7 +23,7 @@ class EventoDeportivoController extends Controller
             'patrocinadores',
         ])->paginate($request->input('per_page', 15));
 
-        return response()->json($eventos);
+        return EventoDeportivoResource::collection($eventos);
     }
 
     /**
@@ -44,7 +45,7 @@ class EventoDeportivoController extends Controller
         }
 
         return response()->json([
-            'evento' => $evento
+            'evento' => new EventoDeportivoResource($evento)
         ]);
     }
 
@@ -63,12 +64,12 @@ class EventoDeportivoController extends Controller
 
         return response()->json([
             'message' => 'Evento creado correctamente',
-            'evento' => $evento->load([
+            'evento' => new EventoDeportivoResource($evento->load([
                 'kit',
                 'creador',
                 'categorias',
                 'patrocinadores',
-            ])
+            ]))
         ], 201);
     }
     /**
@@ -88,12 +89,12 @@ class EventoDeportivoController extends Controller
 
         return response()->json([
             'message' => 'Evento actualizado correctamente',
-            'evento' => $evento->fresh()->load([
+            'evento' => new EventoDeportivoResource($evento->fresh()->load([
                 'kit',
                 'creador',
                 'categorias',
                 'patrocinadores',
-            ])
+            ]))
         ]);
     }
 
@@ -120,7 +121,7 @@ class EventoDeportivoController extends Controller
 
         return response()->json([
             'message' => 'Estado del evento actualizado',
-            'evento' => $evento
+            'evento' => new EventoDeportivoResource($evento)
         ]);
     }
 

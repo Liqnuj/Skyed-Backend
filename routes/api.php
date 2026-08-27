@@ -39,7 +39,7 @@ Route::get('/roles', [RoleController::class, 'index'])
 */
 // Autenticación
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:3,1');
-Route::post('/register', [AuthController::class, 'register']);
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
 Route::post('/enviar-codigo', [AuthController::class, 'enviarCodigoRecuperacion']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:3,1');
