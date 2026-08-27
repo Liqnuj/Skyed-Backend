@@ -25,6 +25,12 @@ use App\Http\Controllers\PremioController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\InvitadoController;
 use App\Http\Controllers\KitController;
+use App\Http\Controllers\RoleController;
+use App\Http\Middleware\CheckRoleContext;
+
+Route::get('/roles', [RoleController::class, 'index']);
+Route::get('/roles', [RoleController::class, 'index'])
+    ->middleware(CheckRoleContext::class.':adminDeportivo');
 
 /*
 |--------------------------------------------------------------------------

@@ -8,10 +8,12 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class User extends Authenticatable
 {
     use HasApiTokens, Notifiable;
+    use HasFactory;
 
     protected $table = 'usuario';
 
