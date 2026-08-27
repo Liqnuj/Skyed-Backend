@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 
 class UserController extends Controller
 {
@@ -40,23 +42,9 @@ class UserController extends Controller
     /**
      * Crear un nuevo usuario.
      */
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
-        $validated = $request->validate([
-            'tipo_documento_u' => 'required|string',
-            'documento_u' => 'required|integer|unique:usuario,documento_u',
-            'nombre_u' => 'required|string',
-            'apellido_u' => 'required|string',
-            'rh_u' => 'required|string',
-            'telefono_u' => 'required|string',
-            'correo_u' => 'required|email|unique:usuario,correo_u',
-            'contrasena_u' => 'required|string|min:8',
-            'fecha_nacimiento_u' => 'required|date',
-
-            // Rol y contexto
-            'id_rol' => 'required|exists:roles,id_rol',
-            'contexto' => 'required|string',
-        ]);
+        $validated = $request->validated();
 
         // Encriptar contraseña
         $validated['contrasena_u'] = Hash::make(
@@ -97,7 +85,7 @@ class UserController extends Controller
     /**
      * Actualizar un usuario existente.
      */
-    public function update(Request $request, $id)
+    public function update(UpdateUserRequest $request, $id)
     {
         $user = User::find($id);
 
@@ -107,18 +95,7 @@ class UserController extends Controller
             ], 404);
         }
 
-        $validated = $request->validate([
-            'tipo_documento_u' => 'sometimes|string',
-            'documento_u' => 'sometimes|integer|unique:usuario,documento_u,' . $user->id_u . ',id_u',
-            'nombre_u' => 'sometimes|string',
-            'apellido_u' => 'sometimes|string',
-            'rh_u' => 'sometimes|string',
-            'telefono_u' => 'sometimes|string|unique:usuario,telefono_u,' . $user->id_u . ',id_u',
-            'correo_u' => 'sometimes|email|unique:usuario,correo_u,' . $user->id_u . ',id_u',
-            'contrasena_u' => 'sometimes|string|min:8',
-            'fecha_nacimiento_u' => 'sometimes|date',
-            'estado_u' => 'sometimes|in:activo,inactivo',
-        ]);
+        $validated = $request->validated();
 
         // Si viene contraseña nueva, la encriptamos.
         // Si no viene, no la tocamos.

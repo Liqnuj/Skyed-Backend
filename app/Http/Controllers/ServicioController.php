@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Servicio;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreServicioRequest;
+use App\Http\Requests\UpdateServicioRequest;
 
 class ServicioController extends Controller
 {
@@ -30,14 +32,9 @@ class ServicioController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreServicioRequest $request)
     {
-        $validated = $request->validate([
-            'nombre_s' => 'required|string|max:100',
-            'descripcion_s' => 'nullable|string|max:255',
-        ]);
-
-        $servicio = Servicio::create($validated);
+        $servicio = Servicio::create($request->validated());
 
         return response()->json([
             'message' => 'Servicio creado correctamente',
@@ -45,7 +42,8 @@ class ServicioController extends Controller
         ], 201);
     }
 
-    public function update(Request $request, $id)
+
+    public function update(UpdateServicioRequest $request, $id)
     {
         $servicio = Servicio::find($id);
 
@@ -55,12 +53,7 @@ class ServicioController extends Controller
             ], 404);
         }
 
-        $validated = $request->validate([
-            'nombre_s' => 'sometimes|string|max:100',
-            'descripcion_s' => 'sometimes|nullable|string|max:255',
-        ]);
-
-        $servicio->update($validated);
+        $servicio->update($request->validated());
 
         return response()->json([
             'message' => 'Servicio actualizado correctamente',

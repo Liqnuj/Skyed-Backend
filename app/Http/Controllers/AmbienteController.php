@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Ambiente;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreAmbienteRequest;
+use App\Http\Requests\UpdateAmbienteRequest;
 
 class AmbienteController extends Controller
 {
@@ -30,25 +32,18 @@ class AmbienteController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreAmbienteRequest $request)
     {
-        $validated = $request->validate([
-            'nombre_a' => 'required|string|max:100',
-            'descripcion_a' => 'nullable|string',
-            'capacidad_a' => 'required|integer|min:1',
-            'precio_referencia_a' => 'nullable|numeric|min:0',
-            'imagen_principal_a' => 'nullable|string|max:255',
-        ]);
-
-        $ambiente = Ambiente::create($validated);
+        $ambiente = Ambiente::create($request->validated());
 
         return response()->json([
             'message' => 'Ambiente creado correctamente',
             'ambiente' => $ambiente
         ], 201);
     }
+    
 
-    public function update(Request $request, $id)
+    public function update(UpdateAmbienteRequest $request, $id)
     {
         $ambiente = Ambiente::find($id);
 
@@ -58,15 +53,7 @@ class AmbienteController extends Controller
             ], 404);
         }
 
-        $validated = $request->validate([
-            'nombre_a' => 'sometimes|string|max:100',
-            'descripcion_a' => 'sometimes|nullable|string',
-            'capacidad_a' => 'sometimes|integer|min:1',
-            'precio_referencia_a' => 'sometimes|nullable|numeric|min:0',
-            'imagen_principal_a' => 'sometimes|nullable|string|max:255',
-        ]);
-
-        $ambiente->update($validated);
+        $ambiente->update($request->validated());
 
         return response()->json([
             'message' => 'Ambiente actualizado correctamente',

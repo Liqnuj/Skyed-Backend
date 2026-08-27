@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\EventoRealizado;
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreEventoRealizadoRequest;
+use App\Http\Requests\UpdateEventoRealizadoRequest;
 
 class EventoRealizadoController extends Controller
 {
@@ -39,15 +41,9 @@ class EventoRealizadoController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreEventoRealizadoRequest $request)
     {
-        $validated = $request->validate([
-            'nombre_er' => 'required|string|max:150',
-            'descripcion_er' => 'nullable|string|max:255',
-            'fecha_er' => 'nullable|date',
-            'id_tipo_eves' => 'required|exists:tipo_evento,id_tipo_eves',
-            'id_a' => 'required|exists:ambiente,id_a',
-        ]);
+        $validated = $request->validated();
 
         $validated['estado_er'] = 'activo';
         $validated['id_u'] = $request->user()->id_u;
@@ -64,7 +60,8 @@ class EventoRealizadoController extends Controller
         ], 201);
     }
 
-    public function update(Request $request, $id)
+
+    public function update(UpdateEventoRealizadoRequest $request, $id)
     {
         $evento = EventoRealizado::find($id);
 
@@ -74,16 +71,7 @@ class EventoRealizadoController extends Controller
             ], 404);
         }
 
-        $validated = $request->validate([
-            'nombre_er' => 'sometimes|string|max:150',
-            'descripcion_er' => 'sometimes|nullable|string|max:255',
-            'fecha_er' => 'sometimes|nullable|date',
-            'id_tipo_eves' => 'sometimes|exists:tipo_evento,id_tipo_eves',
-            'id_a' => 'sometimes|exists:ambiente,id_a',
-            'estado_er' => 'sometimes|in:activo,inactivo',
-        ]);
-
-        $evento->update($validated);
+        $evento->update($request->validated());
 
         return response()->json([
             'message' => 'Evento social actualizado correctamente',
