@@ -95,12 +95,8 @@ class ResultadoController extends Controller
             isset($validated['id_cc'])
         ) {
             CategoriaResultado::create([
-                'posicion_categoria' =>
-                    $validated['posicion_categoria'],
-
-                'estado_competidor' =>
-                    $validated['estado_competidor'] ?? 'clasificado',
-
+                'posicion_categoria' => $validated['posicion_categoria'],
+                'estado_competidor' => $validated['estado_competidor'] ?? 'clasificado',
                 'id_cc' => $validated['id_cc'],
                 'id_r' => $resultado->id_r,
             ]);
@@ -132,6 +128,7 @@ class ResultadoController extends Controller
             'estado_r' => 'sometimes|in:oficial,en revision,descalificado',
         ]);
 
+        // Actualizar el resultado
         $resultado->update($validated);
 
         return response()->json([
