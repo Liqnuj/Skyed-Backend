@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\CategoriaCompetencia;
 use App\Models\EventoDeportivo;
+use App\Http\Resources\CategoriaCompetenciaResource;
+use App\Http\Resources\EventoDeportivoResource;
 use Illuminate\Http\Request;
 
 class CategoriaCompetenciaController extends Controller
@@ -38,7 +40,7 @@ class CategoriaCompetenciaController extends Controller
 
         return response()->json([
             'message' => 'Categoría creada correctamente',
-            'categoria' => $categoria
+            'categoria' => new CategoriaCompetenciaResource($categoria)
         ], 201);
     }
 
@@ -53,7 +55,7 @@ class CategoriaCompetenciaController extends Controller
         }
 
         return response()->json([
-            'categoria' => $categoria
+            'categoria' => new CategoriaCompetenciaResource($categoria)
         ]);
     }
 
@@ -85,7 +87,7 @@ class CategoriaCompetenciaController extends Controller
 
         return response()->json([
             'message' => 'Categoría actualizada correctamente',
-            'categoria' => $categoria->fresh()
+            'categoria' => new CategoriaCompetenciaResource($categoria->fresh())
         ]);
     }
 
