@@ -8,25 +8,7 @@ use Illuminate\Http\Request;
 
 class CategoriaCompetenciaController extends Controller
 {
-    public function index($eventoId)
-    {
-        $evento = EventoDeportivo::find($eventoId);
-
-        if (!$evento) {
-            return response()->json([
-                'message' => 'Evento no encontrado'
-            ], 404);
-        }
-
-        return response()->json([
-            'categorias' => CategoriaCompetencia::where(
-                'id_e',
-                $eventoId
-            )->get()
-        ]);
-    }
-
-    public function store(Request $request, $eventoId)
+    public function store(Request $request, int $eventoId)
     {
         $evento = EventoDeportivo::find($eventoId);
 
@@ -60,7 +42,7 @@ class CategoriaCompetenciaController extends Controller
         ], 201);
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         $categoria = CategoriaCompetencia::with('evento')->find($id);
 
