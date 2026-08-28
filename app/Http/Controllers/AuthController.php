@@ -120,45 +120,32 @@ class AuthController extends Controller
     {
         $validated = $request->validated();
 
-        $record = DB::table('password_reset_tokens')
-            ->where('email', $validated['correo_u'])
-            ->first();
-
-        if (!$record || !Hash::check($validated['token'], $record->token)) {
-            return response()->json([
-                'message' => 'Token inválido o expirado'
-            ], 400);
-        }
-
-        $expiraEn = 60; // minutos
-        if (Carbon::parse($record->created_at)->addMinutes($expiraEn)->isPast()) {
-            DB::table('password_reset_tokens')->where('email', $validated['correo_u'])->delete();
-
-            return response()->json([
-                'message' => 'Token inválido o expirado'
-            ], 400);
-        }
-
         $user = User::where('correo_u', $validated['correo_u'])->first();
 
-        if (!$user) {
+        if (!$user || $user->codigo !== $validated['token']) {
             return response()->json([
-                'message' => 'Token inválido o expirado'
+                'message' => 'El código ingresado es incorrecto o no existe'
             ], 400);
         }
 
-        $user->update([
-            'contrasena_u' => Hash::make($validated['contrasena_u']),
-        ]);
+        if (now()->greaterThan($user->codigo_expira_at)) {
+            return response()->json([
+                'message' => 'El código ha expirado. Por favor, solicita uno nuevo.'
+            ], 400);
+        }
 
-        DB::table('password_reset_tokens')->where('email', $validated['correo_u'])->delete();
+        $user->contrasena_u = Hash::make($validated['contrasena_u']);
+        
+        $user->codigo = null;
+        $user->codigo_expira_at = null;
+        $user->save();
         $user->tokens()->delete();
 
         return response()->json([
             'message' => 'Contraseña actualizada correctamente'
-        ]);
+        ], 200);
     }
-
+    
     /**
      * Obtener el usuario autenticado
      */
@@ -194,6 +181,7 @@ class AuthController extends Controller
 
         $codigoGenerado = rand(100000, 999999);
         $user->codigo = $codigoGenerado;
+        $user->codigo_expira_at = now()->addMinutes(15);
         $user->save();
         
         Mail::to($user->correo_u)->send(new CodigoVerificacionMail((string)$codigoGenerado));
