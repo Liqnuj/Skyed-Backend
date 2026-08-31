@@ -28,9 +28,6 @@ use App\Http\Controllers\KitController;
 use App\Http\Controllers\RoleController;
 use App\Http\Middleware\CheckRoleContext;
 
-Route::get('/roles', [RoleController::class, 'index']);
-Route::get('/roles', [RoleController::class, 'index'])
-    ->middleware(CheckRoleContext::class.':adminDeportivo');
 
 /*
 |--------------------------------------------------------------------------
@@ -62,6 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::put('/cambiar-contrasena', [AuthController::class, 'changePassword']);
+    Route::get('/roles', [RoleController::class, 'index']);
 
     // Notificaciones
     Route::get('/notificaciones', [NotificacionController::class, 'index']);
