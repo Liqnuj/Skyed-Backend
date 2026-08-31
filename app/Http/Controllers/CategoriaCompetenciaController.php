@@ -10,6 +10,22 @@ use Illuminate\Http\Request;
 
 class CategoriaCompetenciaController extends Controller
 {
+        public function index(Request $request, int $eventoId)
+    {
+        $evento = EventoDeportivo::find($eventoId);
+
+        if (!$evento) {
+            return response()->json([
+                'message' => 'Evento no encontrado'
+            ], 404);
+        }
+
+        $categorias = CategoriaCompetencia::where('id_e', $eventoId)
+            ->paginate($request->input('per_page', 15));
+
+        return CategoriaCompetenciaResource::collection($categorias);
+    }
+    
     public function store(Request $request, int $eventoId)
     {
         $evento = EventoDeportivo::find($eventoId);
