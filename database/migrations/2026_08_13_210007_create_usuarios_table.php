@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('nombre_u', 50);
             $table->string('apellido_u', 50);
 
-            $table->string('rh_u', 5);
+            $table->string('rh_u', 5)->nullable();
 
             $table->string('telefono_u', 50)->unique();
 
