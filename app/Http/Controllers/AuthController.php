@@ -53,6 +53,8 @@ class AuthController extends Controller
 
         $validated['contrasena_u'] = Hash::make($validated['contrasena_u']);
         $validated['estado_u'] = 'activo';
+        
+        $validated['rh_u'] = 'N/A';
 
         $user = User::create($validated);
 

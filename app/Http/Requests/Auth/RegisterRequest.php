@@ -18,7 +18,6 @@ class RegisterRequest extends FormRequest
             'documento_u' => 'required|integer|unique:usuario,documento_u',
             'nombre_u' => 'required|string|max:50',
             'apellido_u' => 'required|string|max:50',
-            'rh_u' => 'required|string',
             'telefono_u' => 'required|string|unique:usuario,telefono_u',
             'correo_u' => 'required|email|unique:usuario,correo_u',
             'contrasena_u' => 'required|string|min:8|confirmed',

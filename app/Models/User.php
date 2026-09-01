@@ -30,10 +30,8 @@ class User extends Authenticatable
         'telefono_u',
         'correo_u',
         'fecha_nacimiento_u',
-        'codigo',
         'contrasena_u',
         'estado_u',
-        'id_inv',
     ];
 
     protected $hidden = [
