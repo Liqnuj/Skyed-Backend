@@ -21,6 +21,23 @@ class InscripcionController extends Controller
      * Listar las inscripciones de un evento. Un admin deportivo ve
      * todas; un usuario normal solo ve las suyas.
      */
+    
+    public function misInscripciones(Request $request)
+    {
+        $inscripciones = Inscripcion::with([
+            'evento',
+            'pago',
+            'qr',
+            'invitado',
+        ])
+            ->where('id_u', $request->user()->id_u)
+            ->orderByDesc('fecha_i')
+            ->get();
+
+        return response()->json([
+            'inscripciones' => InscripcionResource::collection($inscripciones),
+        ]);
+    }
     public function index(Request $request, int $eventoId)
     {
         $evento = EventoDeportivo::find($eventoId);
