@@ -49,31 +49,12 @@ class AuthController extends Controller
     {
         $validated = $request->validated();
 
-        // 1. Verificación de duplicados para el Toast de React
-        if (User::where('correo_u', $validated['correo_u'])->exists()) {
-            return response()->json([
-                'message' => 'Este correo electrónico ya se encuentra registrado.'
-            ], 400);
-        }
-
-        if (User::where('documento_u', $validated['documento_u'])->exists()) {
-            return response()->json([
-                'message' => 'Este número de documento ya se encuentra registrado.'
-            ], 400);
-        }
-
-        if (User::where('telefono_u', $validated['telefono_u'])->exists()) {
-            return response()->json([
-                'message' => 'Este número de teléfono ya se encuentra registrado.'
-            ], 400);
-        }
-
-        // 2. Procesamiento normal del usuario
         $contexto = $validated['contexto'] ?? 'deportivo';
         unset($validated['contexto']);
 
         $validated['contrasena_u'] = Hash::make($validated['contrasena_u']);
         $validated['estado_u'] = 'activo';
+        
         $validated['rh_u'] = 'N/A';
 
         $user = User::create($validated);
@@ -283,4 +264,36 @@ class AuthController extends Controller
             'message' => 'Contraseña actualizada correctamente'
         ], 200);
     }
+
+    /**
+     * Subir/actualizar la foto de perfil del usuario logueado.
+     */
+    public function updateFoto(Request $request): JsonResponse
+    {
+        $request->validate([
+            'foto' => 'required|image|mimes:jpg,jpeg,png,webp|max:3072',
+        ]);
+
+        $user = $request->user();
+        $archivo = $request->file('foto');
+
+        // Borra la foto anterior si existía, para no dejar basura en el disco
+        if ($user->foto_u) {
+            Storage::disk('public')->delete($user->foto_u);
+        }
+
+        $nombreArchivo = uniqid() . '.' . $archivo->getClientOriginalExtension();
+        $contenido = $archivo->get(); // lee el contenido en memoria, sin depender de getRealPath()
+
+        Storage::disk('public')->put('fotos_perfil/' . $nombreArchivo, $contenido);
+        $path = 'fotos_perfil/' . $nombreArchivo;
+
+        $user->update(['foto_u' => $path]);
+
+        return response()->json([
+            'message' => 'Foto de perfil actualizada correctamente',
+            'foto_url' => asset('storage/' . $path),
+        ]);
+    }
+
 }
