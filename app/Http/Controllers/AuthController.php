@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class AuthController extends Controller
@@ -222,6 +223,9 @@ class AuthController extends Controller
             'nombre_u' => $user->nombre_u,
             'apellido_u' => $user->apellido_u,
             'correo_u' => $user->correo_u,
+            'ciudad_u' => $user->ciudad_u,
+            'telefono_u' => $user->telefono_u,
+            'foto_url' => $user->foto_u ? asset('storage/' . $user->foto_u) : null,
             'roles' => $user->roles->map(function ($role) {
                 return [
                     'id_rol' => $role->id_rol,
@@ -230,6 +234,30 @@ class AuthController extends Controller
                 ];
             }),
         ];
+    }
+
+        /**
+     * Actualizar los datos personales del usuario logueado
+     * (autoservicio — no requiere rol de admin).
+     */
+    public function updatePerfil(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'nombre_u' => 'sometimes|string|max:50',
+            'apellido_u' => 'sometimes|string|max:50',
+            'correo_u' => 'sometimes|email|unique:usuario,correo_u,' . $user->id_u . ',id_u',
+            'telefono_u' => 'sometimes|string|unique:usuario,telefono_u,' . $user->id_u . ',id_u',
+            'ciudad_u' => 'sometimes|nullable|string|max:80',
+        ]);
+
+        $user->update($validated);
+
+        return response()->json([
+            'message' => 'Perfil actualizado correctamente',
+            'user' => $this->formatUser($user->fresh()->load('roles')),
+        ]);
     }
 
     public function changePassword(Request $request): JsonResponse
