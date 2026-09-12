@@ -27,6 +27,7 @@ use App\Http\Controllers\InvitadoController;
 use App\Http\Controllers\KitController;
 use App\Http\Controllers\RoleController;
 use App\Http\Middleware\CheckRoleContext;
+use App\Http\Controllers\UserRoleController;
 
 
 /*
@@ -60,6 +61,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::put('/cambiar-contrasena', [AuthController::class, 'changePassword']);
     Route::get('/roles', [RoleController::class, 'index']);
+
+    // Gestión de Roles de Usuario
+    Route::get('/users/{id}/roles', [UserRoleController::class, 'index'])
+        ->middleware('role.context:adminDeportivo|adminSocial');
+    Route::post('/users/{id}/roles', [UserRoleController::class, 'store'])
+        ->middleware('role.context:adminDeportivo|adminSocial');
+    Route::delete('/users/{id}/roles/{rolId}', [UserRoleController::class, 'destroy'])
+        ->middleware('role.context:adminDeportivo|adminSocial');
 
     // Notificaciones
     Route::get('/notificaciones', [NotificacionController::class, 'index']);
