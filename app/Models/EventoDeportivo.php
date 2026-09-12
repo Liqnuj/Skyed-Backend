@@ -16,19 +16,22 @@ class EventoDeportivo extends Model
     public $timestamps = true;
 
     protected $fillable = [
-        'nombre_e',
-        'categoria_e',
-        'fecha_e',
-        'hora_e',
-        'ubicacion_e',
-        'descripcion_e',
-        'requisitos_e',
-        'imagen_e',
-        'cupos_disponibles_e',
-        'estado_e',
-        'creado_e',
-        'id_k',
-        'id_u',
+    'nombre_e',
+    'categoria_e',
+    'precio_e',
+    'distancia_e',
+    'desnivel_e',
+    'fecha_e',
+    'hora_e',
+    'ubicacion_e',
+    'descripcion_e',
+    'requisitos_e',
+    'imagen_e',
+    'cupos_disponibles_e',
+    'estado_e',
+    'creado_e',
+    'id_k',
+    'id_u',
     ];
 
     protected $casts = [

@@ -49,20 +49,20 @@ class AuthController extends Controller
     {
         $validated = $request->validated();
 
-        $contexto = $validated['contexto'] ?? 'deportivo';
-        unset($validated['contexto']);
+unset($validated['contexto']); 
 
-        $validated['contrasena_u'] = Hash::make($validated['contrasena_u']);
-        $validated['estado_u'] = 'activo';
-        
-        $validated['rh_u'] = 'N/A';
+$validated['contrasena_u'] = Hash::make($validated['contrasena_u']);
+$validated['estado_u'] = 'activo';
 
-        $user = User::create($validated);
+$validated['rh_u'] = 'N/A';
 
-        $rolNombre = $contexto === 'social' ? 'cliente' : 'participante';
-        $rol = Role::firstOrCreate(['nombre_rol' => $rolNombre]);
-        $user->roles()->attach($rol->id_rol, ['contexto' => $contexto]);
+$user = User::create($validated);
 
+$rolParticipante = Role::firstOrCreate(['nombre_rol' => 'participante']);
+$rolCliente = Role::firstOrCreate(['nombre_rol' => 'cliente']);
+
+$user->roles()->attach($rolParticipante->id_rol, ['contexto' => 'deportivo']);
+$user->roles()->attach($rolCliente->id_rol, ['contexto' => 'social']);
         $user->load('roles');
 
         $token = $user->createToken('skyed-token')->plainTextToken;
