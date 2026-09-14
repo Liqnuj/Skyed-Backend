@@ -117,6 +117,33 @@ $user->roles()->attach($rolCliente->id_rol, ['contexto' => 'social']);
     }
 
     /**
+     * Verificar que el código de 6 dígitos sea correcto antes de cambiar contraseña
+     */
+    public function verificarCodigo(Request $request): JsonResponse
+    {
+        $request->validate([
+            'correo_u' => 'required|email',
+            'token' => 'required|string'
+        ]);
+
+        $user = User::where('correo_u', $request->correo_u)->first();
+
+        if (!$user || $user->codigo !== $request->token) {
+            return response()->json([
+                'message' => 'El código ingresado es incorrecto o no existe'
+            ], 400);
+        }
+
+        if (now()->greaterThan($user->codigo_expira_at)) {
+            return response()->json([
+                'message' => 'El código ha expirado. Por favor, solicita uno nuevo.'
+            ], 400);
+        }
+
+        return response()->json(['message' => 'Código válido'], 200);
+    }
+
+    /**
      * Restablecer la contraseña con el token recibido por correo.
      */
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
