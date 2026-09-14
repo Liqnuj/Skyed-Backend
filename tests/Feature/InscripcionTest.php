@@ -161,3 +161,26 @@ it('cancelar una inscripción repone el cupo del evento', function () {
     expect($evento->fresh()->cupos_disponibles_e)->toBe(5);
     expect(Inscripcion::find($inscripcionId)->estado_i)->toBe('cancelada');
 });
+
+it('cancelar dos veces la misma inscripción no repone el cupo dos veces', function () {
+    // Regresión: antes, cancelar una inscripción ya cancelada volvía a
+    // incrementar cupos_disponibles_e, "inflando" cupos que no existían.
+    $user = userWithRole('participante');
+    $evento = crearEventoParaInscripcion(['cupos_disponibles_e' => 5]);
+
+    $inscripcionId = $this->actingAs($user)
+        ->postJson("/api/eventos/{$evento->id_e}/inscripciones", datosInscripcion())
+        ->json('inscripcion.id');
+
+    $this->actingAs($user)
+        ->deleteJson("/api/inscripciones/{$inscripcionId}")
+        ->assertStatus(200);
+
+    expect($evento->fresh()->cupos_disponibles_e)->toBe(5);
+
+    $this->actingAs($user)
+        ->deleteJson("/api/inscripciones/{$inscripcionId}")
+        ->assertStatus(422);
+
+    expect($evento->fresh()->cupos_disponibles_e)->toBe(5);
+});

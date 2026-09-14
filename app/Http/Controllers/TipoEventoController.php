@@ -9,8 +9,13 @@ class TipoEventoController extends Controller
 {
     public function index(Request $request)
     {
-        $tipos = TipoEvento::with('eventos')
-            ->paginate($request->input('per_page', 15));
+        $query = TipoEvento::with('eventos');
+
+        if ($request->filled('modulo')) {
+            $query->where('modulo_tipo_eves', $request->input('modulo'));
+        }
+
+        $tipos = $query->paginate($request->input('per_page', 15));
 
         return response()->json($tipos);
     }
@@ -35,6 +40,7 @@ class TipoEventoController extends Controller
         $validated = $request->validate([
             'nombre_tipo_eves' => 'required|string|max:50',
             'descripcion_eves' => 'nullable|string|max:120',
+            'modulo_tipo_eves' => 'required|in:deportivo,social',
         ]);
 
         $tipo = TipoEvento::create($validated);
@@ -58,6 +64,7 @@ class TipoEventoController extends Controller
         $validated = $request->validate([
             'nombre_tipo_eves' => 'sometimes|string|max:50',
             'descripcion_eves' => 'sometimes|nullable|string|max:120',
+            'modulo_tipo_eves' => 'sometimes|in:deportivo,social',
         ]);
 
         $tipo->update($validated);

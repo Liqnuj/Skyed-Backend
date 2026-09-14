@@ -71,7 +71,15 @@ class EventoRealizadoController extends Controller
             ], 404);
         }
 
-        $evento->update($request->validated());
+        $validated = $request->validated();
+
+        // Si se reemplaza la foto, borramos la anterior para no dejar basura en el disco.
+        if (array_key_exists('imagen_er', $validated)
+            && $validated['imagen_er'] !== $evento->imagen_er) {
+            ImagenSocialController::eliminarSiEsPropia($evento->imagen_er);
+        }
+
+        $evento->update($validated);
 
         return response()->json([
             'message' => 'Evento social actualizado correctamente',
@@ -119,6 +127,8 @@ class EventoRealizadoController extends Controller
                 'message' => 'Evento social no encontrado'
             ], 404);
         }
+
+        ImagenSocialController::eliminarSiEsPropia($evento->imagen_er);
 
         $evento->delete();
 
