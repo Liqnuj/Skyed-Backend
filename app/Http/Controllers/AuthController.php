@@ -206,6 +206,9 @@ $user->roles()->attach($rolCliente->id_rol, ['contexto' => 'social']);
             'correo_u' => $user->correo_u,
             'ciudad_u' => $user->ciudad_u,
             'telefono_u' => $user->telefono_u,
+            'tipo_documento_u' => $user->tipo_documento_u,
+            'documento_u' => $user->documento_u,
+            'fecha_nacimiento_u' => $user->fecha_nacimiento_u,
             'foto_url' => $user->foto_u ? asset('storage/' . $user->foto_u) : null,
             'roles' => $user->roles->map(function ($role) {
                 return [
@@ -231,6 +234,9 @@ $user->roles()->attach($rolCliente->id_rol, ['contexto' => 'social']);
             'correo_u' => 'sometimes|email|unique:usuario,correo_u,' . $user->id_u . ',id_u',
             'telefono_u' => 'sometimes|string|unique:usuario,telefono_u,' . $user->id_u . ',id_u',
             'ciudad_u' => 'sometimes|nullable|string|max:80',
+            'tipo_documento_u' => 'sometimes|string|max:20',
+            'documento_u' => 'sometimes|numeric|unique:usuario,documento_u,' . $user->id_u . ',id_u',
+            'fecha_nacimiento_u' => 'sometimes|date',
         ]);
 
         $user->update($validated);
@@ -293,6 +299,22 @@ $user->roles()->attach($rolCliente->id_rol, ['contexto' => 'social']);
         return response()->json([
             'message' => 'Foto de perfil actualizada correctamente',
             'foto_url' => asset('storage/' . $path),
+        ]);
+    }
+
+
+    public function desactivarCuenta(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $user->estado_u = 'inactivo';
+        $user->save();
+
+        // Revoca todos los tokens activos, para cerrar sesión en todos lados
+        $user->tokens()->delete();
+
+        return response()->json([
+            'message' => 'Cuenta desactivada correctamente'
         ]);
     }
 
