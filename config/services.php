@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    // Asistente virtual SKAI (Google Gemini). La key NUNCA debe ir en el
+    // código fuente: se lee solo de la variable de entorno GEMINI_API_KEY.
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-1.5-flash'),
+        'max_tokens' => (int) env('GEMINI_MAX_TOKENS', 500),
+    ],
+
 ];
