@@ -16,6 +16,7 @@ class EventoRealizado extends Model
         'nombre_er',
         'descripcion_er',
         'fecha_er',
+        'imagen_er',
         'id_tipo_eves',
         'id_a',
         'id_u',

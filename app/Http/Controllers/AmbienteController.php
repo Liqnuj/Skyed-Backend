@@ -53,7 +53,15 @@ class AmbienteController extends Controller
             ], 404);
         }
 
-        $ambiente->update($request->validated());
+        $validated = $request->validated();
+
+        // Si se reemplaza la foto, borramos la anterior para no dejar basura en el disco.
+        if (array_key_exists('imagen_principal_a', $validated)
+            && $validated['imagen_principal_a'] !== $ambiente->imagen_principal_a) {
+            ImagenSocialController::eliminarSiEsPropia($ambiente->imagen_principal_a);
+        }
+
+        $ambiente->update($validated);
 
         return response()->json([
             'message' => 'Ambiente actualizado correctamente',
@@ -70,6 +78,8 @@ class AmbienteController extends Controller
                 'message' => 'Ambiente no encontrado'
             ], 404);
         }
+
+        ImagenSocialController::eliminarSiEsPropia($ambiente->imagen_principal_a);
 
         $ambiente->delete();
 
