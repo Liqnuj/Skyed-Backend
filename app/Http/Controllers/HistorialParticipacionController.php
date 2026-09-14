@@ -7,18 +7,43 @@ use Illuminate\Http\Request;
 
 class HistorialParticipacionController extends Controller
 {
+    /**
+     * FIX: antes esta ruta (zona general) devolvía el historial de
+     * TODOS los usuarios sin ningún filtro. Ahora un usuario normal
+     * solo ve el suyo; un adminDeportivo ve todo.
+     */
     public function index(Request $request)
     {
-        $historial = HistorialParticipacion::with([
+        $query = HistorialParticipacion::with([
             'usuario',
             'evento'
-        ])->paginate($request->input('per_page', 15));
+        ]);
+
+        if (!$request->user()->hasRole('adminDeportivo')) {
+            $query->where('id_u', $request->user()->id_u);
+        }
+
+        $historial = $query->paginate($request->input('per_page', 15));
 
         return response()->json($historial);
     }
 
-    public function porUsuario($usuarioId)
+    /**
+     * FIX: antes cualquier usuario autenticado podía pasar el
+     * $usuarioId de otra persona y ver su historial completo (IDOR).
+     * Ahora solo el propio usuario o un adminDeportivo pueden.
+     */
+    public function porUsuario(Request $request, $usuarioId)
     {
+        $esDueno = (int) $usuarioId === (int) $request->user()->id_u;
+        $esAdmin = $request->user()->hasRole('adminDeportivo');
+
+        if (!$esDueno && !$esAdmin) {
+            return response()->json([
+                'message' => 'No tienes permisos para ver este historial'
+            ], 403);
+        }
+
         $historial = HistorialParticipacion::with('evento')
             ->where('id_u', $usuarioId)
             ->orderByDesc('fecha_hp')

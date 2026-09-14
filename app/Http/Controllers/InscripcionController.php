@@ -277,6 +277,16 @@ class InscripcionController extends Controller
 
         $this->authorize('delete', $inscripcion);
 
+        // FIX: si la inscripción ya estaba cancelada, cancelarla de
+        // nuevo (p. ej. un doble clic o una llamada repetida al
+        // endpoint) volvía a incrementar cupos_disponibles_e, "liberando"
+        // un cupo que en realidad ya se había devuelto la primera vez.
+        if ($inscripcion->estado_i === 'cancelada') {
+            return response()->json([
+                'message' => 'Esta inscripción ya estaba cancelada'
+            ], 422);
+        }
+
         DB::transaction(function () use ($inscripcion) {
             $evento = EventoDeportivo::where('id_e', $inscripcion->id_e)
                 ->lockForUpdate()
