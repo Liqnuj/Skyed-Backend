@@ -29,6 +29,11 @@ class SkaiController extends Controller
             'history.*.content' => 'required_with:history|string',
         ]);
 
+        // La llamada a Gemini puede reintentarse varias veces (ver más abajo);
+        // le damos más margen que el límite por defecto de PHP para que un
+        // 503 transitorio no termine en un error fatal por timeout.
+        set_time_limit(45);
+
         $apiKey = config('services.gemini.key');
 
         if (!$apiKey) {
@@ -68,11 +73,18 @@ class SkaiController extends Controller
         $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
 
         try {
+            // Gemini devuelve 503 "high demand" de vez en cuando bajo el
+            // tier gratuito; son picos momentáneos, así que reintentamos
+            // un par de veces con backoff antes de darnos por vencidos.
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
                 'x-goog-api-key' => $apiKey,
             ])
-                ->timeout(30)
+                ->timeout(12)
+                ->retry(3, 500, function ($exception, $request) {
+                    return $exception instanceof \Illuminate\Http\Client\RequestException
+                        && in_array($exception->response->status(), [429, 503], true);
+                })
                 ->post($url, [
                     'contents' => $contents,
                     'systemInstruction' => [
@@ -98,8 +110,13 @@ class SkaiController extends Controller
                 'body' => $data,
             ]);
 
+            $status = $data['error']['status'] ?? null;
+            $message = in_array($status, ['UNAVAILABLE', 'RESOURCE_EXHAUSTED'], true)
+                ? 'SKAI está muy solicitado en este momento. Intenta de nuevo en unos segundos.'
+                : 'La IA no respondió correctamente';
+
             return response()->json([
-                'error' => 'La IA no respondió correctamente',
+                'error' => $message,
                 'detail' => $data['error']['message'] ?? 'Error desconocido',
             ], 502);
         }
