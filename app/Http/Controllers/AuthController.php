@@ -214,8 +214,14 @@ $user->roles()->attach($rolCliente->id_rol, ['contexto' => 'social']);
         $user->codigo_expira_at = now()->addMinutes(15);
         $user->save();
         
-        Mail::to($user->correo_u)->send(new CodigoVerificacionMail((string)$codigoGenerado));
-
+        try {
+            Mail::to($user->correo_u)->send(new CodigoVerificacionMail((string)$codigoGenerado));
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'No hay conexión a internet o el servidor de correos no responde. Por favor, intenta de nuevo.'
+            ], 500);
+        }
         return response()->json([
             'message' => 'Código de verificación enviado con éxito'
         ], 200);
