@@ -16,6 +16,7 @@ use App\Http\Controllers\TipoEventoController;
 use App\Http\Controllers\AmbienteController;
 use App\Http\Controllers\ServicioController;
 use App\Http\Controllers\EventoRealizadoController;
+use App\Http\Controllers\ImagenSocialController;
 use App\Http\Controllers\ReservaController;
 use App\Http\Controllers\PqrController;
 use App\Http\Controllers\CopiaSeguridadController;
@@ -68,6 +69,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/cambiar-contrasena', [AuthController::class, 'changePassword']);
     Route::put('/perfil', [AuthController::class, 'updatePerfil']);
     Route::post('/perfil/foto', [AuthController::class, 'updateFoto']);
+    Route::delete('/perfil', [AuthController::class, 'desactivarCuenta']);
+    Route::get('/roles', [RoleController::class, 'index']);
 
     // Gestión de Roles de Usuario
     Route::get('/users/{id}/roles', [UserRoleController::class, 'index'])
@@ -220,7 +223,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // 4. ZONA EXCLUSIVA: Administrador Social
     // ========================================================
     Route::middleware('role.context:adminSocial')->group(function () {
-        
+
+        // Subida de imágenes (ambientes y eventos sociales)
+        Route::post('/social/imagenes', [ImagenSocialController::class, 'store']);
+
         // Ambientes y Servicios
         Route::post('/ambientes', [AmbienteController::class, 'store']);
         Route::put('/ambientes/{id}', [AmbienteController::class, 'update']);
