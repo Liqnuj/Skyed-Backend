@@ -16,6 +16,7 @@ use App\Http\Controllers\TipoEventoController;
 use App\Http\Controllers\AmbienteController;
 use App\Http\Controllers\ServicioController;
 use App\Http\Controllers\EventoRealizadoController;
+use App\Http\Controllers\ImagenSocialController;
 use App\Http\Controllers\ReservaController;
 use App\Http\Controllers\PqrController;
 use App\Http\Controllers\CopiaSeguridadController;
@@ -220,7 +221,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // 4. ZONA EXCLUSIVA: Administrador Social
     // ========================================================
     Route::middleware('role.context:adminSocial')->group(function () {
-        
+
+        // Subida de imágenes (ambientes y eventos sociales)
+        Route::post('/social/imagenes', [ImagenSocialController::class, 'store']);
+
         // Ambientes y Servicios
         Route::post('/ambientes', [AmbienteController::class, 'store']);
         Route::put('/ambientes/{id}', [AmbienteController::class, 'update']);
