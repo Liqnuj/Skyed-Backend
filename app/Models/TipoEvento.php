@@ -14,6 +14,7 @@ class TipoEvento extends Model
     protected $fillable = [
         'nombre_tipo_eves',
         'descripcion_eves',
+        'modulo_tipo_eves',
     ];
 
     public function eventos(): HasMany
@@ -23,5 +24,15 @@ class TipoEvento extends Model
             'id_tipo_eves',
             'id_tipo_eves'
         );
+    }
+
+    public function scopeSocial($query)
+    {
+        return $query->where('modulo_tipo_eves', 'social');
+    }
+
+    public function scopeDeportivo($query)
+    {
+        return $query->where('modulo_tipo_eves', 'deportivo');
     }
 }
