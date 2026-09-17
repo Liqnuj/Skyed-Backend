@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\InscripcionQrMail;
 use App\Models\EventoDeportivo;
 use App\Models\Inscripcion;
 use App\Models\Invitado;
@@ -9,6 +10,7 @@ use App\Models\Pago;
 use App\Models\QrEntrada;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Http\Requests\StoreInscripcionRequest;
 use App\Http\Requests\UpdateInscripcionRequest;
@@ -218,6 +220,8 @@ class InscripcionController extends Controller
         if ($resultado instanceof \Illuminate\Http\JsonResponse) {
             return $resultado;
         }
+
+        Mail::to($resultado->usuario->correo_u)->send(new InscripcionQrMail($resultado));
 
         return response()->json([
             'message' => 'Inscripción creada correctamente',

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\HistorialParticipacion;
 use Illuminate\Http\Request;
+use App\Http\Resources\HistorialParticipacionResource;
 
 class HistorialParticipacionController extends Controller
 {
@@ -50,7 +51,7 @@ class HistorialParticipacionController extends Controller
             ->get();
 
         return response()->json([
-            'historial' => $historial
+            'historial' => HistorialParticipacionResource::collection($historial)
         ]);
     }
 
