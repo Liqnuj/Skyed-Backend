@@ -23,7 +23,14 @@ class CategoriaCompetenciaController extends Controller
         $categorias = CategoriaCompetencia::where('id_e', $eventoId)
             ->paginate($request->input('per_page', 15));
 
-        return CategoriaCompetenciaResource::collection($categorias);
+        // FIX: la respuesta no incluía la clave "evento" (solo las
+        // categorías), aunque el propio test de este endpoint
+        // (tests/Feature/CategoriaCompetenciaTest.php) y el patrón ya
+        // usado en InscripcionController::index esperan ambas claves.
+        return response()->json([
+            'evento' => new EventoDeportivoResource($evento),
+            'categorias' => CategoriaCompetenciaResource::collection($categorias),
+        ]);
     }
     
     public function store(Request $request, int $eventoId)
