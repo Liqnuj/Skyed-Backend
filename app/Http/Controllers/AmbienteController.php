@@ -53,7 +53,14 @@ class AmbienteController extends Controller
             ], 404);
         }
 
-        $ambiente->update($request->validated());
+        $validated = $request->validated();
+
+        if (array_key_exists('imagen_principal_a', $validated)
+            && $validated['imagen_principal_a'] !== $ambiente->imagen_principal_a) {
+            SocialImagenController::eliminarSiEsPropia($ambiente->imagen_principal_a);
+        }
+
+        $ambiente->update($validated);
 
         return response()->json([
             'message' => 'Ambiente actualizado correctamente',
@@ -71,6 +78,7 @@ class AmbienteController extends Controller
             ], 404);
         }
 
+        SocialImagenController::eliminarSiEsPropia($ambiente->imagen_principal_a);
         $ambiente->delete();
 
         return response()->json([

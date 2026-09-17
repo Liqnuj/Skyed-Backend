@@ -38,7 +38,7 @@ class StoreEventoDeportivoRequest extends FormRequest
     {
         return [
             'nombre_e.required' => 'El nombre del evento es obligatorio.',
-            'categoria_e.in' => 'La categoría debe ser atletismo, senderismo o ciclismo.',
+            'categoria_e.in' => 'La categoría debe ser ruta, mtb, gravel, pista o bmx.',
             'fecha_e.date' => 'La fecha no tiene un formato válido.',
             'cupos_disponibles_e.min' => 'Los cupos no pueden ser negativos.',
         ];
