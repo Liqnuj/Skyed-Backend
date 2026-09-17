@@ -71,7 +71,14 @@ class EventoRealizadoController extends Controller
             ], 404);
         }
 
-        $evento->update($request->validated());
+        $validated = $request->validated();
+
+        if (array_key_exists('imagen_er', $validated)
+            && $validated['imagen_er'] !== $evento->imagen_er) {
+            SocialImagenController::eliminarSiEsPropia($evento->imagen_er);
+        }
+
+        $evento->update($validated);
 
         return response()->json([
             'message' => 'Evento social actualizado correctamente',
@@ -120,6 +127,7 @@ class EventoRealizadoController extends Controller
             ], 404);
         }
 
+        SocialImagenController::eliminarSiEsPropia($evento->imagen_er);
         $evento->delete();
 
         return response()->json([

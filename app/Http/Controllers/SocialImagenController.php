@@ -78,4 +78,28 @@ class SocialImagenController extends Controller
             'url' => asset('storage/' . $path),
         ], 201);
     }
+
+    /**
+     * Borra del disco una imagen previamente subida por este controlador,
+     * si la URL guardada pertenece a nuestro storage. Las URLs externas
+     * (enlaces antiguos pegados a mano) se dejan intactas.
+     */
+    public static function eliminarSiEsPropia(?string $url): void
+    {
+        if (!$url) {
+            return;
+        }
+
+        $base = url('/storage/');
+
+        if (!str_starts_with($url, $base)) {
+            return;
+        }
+
+        $rutaRelativa = ltrim(substr($url, strlen($base)), '/');
+
+        if ($rutaRelativa !== '') {
+            Storage::disk('public')->delete($rutaRelativa);
+        }
+    }
 }

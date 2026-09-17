@@ -27,6 +27,7 @@ use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\InvitadoController;
 use App\Http\Controllers\KitController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SkaiController;
 use App\Http\Middleware\CheckRoleContext;
 use App\Http\Controllers\UserRoleController;
 
@@ -39,7 +40,8 @@ use App\Http\Controllers\UserRoleController;
 // Autenticación
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:3,1');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
-Route::post('/enviar-codigo', [AuthController::class, 'enviarCodigoRecuperacion']);
+Route::post('/enviar-codigo-recuperacion', [AuthController::class, 'enviarCodigoRecuperacion']);
+Route::post('/verificar-codigo', [AuthController::class, 'verificarCodigo']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:3,1');
 
@@ -52,6 +54,10 @@ Route::get('/ambientes', [AmbienteController::class, 'index']);
 Route::get('/ambientes/{id}', [AmbienteController::class, 'show']);
 Route::get('/eventos-sociales', [EventoRealizadoController::class, 'index']);
 Route::get('/eventos-sociales/{id}', [EventoRealizadoController::class, 'show']);
+
+// Asistente virtual SKAI (funciona para visitantes sin sesión también).
+// Throttle para no dejar la key de Gemini abierta a abuso.
+Route::post('/asistente', [SkaiController::class, 'responder'])->middleware('throttle:20,1');
 
 
 /*
@@ -69,7 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/cambiar-contrasena', [AuthController::class, 'changePassword']);
     Route::put('/perfil', [AuthController::class, 'updatePerfil']);
     Route::post('/perfil/foto', [AuthController::class, 'updateFoto']);
-    Route::get('/roles', [RoleController::class, 'index']);
+    Route::delete('/perfil', [AuthController::class, 'desactivarCuenta']);
 
     // Gestión de Roles de Usuario
     Route::get('/users/{id}/roles', [UserRoleController::class, 'index'])
@@ -139,7 +145,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // 2. ZONA GLOBAL (Cualquier Administrador)
     // ========================================================
     Route::middleware('role.context:adminDeportivo|adminSocial')->group(function () {
-        
+
+        // Roles disponibles (para el panel de administración de usuarios).
+        // FIX: vivía en la zona general sin ninguna restricción, aunque
+        // el propio test del equipo (tests/Feature/RoleRouteTest.php)
+        // espera 403 para un usuario sin rol de admin.
+        Route::get('/roles', [RoleController::class, 'index']);
+
         // Gestión de Usuarios
         Route::get('/users', [UserController::class, 'index']);
         Route::get('/users/{id}', [UserController::class, 'show']);
