@@ -13,7 +13,7 @@ class EventoRealizadoController extends Controller
     {
         $eventos = EventoRealizado::with([
             'tipoEvento',
-            'ambiente',
+            'ambiente.servicios',
             'creador',
             'reservas',
         ])->paginate($request->input('per_page', 15));
@@ -25,7 +25,7 @@ class EventoRealizadoController extends Controller
     {
         $evento = EventoRealizado::with([
             'tipoEvento',
-            'ambiente',
+            'ambiente.servicios',
             'creador',
             'reservas',
         ])->find($id);
@@ -71,15 +71,7 @@ class EventoRealizadoController extends Controller
             ], 404);
         }
 
-        $validated = $request->validated();
-
-        // Si se reemplaza la foto, borramos la anterior para no dejar basura en el disco.
-        if (array_key_exists('imagen_er', $validated)
-            && $validated['imagen_er'] !== $evento->imagen_er) {
-            ImagenSocialController::eliminarSiEsPropia($evento->imagen_er);
-        }
-
-        $evento->update($validated);
+        $evento->update($request->validated());
 
         return response()->json([
             'message' => 'Evento social actualizado correctamente',
@@ -127,8 +119,6 @@ class EventoRealizadoController extends Controller
                 'message' => 'Evento social no encontrado'
             ], 404);
         }
-
-        ImagenSocialController::eliminarSiEsPropia($evento->imagen_er);
 
         $evento->delete();
 
