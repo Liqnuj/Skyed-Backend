@@ -81,10 +81,13 @@ class SkaiController extends Controller
                 'x-goog-api-key' => $apiKey,
             ])
                 ->timeout(12)
+                // throw: false => al agotar los intentos devolvemos la última
+                // respuesta (503/429) para manejarla abajo, en vez de lanzar
+                // una RequestException sin capturar (500 con traza).
                 ->retry(3, 500, function ($exception, $request) {
                     return $exception instanceof \Illuminate\Http\Client\RequestException
                         && in_array($exception->response->status(), [429, 503], true);
-                })
+                }, throw: false)
                 ->post($url, [
                     'contents' => $contents,
                     'systemInstruction' => [
