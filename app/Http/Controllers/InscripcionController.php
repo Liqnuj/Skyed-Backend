@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\InscripcionQrMail;
 use App\Models\EventoDeportivo;
 use App\Models\Inscripcion;
 use App\Models\Invitado;
@@ -9,6 +10,7 @@ use App\Models\Pago;
 use App\Models\QrEntrada;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Http\Requests\StoreInscripcionRequest;
 use App\Http\Requests\UpdateInscripcionRequest;
@@ -219,6 +221,8 @@ class InscripcionController extends Controller
             return $resultado;
         }
 
+        Mail::to($resultado->usuario->correo_u)->send(new InscripcionQrMail($resultado));
+
         return response()->json([
             'message' => 'Inscripción creada correctamente',
             'inscripcion' => new InscripcionResource($resultado),
@@ -276,6 +280,16 @@ class InscripcionController extends Controller
         }
 
         $this->authorize('delete', $inscripcion);
+
+        // FIX: si la inscripción ya estaba cancelada, cancelarla de
+        // nuevo (p. ej. un doble clic o una llamada repetida al
+        // endpoint) volvía a incrementar cupos_disponibles_e, "liberando"
+        // un cupo que en realidad ya se había devuelto la primera vez.
+        if ($inscripcion->estado_i === 'cancelada') {
+            return response()->json([
+                'message' => 'Esta inscripción ya estaba cancelada'
+            ], 422);
+        }
 
         DB::transaction(function () use ($inscripcion) {
             $evento = EventoDeportivo::where('id_e', $inscripcion->id_e)

@@ -16,7 +16,7 @@ use App\Http\Controllers\TipoEventoController;
 use App\Http\Controllers\AmbienteController;
 use App\Http\Controllers\ServicioController;
 use App\Http\Controllers\EventoRealizadoController;
-use App\Http\Controllers\ImagenSocialController;
+use App\Http\Controllers\SocialImagenController;
 use App\Http\Controllers\ReservaController;
 use App\Http\Controllers\PqrController;
 use App\Http\Controllers\CopiaSeguridadController;
@@ -27,6 +27,7 @@ use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\InvitadoController;
 use App\Http\Controllers\KitController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SkaiController;
 use App\Http\Middleware\CheckRoleContext;
 use App\Http\Controllers\UserRoleController;
 
@@ -39,13 +40,24 @@ use App\Http\Controllers\UserRoleController;
 // Autenticación
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:3,1');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
-Route::post('/enviar-codigo', [AuthController::class, 'enviarCodigoRecuperacion']);
+Route::post('/enviar-codigo-recuperacion', [AuthController::class, 'enviarCodigoRecuperacion']);
+Route::post('/verificar-codigo', [AuthController::class, 'verificarCodigo']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:3,1');
 
 // Catálogos públicos (Lectura)
 Route::get('/eventos', [EventoDeportivoController::class, 'index']);
 Route::get('/eventos/{id}', [EventoDeportivoController::class, 'show']);
+
+// Catálogo público de Social (para las páginas de Eventos y Lugares, sin login)
+Route::get('/ambientes', [AmbienteController::class, 'index']);
+Route::get('/ambientes/{id}', [AmbienteController::class, 'show']);
+Route::get('/eventos-sociales', [EventoRealizadoController::class, 'index']);
+Route::get('/eventos-sociales/{id}', [EventoRealizadoController::class, 'show']);
+
+// Asistente virtual SKAI (funciona para visitantes sin sesión también).
+// Throttle para no dejar la key de Gemini abierta a abuso.
+Route::post('/asistente', [SkaiController::class, 'responder'])->middleware('throttle:20,1');
 
 
 /*
@@ -63,7 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/cambiar-contrasena', [AuthController::class, 'changePassword']);
     Route::put('/perfil', [AuthController::class, 'updatePerfil']);
     Route::post('/perfil/foto', [AuthController::class, 'updateFoto']);
-    Route::get('/roles', [RoleController::class, 'index']);
+    Route::delete('/perfil', [AuthController::class, 'desactivarCuenta']);
 
     // Gestión de Roles de Usuario
     Route::get('/users/{id}/roles', [UserRoleController::class, 'index'])
@@ -103,12 +115,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/resultados/{id}', [ResultadoController::class, 'show']);
     Route::get('/tipos-evento', [TipoEventoController::class, 'index']);
     Route::get('/tipos-evento/{id}', [TipoEventoController::class, 'show']);
-    Route::get('/ambientes', [AmbienteController::class, 'index']);
-    Route::get('/ambientes/{id}', [AmbienteController::class, 'show']);
     Route::get('/servicios', [ServicioController::class, 'index']);
     Route::get('/servicios/{id}', [ServicioController::class, 'show']);
-    Route::get('/eventos-sociales', [EventoRealizadoController::class, 'index']);
-    Route::get('/eventos-sociales/{id}', [EventoRealizadoController::class, 'show']);
     Route::get('/pagos', [PagoController::class, 'index']);
     Route::get('/pagos/{id}', [PagoController::class, 'show']);
     Route::get('/qr/{id}', [QrEntradaController::class, 'show']);
@@ -137,7 +145,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // 2. ZONA GLOBAL (Cualquier Administrador)
     // ========================================================
     Route::middleware('role.context:adminDeportivo|adminSocial')->group(function () {
-        
+
+        // Roles disponibles (para el panel de administración de usuarios).
+        // FIX: vivía en la zona general sin ninguna restricción, aunque
+        // el propio test del equipo (tests/Feature/RoleRouteTest.php)
+        // espera 403 para un usuario sin rol de admin.
+        Route::get('/roles', [RoleController::class, 'index']);
+
         // Gestión de Usuarios
         Route::get('/users', [UserController::class, 'index']);
         Route::get('/users/{id}', [UserController::class, 'show']);
@@ -210,10 +224,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // 4. ZONA EXCLUSIVA: Administrador Social
     // ========================================================
     Route::middleware('role.context:adminSocial')->group(function () {
-
-        // Subida de imágenes (ambientes y eventos sociales)
-        Route::post('/social/imagenes', [ImagenSocialController::class, 'store']);
-
+        
         // Ambientes y Servicios
         Route::post('/ambientes', [AmbienteController::class, 'store']);
         Route::put('/ambientes/{id}', [AmbienteController::class, 'update']);
@@ -222,6 +233,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/servicios', [ServicioController::class, 'store']);
         Route::put('/servicios/{id}', [ServicioController::class, 'update']);
         Route::delete('/servicios/{id}', [ServicioController::class, 'destroy']);
+
+        // Subida de imágenes (ambientes/eventos) usada por los formularios del panel
+        Route::post('/social/imagenes', [SocialImagenController::class, 'store']);
 
         // Eventos Sociales
         Route::post('/eventos-sociales', [EventoRealizadoController::class, 'store']);

@@ -9,9 +9,14 @@ use Illuminate\Support\Facades\DB;
 class QrEntradaController extends Controller
 {
     /**
-     * Mostrar un QR específico.
+     * Mostrar un QR específico. Solo el dueño de la inscripción
+     * asociada o un adminDeportivo pueden verlo.
+     *
+     * FIX: antes cualquier usuario autenticado podía consultar el QR
+     * (código, estado, fecha de uso, datos del dueño) de cualquier
+     * otra inscripción con solo cambiar el id en la URL (IDOR).
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $qr = QrEntrada::with([
             'inscripcion.usuario',
@@ -22,6 +27,15 @@ class QrEntradaController extends Controller
             return response()->json([
                 'message' => 'QR no encontrado'
             ], 404);
+        }
+
+        $esDueno = $qr->inscripcion && $qr->inscripcion->id_u === $request->user()->id_u;
+        $esAdmin = $request->user()->hasRole('adminDeportivo');
+
+        if (!$esDueno && !$esAdmin) {
+            return response()->json([
+                'message' => 'No tienes permisos para ver este QR'
+            ], 403);
         }
 
         return response()->json([

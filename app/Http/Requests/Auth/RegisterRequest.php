@@ -3,8 +3,6 @@
 namespace App\Http\Requests\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Http\Exceptions\HttpResponseException;
 
 class RegisterRequest extends FormRequest
 {
@@ -38,15 +36,5 @@ class RegisterRequest extends FormRequest
             'contrasena_u.confirmed' => 'Las contraseñas no coinciden.',
             'fecha_nacimiento_u.required' => 'La fecha de nacimiento es obligatoria.',
         ];
-    }
-
-
-    protected function failedValidation(Validator $validator)
-    {
-        $primerError = $validator->errors()->first();
-
-        throw new HttpResponseException(response()->json([
-            'message' => $primerError
-        ], 400));
     }
 }

@@ -10,7 +10,12 @@ use Illuminate\Http\Request;
 class EntregaKitController extends Controller
 {
     /**
-     * Listar las entregas de kit de un evento.
+     * Listar las entregas de kit de un evento. Un admin deportivo ve
+     * todas; un usuario normal solo ve la suya.
+     *
+     * FIX: antes cualquier usuario autenticado podía ver la lista
+     * completa de entregas (nombre, documento vía la relación
+     * `usuario`) de todos los participantes del evento.
      */
     public function index(Request $request, $eventoId)
     {
@@ -22,13 +27,17 @@ class EntregaKitController extends Controller
             ], 404);
         }
 
-        $entregas = EntregaKit::with([
+        $query = EntregaKit::with([
             'kit',
             'usuario',
             'evento'
-        ])
-            ->where('id_e', $eventoId)
-            ->paginate($request->input('per_page', 15));
+        ])->where('id_e', $eventoId);
+
+        if (!$request->user()->hasRole('adminDeportivo')) {
+            $query->where('id_u', $request->user()->id_u);
+        }
+
+        $entregas = $query->paginate($request->input('per_page', 15));
 
         return response()->json([
             'evento' => $evento,
@@ -36,9 +45,12 @@ class EntregaKitController extends Controller
         ]);
     }
     /**
-     * Mostrar una entrega específica.
+     * Mostrar una entrega específica. Solo el dueño o un
+     * adminDeportivo pueden verla.
+     *
+     * FIX: antes no había ningún control de acceso (IDOR).
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $entrega = EntregaKit::with([
             'kit',
@@ -50,6 +62,15 @@ class EntregaKitController extends Controller
             return response()->json([
                 'message' => 'Entrega no encontrada'
             ], 404);
+        }
+
+        $esDueno = $entrega->id_u === $request->user()->id_u;
+        $esAdmin = $request->user()->hasRole('adminDeportivo');
+
+        if (!$esDueno && !$esAdmin) {
+            return response()->json([
+                'message' => 'No tienes permisos para ver esta entrega'
+            ], 403);
         }
 
         return response()->json([

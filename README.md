@@ -75,6 +75,21 @@ php artisan serve
 
 La API queda disponible en `http://127.0.0.1:8000/api`.
 
+### 5. (Opcional) Activar el asistente virtual SKAI
+
+El chat de IA (`SkaiController`) usa la API de Gemini. Como `.env` **no
+se sube a git** (cada quien tiene el suyo), cada persona del equipo
+necesita su propia key para que el chat le funcione en su máquina:
+
+```bash
+GEMINI_API_KEY=   # consíguela gratis en https://aistudio.google.com/apikey
+GEMINI_MODEL=gemini-3.6-flash
+GEMINI_MAX_TOKENS=500
+```
+
+Sin esto el resto de la app funciona normal; solo el widget de SKAI
+mostrará "El asistente no está configurado todavía".
+
 ---
 
 ## Sistema de roles y permisos

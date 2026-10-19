@@ -8,7 +8,10 @@ function datosEvento(array $overrides = []): array
 {
     return array_merge([
         'nombre_e' => 'Ciclo Ruta Boyacá',
-        'categoria_e' => 'ciclismo',
+        'categoria_e' => 'ruta',
+        'precio_e' => 50000,
+        'distancia_e' => '80km',
+        'desnivel_e' => '1200m',
         'fecha_e' => now()->addMonth()->toDateString(),
         'hora_e' => '07:00',
         'ubicacion_e' => 'Parque principal, Tunja',

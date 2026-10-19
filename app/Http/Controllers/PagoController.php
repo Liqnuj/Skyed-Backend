@@ -10,25 +10,44 @@ use App\Services\NotificacionService;
 class PagoController extends Controller
 {
     /**
-     * Listar todos los pagos.
+     * Listar pagos. Un admin deportivo ve todos; un usuario normal
+     * solo ve los de sus propias inscripciones.
+     *
+     * FIX: antes esta ruta vivía en la "zona general" (cualquier
+     * usuario autenticado) sin ningún filtro, por lo que cualquier
+     * participante podía listar los pagos (montos, comprobantes,
+     * método de pago) de TODOS los demás usuarios.
      */
     public function index(Request $request)
     {
-        $pagos = Pago::with([
+        $query = Pago::with([
             'inscripcion.usuario',
             'inscripcion.evento',
             'inscripcion.qr',
-        ])->paginate($request->input('per_page', 15));
-        
+        ]);
+
+        if (!$request->user()->hasRole('adminDeportivo')) {
+            $query->whereHas('inscripcion', function ($q) use ($request) {
+                $q->where('id_u', $request->user()->id_u);
+            });
+        }
+
+        $pagos = $query->paginate($request->input('per_page', 15));
+
         return response()->json([
             'pagos' => $pagos,
         ]);
     }
 
     /**
-     * Mostrar un pago específico.
+     * Mostrar un pago específico. Solo el dueño de la inscripción
+     * asociada o un adminDeportivo pueden verlo.
+     *
+     * FIX: antes cualquier usuario autenticado podía ver el pago de
+     * cualquier otra persona simplemente probando IDs consecutivos
+     * (IDOR).
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $pago = Pago::with([
             'inscripcion.usuario',
@@ -40,6 +59,15 @@ class PagoController extends Controller
             return response()->json([
                 'message' => 'Pago no encontrado'
             ], 404);
+        }
+
+        $esDueno = $pago->inscripcion && $pago->inscripcion->id_u === $request->user()->id_u;
+        $esAdmin = $request->user()->hasRole('adminDeportivo');
+
+        if (!$esDueno && !$esAdmin) {
+            return response()->json([
+                'message' => 'No tienes permisos para ver este pago'
+            ], 403);
         }
 
         return response()->json([

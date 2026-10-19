@@ -55,10 +55,9 @@ class AmbienteController extends Controller
 
         $validated = $request->validated();
 
-        // Si se reemplaza la foto, borramos la anterior para no dejar basura en el disco.
         if (array_key_exists('imagen_principal_a', $validated)
             && $validated['imagen_principal_a'] !== $ambiente->imagen_principal_a) {
-            ImagenSocialController::eliminarSiEsPropia($ambiente->imagen_principal_a);
+            SocialImagenController::eliminarSiEsPropia($ambiente->imagen_principal_a);
         }
 
         $ambiente->update($validated);
@@ -79,8 +78,7 @@ class AmbienteController extends Controller
             ], 404);
         }
 
-        ImagenSocialController::eliminarSiEsPropia($ambiente->imagen_principal_a);
-
+        SocialImagenController::eliminarSiEsPropia($ambiente->imagen_principal_a);
         $ambiente->delete();
 
         return response()->json([

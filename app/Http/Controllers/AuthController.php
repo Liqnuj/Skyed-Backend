@@ -29,7 +29,7 @@ class AuthController extends Controller
 
         if (!$user || !Hash::check($request->contrasena_u, $user->contrasena_u)) {
             return response()->json([
-                'message' => 'Credenciales incorrectas'
+                'message' => 'Correo o contraseña incorrectos'
             ], 401);
         }
 
@@ -49,20 +49,19 @@ class AuthController extends Controller
     {
         $validated = $request->validated();
 
-unset($validated['contexto']); 
+        $contexto = $validated['contexto'] ?? 'deportivo';
+        unset($validated['contexto']);
 
-$validated['contrasena_u'] = Hash::make($validated['contrasena_u']);
-$validated['estado_u'] = 'activo';
+        $validated['contrasena_u'] = Hash::make($validated['contrasena_u']);
+        $validated['estado_u'] = 'activo';
+        $validated['rh_u'] = 'N/A';
 
-$validated['rh_u'] = 'N/A';
+        $user = User::create($validated);
 
-$user = User::create($validated);
+        $nombreRol = $contexto === 'social' ? 'cliente' : 'participante';
+        $rol = Role::firstOrCreate(['nombre_rol' => $nombreRol]);
+        $user->roles()->attach($rol->id_rol, ['contexto' => $contexto]);
 
-$rolParticipante = Role::firstOrCreate(['nombre_rol' => 'participante']);
-$rolCliente = Role::firstOrCreate(['nombre_rol' => 'cliente']);
-
-$user->roles()->attach($rolParticipante->id_rol, ['contexto' => 'deportivo']);
-$user->roles()->attach($rolCliente->id_rol, ['contexto' => 'social']);
         $user->load('roles');
 
         $token = $user->createToken('skyed-token')->plainTextToken;
@@ -114,6 +113,33 @@ $user->roles()->attach($rolCliente->id_rol, ['contexto' => 'social']);
         return response()->json([
             'message' => 'Si el correo existe, se enviaron instrucciones de recuperación'
         ]);
+    }
+
+    /**
+     * Verificar que el código de 6 dígitos sea correcto antes de cambiar contraseña
+     */
+    public function verificarCodigo(Request $request): JsonResponse
+    {
+        $request->validate([
+            'correo_u' => 'required|email',
+            'token' => 'required|string'
+        ]);
+
+        $user = User::where('correo_u', $request->correo_u)->first();
+
+        if (!$user || $user->codigo !== $request->token) {
+            return response()->json([
+                'message' => 'El código ingresado es incorrecto o no existe'
+            ], 400);
+        }
+
+        if (now()->greaterThan($user->codigo_expira_at)) {
+            return response()->json([
+                'message' => 'El código ha expirado. Por favor, solicita uno nuevo.'
+            ], 400);
+        }
+
+        return response()->json(['message' => 'Código válido'], 200);
     }
 
     /**
@@ -187,8 +213,14 @@ $user->roles()->attach($rolCliente->id_rol, ['contexto' => 'social']);
         $user->codigo_expira_at = now()->addMinutes(15);
         $user->save();
         
-        Mail::to($user->correo_u)->send(new CodigoVerificacionMail((string)$codigoGenerado));
-
+        try {
+            Mail::to($user->correo_u)->send(new CodigoVerificacionMail((string)$codigoGenerado));
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'No hay conexión a internet o el servidor de correos no responde. Por favor, intenta de nuevo.'
+            ], 500);
+        }
         return response()->json([
             'message' => 'Código de verificación enviado con éxito'
         ], 200);
@@ -206,6 +238,9 @@ $user->roles()->attach($rolCliente->id_rol, ['contexto' => 'social']);
             'correo_u' => $user->correo_u,
             'ciudad_u' => $user->ciudad_u,
             'telefono_u' => $user->telefono_u,
+            'tipo_documento_u' => $user->tipo_documento_u,
+            'documento_u' => $user->documento_u,
+            'fecha_nacimiento_u' => $user->fecha_nacimiento_u,
             'foto_url' => $user->foto_u ? asset('storage/' . $user->foto_u) : null,
             'roles' => $user->roles->map(function ($role) {
                 return [
@@ -231,6 +266,9 @@ $user->roles()->attach($rolCliente->id_rol, ['contexto' => 'social']);
             'correo_u' => 'sometimes|email|unique:usuario,correo_u,' . $user->id_u . ',id_u',
             'telefono_u' => 'sometimes|string|unique:usuario,telefono_u,' . $user->id_u . ',id_u',
             'ciudad_u' => 'sometimes|nullable|string|max:80',
+            'tipo_documento_u' => 'sometimes|string|max:20',
+            'documento_u' => 'sometimes|numeric|unique:usuario,documento_u,' . $user->id_u . ',id_u',
+            'fecha_nacimiento_u' => 'sometimes|date',
         ]);
 
         $user->update($validated);
@@ -293,6 +331,22 @@ $user->roles()->attach($rolCliente->id_rol, ['contexto' => 'social']);
         return response()->json([
             'message' => 'Foto de perfil actualizada correctamente',
             'foto_url' => asset('storage/' . $path),
+        ]);
+    }
+
+
+    public function desactivarCuenta(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $user->estado_u = 'inactivo';
+        $user->save();
+
+        // Revoca todos los tokens activos, para cerrar sesión en todos lados
+        $user->tokens()->delete();
+
+        return response()->json([
+            'message' => 'Cuenta desactivada correctamente'
         ]);
     }
 
