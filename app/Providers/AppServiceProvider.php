@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Foundation\Console\ServeCommand;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -12,7 +13,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // FIX: `php artisan serve` arranca el servidor de PHP pasándole solo
+        // unas pocas variables de entorno, y no incluye TEMP/TMP. En Windows,
+        // sin ellas PHP no encuentra la carpeta temporal y TODA subida de
+        // archivos falla ("unable to create a temporary file"): fotos de
+        // eventos, de perfil y del panel social. Hay que reiniciar
+        // `php artisan serve` para que tome este cambio.
+        ServeCommand::$passthroughVariables = array_values(array_unique(array_merge(
+            ServeCommand::$passthroughVariables,
+            ['TEMP', 'TMP', 'TMPDIR'],
+        )));
     }
 
     /**

@@ -18,8 +18,12 @@ class SocialImagenController extends Controller
      */
     public function store(Request $request)
     {
-        if ($request->hasFile('imagen') && !$request->file('imagen')->isValid()) {
-            $codigo = $request->file('imagen')->getError();
+        // FIX: era hasFile(), que da false justamente cuando la subida falló,
+        // así que estos mensajes nunca se mostraban. file() devuelve el
+        // archivo aunque PHP lo haya rechazado.
+        $archivoSubido = $request->file('imagen');
+        if ($archivoSubido && !$archivoSubido->isValid()) {
+            $codigo = $archivoSubido->getError();
             $mensajes = [
                 UPLOAD_ERR_INI_SIZE => sprintf(
                     'El archivo supera upload_max_filesize (actualmente %s en el php.ini que está usando este proceso de PHP).',
@@ -28,8 +32,8 @@ class SocialImagenController extends Controller
                 UPLOAD_ERR_FORM_SIZE => 'El archivo supera el límite máximo definido en el formulario.',
                 UPLOAD_ERR_PARTIAL => 'El archivo se subió solo parcialmente, intenta de nuevo.',
                 UPLOAD_ERR_NO_FILE => 'No se recibió ningún archivo.',
-                UPLOAD_ERR_NO_TMP_DIR => 'El servidor no tiene una carpeta temporal configurada para subir archivos.',
-                UPLOAD_ERR_CANT_WRITE => 'El servidor no pudo escribir el archivo en disco (revisa permisos de la carpeta temporal).',
+                UPLOAD_ERR_NO_TMP_DIR => 'El servidor no encontró su carpeta temporal para recibir la imagen. Detén "php artisan serve" (Ctrl+C) y vuelve a iniciarlo.',
+                UPLOAD_ERR_CANT_WRITE => 'El servidor no pudo guardar la imagen en su carpeta temporal. Detén "php artisan serve" (Ctrl+C) y vuelve a iniciarlo.',
                 UPLOAD_ERR_EXTENSION => 'Una extensión de PHP bloqueó la subida del archivo.',
             ];
 
@@ -59,10 +63,11 @@ class SocialImagenController extends Controller
             'carpeta' => 'required|in:ambientes,eventos,deportivo',
         ], [
             'imagen.required' => 'No llegó ningún archivo de imagen al servidor.',
-            // Sale cuando PHP descarta el archivo por upload_max_filesize
-            // (antes aparecía en inglés: "The imagen failed to upload.").
+            // Sale cuando PHP descarta el archivo (antes en inglés: "The
+            // imagen failed to upload."); el bloque de arriba ya explica
+            // casi todos los motivos, esto queda por si acaso.
             'imagen.uploaded' => sprintf(
-                'La imagen supera el tamaño que acepta el servidor (%s). Intenta con una foto más liviana.',
+                'El servidor no pudo recibir la imagen (acepta hasta %s). Intenta con otra foto o reinicia "php artisan serve".',
                 ini_get('upload_max_filesize')
             ),
             'imagen.image' => 'El archivo no es una imagen válida.',
