@@ -135,6 +135,14 @@ class PagoController extends Controller
             ], 422);
         }
 
+        // FIX: confirmar el pago de una inscripción cancelada la "revivía"
+        // (confirmada y con QR activo) sin volver a descontar el cupo.
+        if ($pago->inscripcion?->estado_i === 'cancelada' && $nuevoEstado === 'confirmado') {
+            return response()->json([
+                'message' => 'La inscripción de este pago fue cancelada; no se puede confirmar.',
+            ], 422);
+        }
+
         DB::transaction(function () use (
             $pago,
             $nuevoEstado,
@@ -183,13 +191,15 @@ class PagoController extends Controller
             if (in_array($nuevoEstado, ['rechazado', 'cancelado'])) {
 
                 /*
-                 * Si la inscripción estaba confirmada,
-                 * significa que el cupo ya estaba ocupado.
-                 *
-                 * En ese caso debemos devolverlo.
+                 * FIX: el cupo se descuenta al crear la inscripción
+                 * (InscripcionController::store), no al confirmar el pago.
+                 * Antes solo se devolvía si estaba confirmada, así que al
+                 * rechazar un pago pendiente el cupo se perdía. Se devuelve
+                 * siempre que la inscripción no estuviera ya cancelada
+                 * (al cancelarla ya se había devuelto).
                  */
                 if (
-                    $inscripcion->estado_i === 'confirmada' &&
+                    $inscripcion->estado_i !== 'cancelada' &&
                     $inscripcion->evento
                 ) {
                     $inscripcion->evento->increment(

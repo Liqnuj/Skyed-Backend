@@ -180,6 +180,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // ========================================================
     Route::middleware('role.context:adminDeportivo')->group(function () {
         
+        // Subida de la imagen de un evento deportivo (panel /deportivo/admin)
+        Route::post('/deportivo/imagenes', [SocialImagenController::class, 'storeDeportivo']);
+
         // Eventos
         Route::post('/eventos', [EventoDeportivoController::class, 'store']);
         Route::put('/eventos/{id}', [EventoDeportivoController::class, 'update']);

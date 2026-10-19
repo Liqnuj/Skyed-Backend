@@ -322,6 +322,14 @@ class InscripcionController extends Controller
                     'estado_qr' => 'cancelado'
                 ]);
             }
+
+            // FIX: el pago quedaba "pendiente" y aparecía en el panel como
+            // pago por validar de una inscripción que ya no existe.
+            if ($inscripcion->pago && $inscripcion->pago->estado_p === 'pendiente') {
+                $inscripcion->pago->update([
+                    'estado_p' => 'cancelado'
+                ]);
+            }
         });
 
         return response()->json([

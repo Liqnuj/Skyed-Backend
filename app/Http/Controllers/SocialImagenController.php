@@ -56,9 +56,15 @@ class SocialImagenController extends Controller
 
         $request->validate([
             'imagen' => 'required|image|mimes:jpg,jpeg,png,webp|max:8192',
-            'carpeta' => 'required|in:ambientes,eventos',
+            'carpeta' => 'required|in:ambientes,eventos,deportivo',
         ], [
             'imagen.required' => 'No llegó ningún archivo de imagen al servidor.',
+            // Sale cuando PHP descarta el archivo por upload_max_filesize
+            // (antes aparecía en inglés: "The imagen failed to upload.").
+            'imagen.uploaded' => sprintf(
+                'La imagen supera el tamaño que acepta el servidor (%s). Intenta con una foto más liviana.',
+                ini_get('upload_max_filesize')
+            ),
             'imagen.image' => 'El archivo no es una imagen válida.',
             'imagen.mimes' => 'Solo se aceptan imágenes JPG, PNG o WEBP.',
             'imagen.max' => 'La imagen no debe superar 8 MB.',
@@ -77,7 +83,21 @@ class SocialImagenController extends Controller
 
         return response()->json([
             'url' => asset('storage/' . $path),
+            // Ruta relativa al disco public: es lo que guarda imagen_e de
+            // los eventos deportivos (su Resource arma la URL completa).
+            'path' => $path,
         ], 201);
+    }
+
+    /**
+     * POST /deportivo/imagenes (adminDeportivo): mismo proceso de subida,
+     * siempre en la carpeta "deportivo" del disco public.
+     */
+    public function storeDeportivo(Request $request)
+    {
+        $request->merge(['carpeta' => 'deportivo']);
+
+        return $this->store($request);
     }
 
     /**

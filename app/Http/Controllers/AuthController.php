@@ -357,6 +357,10 @@ class AuthController extends Controller
     {
         $request->validate([
             'foto' => 'required|image|mimes:jpg,jpeg,png,webp|max:3072',
+        ], [
+            'foto.uploaded' => 'La foto supera el tamaño que acepta el servidor. Intenta con una imagen más liviana.',
+            'foto.max' => 'La foto no debe superar 3 MB.',
+            'foto.image' => 'El archivo debe ser una imagen.',
         ]);
 
         $user = $request->user();

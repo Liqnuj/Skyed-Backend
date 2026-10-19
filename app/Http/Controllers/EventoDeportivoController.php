@@ -138,8 +138,19 @@ class EventoDeportivoController extends Controller
             ], 404);
         }
 
-        if ($evento->imagen) {
-            Storage::disk('public')->delete($evento->imagen);
+        // FIX: la tabla inscripcion tiene cascadeOnDelete hacia el evento,
+        // así que borrar un evento con inscritos eliminaba en silencio sus
+        // inscripciones (y fallaba con 500 si alguna ya tenía resultado).
+        $inscritos = $evento->inscripciones()->count();
+        if ($inscritos > 0) {
+            return response()->json([
+                'message' => "Este evento tiene {$inscritos} inscripción(es). Inhabilítalo en lugar de eliminarlo para conservar el historial."
+            ], 409);
+        }
+
+        // FIX: usaba $evento->imagen (no existe); la columna es imagen_e.
+        if ($evento->imagen_e) {
+            Storage::disk('public')->delete($evento->imagen_e);
         }
 
         $evento->delete();

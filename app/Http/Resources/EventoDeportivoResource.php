@@ -4,10 +4,29 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class EventoDeportivoResource extends JsonResource
 {
+    /**
+     * FIX: Storage::disk('public')->url() arma la URL con APP_URL, que en
+     * el .env es "http://localhost" (sin el puerto 8000 de artisan serve),
+     * así que las fotos de los eventos no cargaban. asset() usa el host
+     * real de la petición, igual que las fotos de perfil y de Social.
+     */
+    private function urlImagen(): ?string
+    {
+        if (!$this->imagen_e) {
+            return null;
+        }
+
+        if (Str::startsWith($this->imagen_e, ['http://', 'https://'])) {
+            return $this->imagen_e;
+        }
+
+        return asset('storage/' . ltrim($this->imagen_e, '/'));
+    }
+
     public function toArray(Request $request): array
     {
         return [
@@ -27,9 +46,7 @@ class EventoDeportivoResource extends JsonResource
             // consume el frontend) y también la URL completa lista
             // para usar en un <img src>.
             'imagen' => $this->imagen_e,
-            'imagen_url' => $this->imagen_e
-                ? Storage::disk('public')->url($this->imagen_e)
-                : null,
+            'imagen_url' => $this->urlImagen(),
 
             'cupos_disponibles' => $this->cupos_disponibles_e,
             'estado' => $this->estado_e,
