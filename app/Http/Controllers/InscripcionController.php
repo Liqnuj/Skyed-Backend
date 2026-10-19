@@ -10,6 +10,7 @@ use App\Models\Pago;
 use App\Models\QrEntrada;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Http\Requests\StoreInscripcionRequest;
@@ -154,12 +155,17 @@ class InscripcionController extends Controller
                 $invitadoId = $invitado->id_inv;
             }
 
+            // FIX: el precio lo decide el servidor con el precio del evento.
+            // Antes se guardaba el precio_pagado_i que mandaba el navegador,
+            // así que se podía inscribir pagando $1 a un evento de $90.000.
+            $precio = (float) $evento->precio_e;
+
             // Crear inscripción.
             $inscripcion = Inscripcion::create([
                 'cupo_i' => 1,
                 'estado_i' => 'pendiente',
                 'fecha_i' => now(),
-                'precio_pagado_i' => $validated['precio_pagado_i'] ?? null,
+                'precio_pagado_i' => $precio,
 
                 'contacto_emergencia_nombre' =>
                     $validated['contacto_emergencia_nombre'],
@@ -189,8 +195,7 @@ class InscripcionController extends Controller
                 'comprobante_p' =>
                     $validated['comprobante_p'] ?? null,
 
-                'monto_p' =>
-                    $validated['precio_pagado_i'] ?? 0,
+                'monto_p' => $precio,
 
                 'fecha_p' => now(),
                 'estado_p' => 'pendiente',
@@ -221,7 +226,15 @@ class InscripcionController extends Controller
             return $resultado;
         }
 
-        Mail::to($resultado->usuario->correo_u)->send(new InscripcionQrMail($resultado));
+        // FIX: la inscripción ya quedó guardada; si el correo falla (sin
+        // internet, SMTP caído) no debe responder 500, porque el usuario
+        // creería que no se inscribió y el cupo ya se descontó. El QR
+        // igual queda disponible en "Mi entrada".
+        try {
+            Mail::to($resultado->usuario->correo_u)->send(new InscripcionQrMail($resultado));
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo enviar el correo con el QR de la inscripción ' . $resultado->id_i . ': ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'Inscripción creada correctamente',

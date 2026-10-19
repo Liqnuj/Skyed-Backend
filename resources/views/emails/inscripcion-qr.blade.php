@@ -9,9 +9,13 @@
         <h2 style="color:#fff; margin-top:0;">¡Inscripción confirmada!</h2>
         <p>Hola {{ $nombreUsuario }}, este es tu código QR para <strong>{{ $nombreEvento }}</strong>.</p>
 
+        @if ($qrImagen)
         <img src="{{ $message->embedData($qrImagen, 'qr.png', 'image/png') }}"
              alt="Código QR de la inscripción" width="260" height="260"
              style="margin: 1.5rem 0; border-radius: 8px;">
+        @else
+        <p style="margin: 1.5rem 0;">Tu código QR estará disponible en la sección "Mi entrada" de Skyed.</p>
+        @endif
 
         <p style="font-size: .85rem; color:#9aa5b8;">Código: {{ $codigo }}</p>
         <p style="font-size: .9rem;">Muestra este código en el punto de control el día del evento.</p>

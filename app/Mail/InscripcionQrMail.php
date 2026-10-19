@@ -33,10 +33,17 @@ class InscripcionQrMail extends Mailable
         $codigo = $this->inscripcion->qr->codigo_qr;
 
         // Mismo servicio y mismo texto que usa Participant.tsx -> mismo QR.
-        $qrImagen = Http::get('https://api.qrserver.com/v1/create-qr-code/', [
-            'size' => '260x260',
-            'data' => $codigo,
-        ])->body();
+        // Con timeout corto: si el servicio externo no responde, el correo
+        // sale igual con el código en texto (la vista omite la imagen).
+        try {
+            $respuesta = Http::connectTimeout(3)->timeout(6)->get('https://api.qrserver.com/v1/create-qr-code/', [
+                'size' => '260x260',
+                'data' => $codigo,
+            ]);
+            $qrImagen = $respuesta->successful() ? $respuesta->body() : null;
+        } catch (\Throwable $e) {
+            $qrImagen = null;
+        }
 
         return new Content(
             view: 'emails.inscripcion-qr',

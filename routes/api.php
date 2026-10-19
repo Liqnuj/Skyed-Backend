@@ -38,12 +38,17 @@ use App\Http\Controllers\UserRoleController;
 |--------------------------------------------------------------------------
 */
 // Autenticación
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:3,1');
-Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
-Route::post('/enviar-codigo-recuperacion', [AuthController::class, 'enviarCodigoRecuperacion']);
-Route::post('/verificar-codigo', [AuthController::class, 'verificarCodigo']);
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
-Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:3,1');
+// El tercer parámetro de throttle es el nombre del contador. Sin él, TODAS
+// las rutas con throttle compartían un solo contador por IP: 3 mensajes a
+// SKAI (que está también en /login) bloqueaban el inicio de sesión.
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:3,1,login');
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1,register');
+// FIX: sin throttle se podía probar el código de 6 dígitos por fuerza
+// bruta y enviar correos de recuperación sin límite (spam al usuario).
+Route::post('/enviar-codigo-recuperacion', [AuthController::class, 'enviarCodigoRecuperacion'])->middleware('throttle:3,1,enviar-codigo');
+Route::post('/verificar-codigo', [AuthController::class, 'verificarCodigo'])->middleware('throttle:6,1,verificar-codigo');
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1,forgot-password');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:3,1,reset-password');
 
 // Catálogos públicos (Lectura)
 Route::get('/eventos', [EventoDeportivoController::class, 'index']);
@@ -57,7 +62,7 @@ Route::get('/eventos-sociales/{id}', [EventoRealizadoController::class, 'show'])
 
 // Asistente virtual SKAI (funciona para visitantes sin sesión también).
 // Throttle para no dejar la key de Gemini abierta a abuso.
-Route::post('/asistente', [SkaiController::class, 'responder'])->middleware('throttle:20,1');
+Route::post('/asistente', [SkaiController::class, 'responder'])->middleware('throttle:20,1,skai');
 
 
 /*
@@ -125,13 +130,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/kits', [KitController::class, 'index']);
     Route::get('/kits/{id}', [KitController::class, 'show']);
 
-    // Invitados (Autoservicio)
-    Route::get('/invitados', [InvitadoController::class, 'index']);
-    Route::get('/invitados/{id}', [InvitadoController::class, 'show']);
-    Route::post('/invitados', [InvitadoController::class, 'store']);
-    Route::put('/invitados/{id}', [InvitadoController::class, 'update']);
-    Route::delete('/invitados/{id}', [InvitadoController::class, 'destroy']);
-
     // Reservas y PQR (Autoservicio)
     Route::get('/reservas', [ReservaController::class, 'index']);
     Route::get('/reservas/{id}', [ReservaController::class, 'show']);
@@ -158,6 +156,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/users', [UserController::class, 'store']);
         Route::put('/users/{id}', [UserController::class, 'update']);
         Route::delete('/users/{id}', [UserController::class, 'destroy']);
+
+        // Invitados (acompañantes de una inscripción).
+        // FIX: estaban en la zona general, así que cualquier usuario con
+        // sesión podía listar, editar y borrar los invitados de TODOS
+        // (documento, teléfono, RH, fecha de nacimiento). El participante
+        // registra a su invitado dentro de POST /eventos/{id}/inscripciones.
+        Route::get('/invitados', [InvitadoController::class, 'index']);
+        Route::get('/invitados/{id}', [InvitadoController::class, 'show']);
+        Route::post('/invitados', [InvitadoController::class, 'store']);
+        Route::put('/invitados/{id}', [InvitadoController::class, 'update']);
+        Route::delete('/invitados/{id}', [InvitadoController::class, 'destroy']);
 
         // Copias de Seguridad
         Route::get('/copias-seguridad', [CopiaSeguridadController::class, 'index']);

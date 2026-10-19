@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
@@ -31,6 +32,14 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'Correo o contraseña incorrectos'
             ], 401);
+        }
+
+        // FIX: una cuenta desactivada (por el propio usuario desde su
+        // perfil o por un administrador) podía volver a iniciar sesión.
+        if ($user->estado_u === 'inactivo') {
+            return response()->json([
+                'message' => 'Tu cuenta está desactivada. Comunícate con el administrador de Skyed para reactivarla.'
+            ], 403);
         }
 
         $token = $user->createToken('skyed-token')->plainTextToken;
@@ -127,16 +136,8 @@ class AuthController extends Controller
 
         $user = User::where('correo_u', $request->correo_u)->first();
 
-        if (!$user || $user->codigo !== $request->token) {
-            return response()->json([
-                'message' => 'El código ingresado es incorrecto o no existe'
-            ], 400);
-        }
-
-        if (now()->greaterThan($user->codigo_expira_at)) {
-            return response()->json([
-                'message' => 'El código ha expirado. Por favor, solicita uno nuevo.'
-            ], 400);
+        if ($error = $this->validarCodigoRecuperacion($user, $request->token)) {
+            return $error;
         }
 
         return response()->json(['message' => 'Código válido'], 200);
@@ -151,24 +152,17 @@ class AuthController extends Controller
 
         $user = User::where('correo_u', $validated['correo_u'])->first();
 
-        if (!$user || $user->codigo !== $validated['token']) {
-            return response()->json([
-                'message' => 'El código ingresado es incorrecto o no existe'
-            ], 400);
-        }
-
-        if (now()->greaterThan($user->codigo_expira_at)) {
-            return response()->json([
-                'message' => 'El código ha expirado. Por favor, solicita uno nuevo.'
-            ], 400);
+        if ($error = $this->validarCodigoRecuperacion($user, $validated['token'])) {
+            return $error;
         }
 
         $user->contrasena_u = Hash::make($validated['contrasena_u']);
-        
+
         $user->codigo = null;
         $user->codigo_expira_at = null;
         $user->save();
         $user->tokens()->delete();
+        RateLimiter::clear($this->claveIntentosCodigo($user));
 
         return response()->json([
             'message' => 'Contraseña actualizada correctamente'
@@ -208,10 +202,12 @@ class AuthController extends Controller
             return response()->json(['message' => 'El correo no está registrado en Skyed'], 404);
         }
 
-        $codigoGenerado = rand(100000, 999999);
+        // random_int es criptográficamente seguro; rand() es predecible.
+        $codigoGenerado = random_int(100000, 999999);
         $user->codigo = $codigoGenerado;
         $user->codigo_expira_at = now()->addMinutes(15);
         $user->save();
+        RateLimiter::clear($this->claveIntentosCodigo($user));
         
         try {
             Mail::to($user->correo_u)->send(new CodigoVerificacionMail((string)$codigoGenerado));
@@ -224,6 +220,57 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Código de verificación enviado con éxito'
         ], 200);
+    }
+
+    /**
+     * Valida el código de recuperación de 6 dígitos. Devuelve la respuesta
+     * de error, o null si el código es correcto y vigente.
+     *
+     * Tras 5 intentos fallidos el código se invalida: así no se puede
+     * adivinar por fuerza bruta aunque se cambie de IP (el throttle de la
+     * ruta solo limita por IP).
+     */
+    private function validarCodigoRecuperacion(?User $user, string $token): ?JsonResponse
+    {
+        $incorrecto = response()->json([
+            'message' => 'El código ingresado es incorrecto o no existe'
+        ], 400);
+
+        if (!$user || !$user->codigo) {
+            return $incorrecto;
+        }
+
+        $clave = $this->claveIntentosCodigo($user);
+
+        if (!hash_equals((string) $user->codigo, trim($token))) {
+            RateLimiter::hit($clave, 15 * 60);
+
+            if (RateLimiter::attempts($clave) >= 5) {
+                $user->codigo = null;
+                $user->codigo_expira_at = null;
+                $user->save();
+                RateLimiter::clear($clave);
+
+                return response()->json([
+                    'message' => 'Demasiados intentos fallidos. Por seguridad el código se anuló: solicita uno nuevo.'
+                ], 429);
+            }
+
+            return $incorrecto;
+        }
+
+        if (!$user->codigo_expira_at || now()->greaterThan($user->codigo_expira_at)) {
+            return response()->json([
+                'message' => 'El código ha expirado. Por favor, solicita uno nuevo.'
+            ], 400);
+        }
+
+        return null;
+    }
+
+    private function claveIntentosCodigo(User $user): string
+    {
+        return 'codigo-recuperacion:' . $user->id_u;
     }
 
     /**
@@ -320,7 +367,9 @@ class AuthController extends Controller
             Storage::disk('public')->delete($user->foto_u);
         }
 
-        $nombreArchivo = uniqid() . '.' . $archivo->getClientOriginalExtension();
+        // extension() se deduce del contenido real del archivo, no del nombre que
+        // manda el navegador (evita guardar algo como "foto.php").
+        $nombreArchivo = uniqid() . '.' . $archivo->extension();
         $contenido = $archivo->get(); // lee el contenido en memoria, sin depender de getRealPath()
 
         Storage::disk('public')->put('fotos_perfil/' . $nombreArchivo, $contenido);

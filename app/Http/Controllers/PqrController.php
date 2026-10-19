@@ -60,7 +60,9 @@ class PqrController extends Controller
         $validated = $request->validate([
             'tipo_pqr' => 'required|in:peticion,queja,reclamo,sugerencia,felicitacion',
             'asunto_pqr' => 'required|string|max:150',
-            'mensaje_pqr' => 'required|string',
+            // El formulario limita a 1000 caracteres; sin max se podían
+            // guardar textos de varios MB llamando a la API directamente.
+            'mensaje_pqr' => 'required|string|max:2000',
         ]);
 
         $pqr = Pqr::create([

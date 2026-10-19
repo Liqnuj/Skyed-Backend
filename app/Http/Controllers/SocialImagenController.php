@@ -68,7 +68,8 @@ class SocialImagenController extends Controller
 
         $archivo = $request->file('imagen');
         $carpeta = $request->input('carpeta');
-        $nombreArchivo = uniqid($carpeta . '_') . '.' . $archivo->getClientOriginalExtension();
+        // extension() se deduce del contenido real, no del nombre que manda el navegador.
+        $nombreArchivo = uniqid($carpeta . '_') . '.' . $archivo->extension();
         $contenido = $archivo->get(); // en memoria, sin depender de getRealPath()
 
         Storage::disk('public')->put($carpeta . '/' . $nombreArchivo, $contenido);

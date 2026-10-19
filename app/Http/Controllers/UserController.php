@@ -110,4 +110,38 @@ class UserController extends Controller
             'user' => $user->fresh()->load('roles')
         ]);
     }
+
+    /**
+     * "Eliminar" un usuario.
+     *
+     * FIX: la ruta DELETE /users/{id} existía pero este método no, así que
+     * respondía 500. No se borra el registro (tiene inscripciones, pagos,
+     * reservas y PQR asociados): se desactiva y se cierran sus sesiones,
+     * igual que cuando el usuario desactiva su propia cuenta. Un admin
+     * puede reactivarlo con PUT /users/{id} y estado_u = activo.
+     */
+    public function destroy(Request $request, $id)
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'Usuario no encontrado'
+            ], 404);
+        }
+
+        if ($user->id_u === $request->user()->id_u) {
+            return response()->json([
+                'message' => 'No puedes desactivar tu propia cuenta de administrador desde aquí'
+            ], 422);
+        }
+
+        $user->estado_u = 'inactivo';
+        $user->save();
+        $user->tokens()->delete();
+
+        return response()->json([
+            'message' => 'Usuario desactivado correctamente'
+        ]);
+    }
 }
