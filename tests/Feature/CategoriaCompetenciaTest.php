@@ -8,7 +8,8 @@ function crearEventoParaCategoria(): EventoDeportivo
 {
     return EventoDeportivo::create([
         'nombre_e' => 'Carrera de Montaña',
-        'categoria_e' => 'atletismo',
+        'categoria_e' => 'mtb', // categoría válida (ruta, mtb, gravel, pista o bmx)
+        'precio_e' => 60000,
         'fecha_e' => now()->addMonth()->toDateString(),
         'hora_e' => '06:00',
         'ubicacion_e' => 'Sendero El Alto',

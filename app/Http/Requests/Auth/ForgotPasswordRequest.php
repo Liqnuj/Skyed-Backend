@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Support\ReglasUsuario;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ForgotPasswordRequest extends FormRequest
@@ -9,6 +10,13 @@ class ForgotPasswordRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->correo_u)) {
+            $this->merge(['correo_u' => ReglasUsuario::normalizarCorreo($this->correo_u)]);
+        }
     }
 
     public function rules(): array

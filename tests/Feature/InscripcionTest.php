@@ -9,7 +9,8 @@ function crearEventoParaInscripcion(array $overrides = []): EventoDeportivo
 {
     return EventoDeportivo::create(array_merge([
         'nombre_e' => 'Ciclo Ruta Boyacá',
-        'categoria_e' => 'ciclismo',
+        'categoria_e' => 'ruta', // categoría válida (ruta, mtb, gravel, pista o bmx)
+        'precio_e' => 50000,
         'fecha_e' => now()->addMonth()->toDateString(),
         'hora_e' => '07:00',
         'ubicacion_e' => 'Parque principal, Tunja',
@@ -183,4 +184,28 @@ it('cancelar dos veces la misma inscripción no repone el cupo dos veces', funct
         ->assertStatus(422);
 
     expect($evento->fresh()->cupos_disponibles_e)->toBe(5);
+});
+
+it('no permite inscribirse sin iniciar sesión', function () {
+    $evento = crearEventoParaInscripcion();
+
+    $this->postJson("/api/eventos/{$evento->id_e}/inscripciones", datosInscripcion())
+        ->assertStatus(401);
+
+    expect(Inscripcion::count())->toBe(0);
+});
+
+it('pide los datos del contacto de emergencia', function () {
+    $evento = crearEventoParaInscripcion();
+
+    $this->actingAs(userWithRole('participante'))
+        ->postJson("/api/eventos/{$evento->id_e}/inscripciones", ['cupo_i' => 1])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors([
+            'contacto_emergencia_nombre',
+            'contacto_emergencia_telefono',
+            'contacto_emergencia_parentesco',
+        ]);
+
+    expect($evento->fresh()->cupos_disponibles_e)->toBe(2);
 });

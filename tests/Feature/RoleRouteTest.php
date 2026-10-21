@@ -21,7 +21,7 @@ it('permite el acceso y devuelve los datos si el usuario tiene el rol correcto',
         'nombre_rol' => 'adminDeportivo'
     ]);
 
-    $user->roles()->attach($rolAdminDeportivo->id_rol, ['contexto' => 'general']);
+    $user->roles()->attach($rolAdminDeportivo->id_rol, ['contexto' => 'deportivo']);
 
     // Agrega $this-> antes de actingAs
     $this->actingAs($user)
