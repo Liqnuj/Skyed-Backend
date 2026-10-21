@@ -9,6 +9,7 @@ use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Mail\CodigoVerificacionMail;
 use App\Models\User;
 use App\Models\Role;
+use App\Support\ReglasUsuario;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +27,7 @@ class AuthController extends Controller
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = User::where('correo_u', $request->correo_u)->first();
+        $user = ReglasUsuario::buscarPorCorreo($request->correo_u);
 
         if (!$user || !Hash::check($request->contrasena_u, $user->contrasena_u)) {
             return response()->json([
@@ -87,7 +88,7 @@ class AuthController extends Controller
      */
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
-        $user = User::where('correo_u', $request->correo_u)->first();
+        $user = ReglasUsuario::buscarPorCorreo($request->correo_u);
 
         if (!$user) {
             return response()->json([
@@ -134,7 +135,7 @@ class AuthController extends Controller
             'token' => 'required|string'
         ]);
 
-        $user = User::where('correo_u', $request->correo_u)->first();
+        $user = ReglasUsuario::buscarPorCorreo($request->correo_u);
 
         if ($error = $this->validarCodigoRecuperacion($user, $request->token)) {
             return $error;
@@ -150,7 +151,7 @@ class AuthController extends Controller
     {
         $validated = $request->validated();
 
-        $user = User::where('correo_u', $validated['correo_u'])->first();
+        $user = ReglasUsuario::buscarPorCorreo($validated['correo_u']);
 
         if ($error = $this->validarCodigoRecuperacion($user, $validated['token'])) {
             return $error;
@@ -196,7 +197,7 @@ class AuthController extends Controller
      */
     public function enviarCodigoRecuperacion(ForgotPasswordRequest $request)
     {
-        $user = User::where('correo_u', $request->correo_u)->first();
+        $user = ReglasUsuario::buscarPorCorreo($request->correo_u);
 
         if (!$user) {
             return response()->json(['message' => 'El correo no está registrado en Skyed'], 404);
@@ -307,16 +308,23 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
+        // Mismas reglas que el registro (antes aquí se podía poner un
+        // nombre con números, un teléfono con letras o un documento con
+        // decimales, que además rompía la columna numérica).
+        $request->merge(ReglasUsuario::limpiar($request->only([
+            'nombre_u', 'apellido_u', 'telefono_u', 'documento_u', 'correo_u', 'ciudad_u',
+        ])));
+
         $validated = $request->validate([
-            'nombre_u' => 'sometimes|string|max:50',
-            'apellido_u' => 'sometimes|string|max:50',
-            'correo_u' => 'sometimes|email|unique:usuario,correo_u,' . $user->id_u . ',id_u',
-            'telefono_u' => 'sometimes|string|unique:usuario,telefono_u,' . $user->id_u . ',id_u',
+            'nombre_u' => ['sometimes', 'required', 'string', 'max:50', 'regex:' . ReglasUsuario::NOMBRE],
+            'apellido_u' => ['sometimes', 'required', 'string', 'max:50', 'regex:' . ReglasUsuario::NOMBRE],
+            'correo_u' => ['sometimes', 'required', 'email', 'max:80', ReglasUsuario::correoUnico($user->id_u)],
+            'telefono_u' => 'sometimes|required|digits_between:7,15|unique:usuario,telefono_u,' . $user->id_u . ',id_u',
             'ciudad_u' => 'sometimes|nullable|string|max:80',
-            'tipo_documento_u' => 'sometimes|string|max:20',
-            'documento_u' => 'sometimes|numeric|unique:usuario,documento_u,' . $user->id_u . ',id_u',
-            'fecha_nacimiento_u' => 'sometimes|date',
-        ]);
+            'tipo_documento_u' => 'sometimes|required|string|max:30',
+            'documento_u' => 'sometimes|required|integer|digits_between:5,12|unique:usuario,documento_u,' . $user->id_u . ',id_u',
+            'fecha_nacimiento_u' => 'sometimes|required|date|after:1900-01-01|before_or_equal:' . ReglasUsuario::fechaMaximaNacimiento(),
+        ], ReglasUsuario::mensajes());
 
         $user->update($validated);
 
@@ -330,8 +338,12 @@ class AuthController extends Controller
     {
         $request->validate([
             'contrasena_actual' => 'required|string',
-            'nueva_contrasena' => 'required|string|min:8|confirmed',
-        ]);
+            // Misma regla que el registro y la recuperación de contraseña.
+            'nueva_contrasena' => array_merge(ReglasUsuario::contrasena(), ['different:contrasena_actual']),
+        ], array_merge(ReglasUsuario::mensajes('nueva_contrasena'), [
+            'contrasena_actual.required' => 'Escribe tu contraseña actual.',
+            'nueva_contrasena.different' => 'La nueva contraseña debe ser distinta a la actual.',
+        ]));
 
         $user = $request->user();
 
