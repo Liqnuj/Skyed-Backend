@@ -22,6 +22,7 @@ class Reserva extends Model
         'estado_rese',
         'creado_en_rese',
         'id_u',
+        'id_tipo_eves',
         'id_er',
     ];
 

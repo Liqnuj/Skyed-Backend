@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('reserva', function (Blueprint $table) {
             $table->id('id_rese');
-
+            
             $table->date('fecha_evento_rese');
             $table->integer('invitados_rese');
             $table->decimal('presupuesto_rese', 12, 2);
@@ -24,7 +24,11 @@ return new class extends Migration
                 ->constrained('usuario', 'id_u')
                 ->cascadeOnDelete();
 
+            $table->foreignId('id_tipo_eves')
+                ->constrained('tipo_evento', 'id_tipo_eves');
+
             $table->foreignId('id_er')
+                ->nullable()
                 ->constrained('evento_realizado', 'id_er')
                 ->cascadeOnDelete();
 

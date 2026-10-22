@@ -5,13 +5,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\EventoDeportivoController;
 use App\Http\Controllers\CategoriaCompetenciaController;
-use App\Http\Controllers\PatrocinadorController;
-use App\Http\Controllers\InscripcionController;
-use App\Http\Controllers\EntregaKitController;
 use App\Http\Controllers\HistorialParticipacionController;
-use App\Http\Controllers\EstacionController;
 use App\Http\Controllers\RutaEventoController;
-use App\Http\Controllers\ResultadoController;
 use App\Http\Controllers\TipoEventoController;
 use App\Http\Controllers\AmbienteController;
 use App\Http\Controllers\ServicioController;
@@ -20,17 +15,49 @@ use App\Http\Controllers\SocialImagenController;
 use App\Http\Controllers\ReservaController;
 use App\Http\Controllers\PqrController;
 use App\Http\Controllers\CopiaSeguridadController;
-use App\Http\Controllers\PagoController;
 use App\Http\Controllers\QrEntradaController;
 use App\Http\Controllers\PremioController;
-use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\InvitadoController;
-use App\Http\Controllers\KitController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SkaiController;
-use App\Http\Middleware\CheckRoleContext;
 use App\Http\Controllers\UserRoleController;
 
+// AGREGADOS: Importaciones de los controladores generales que faltaban
+use App\Http\Controllers\NotificacionController;
+use App\Http\Controllers\InscripcionController;
+use App\Http\Controllers\PatrocinadorController;
+use App\Http\Controllers\EntregaKitController;
+use App\Http\Controllers\EstacionController;
+use App\Http\Controllers\ResultadoController;
+use App\Http\Controllers\PagoController;
+use App\Http\Controllers\KitController;
+
+// ALIAS PARA ADMIN: Para evitar choque de nombres con los de arriba, les damos un alias (As)
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\UsuarioController as AdminUsuarioController;
+use App\Http\Controllers\Admin\EventoController as AdminEventoController;
+use App\Http\Controllers\Admin\KitController as AdminKitController;
+use App\Http\Controllers\Admin\CategoriaController as AdminCategoriaController;
+use App\Http\Controllers\Admin\PatrocinadorController as AdminPatrocinadorController;
+use App\Http\Controllers\Admin\EventoPatrocinadorController as AdminEventoPatroController;
+use App\Http\Controllers\Admin\ResultadoController as AdminResultadoController;
+use App\Http\Controllers\Admin\InscripcionController as AdminInscripcionController;
+use App\Http\Controllers\Admin\PagoController as AdminPagoController;
+use App\Http\Controllers\Admin\EntregaKitController as AdminEntregaKitController;
+use App\Http\Controllers\Admin\RutaController as AdminRutaController;
+use App\Http\Controllers\Admin\EstacionController as AdminEstacionController;
+use App\Http\Controllers\Admin\NotificacionController as AdminNotificacionController;
+use App\Http\Controllers\Admin\RespaldoController as AdminRespaldoController;
+
+use App\Http\Middleware\CheckRoleContext;
+
+
+use App\Models\TipoEvento;
+
+Route::get('/tipos-evento', function () {
+    $tipos = TipoEvento::where('modulo_tipo_eves', 'Social')->get();
+    return response()->json($tipos);
+});
 
 /*
 |--------------------------------------------------------------------------
