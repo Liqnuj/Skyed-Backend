@@ -16,7 +16,7 @@ return new class extends Migration
                 ->cascadeOnDelete();
 
             $table->foreignId('id_rol')
-                ->constrained('roles', 'id_rol')
+                ->constrained('rol', 'id_rol')
                 ->cascadeOnDelete();
 
             $table->string('contexto', 20);
