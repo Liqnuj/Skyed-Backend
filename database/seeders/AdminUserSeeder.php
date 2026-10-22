@@ -10,41 +10,74 @@ use Illuminate\Support\Facades\Hash;
 class AdminUserSeeder extends Seeder
 {
     /**
-     * Crea un usuario Administrador con acceso a ambos dominios
-     * (deportivo y social) para poder probar las rutas protegidas
-     * desde Postman. Cambia el correo/contraseña si lo vas a dejar
-     * en un ambiente compartido.
+     * Crea usuarios administradores independientes para los dominios
+     * deportivo y social.
      */
     public function run(): void
     {
-        $admin = User::firstOrCreate(
-            ['correo_u' => 'admin@skyed.test'],
+        $admins = [
             [
-                'tipo_documento_u' => 'CC',
-                'documento_u' => 100000000,
-                'nombre_u' => 'Admin',
+                'correo_u' => 'admindeportivo@skyed.test',
+                'documento_u' => 100000001,
+                'nombre_u' => 'Admin Deportivo',
                 'apellido_u' => 'SkyEd',
-                'rh_u' => 'O+',
-                'telefono_u' => '3000000000',
-                'fecha_nacimiento_u' => '1990-01-01',
-                'contrasena_u' => Hash::make('password123'),
-                'estado_u' => 'activo',
-            ]
-        );
+                'telefono_u' => '3000000001',
+                'rol' => 'adminDeportivo',
+                'contexto' => 'deportivo',
+            ],
+            [
+                'correo_u' => 'adminsocial@skyed.test',
+                'documento_u' => 100000002,
+                'nombre_u' => 'Admin Social',
+                'apellido_u' => 'SkyEd',
+                'telefono_u' => '3000000002',
+                'rol' => 'adminSocial',
+                'contexto' => 'social',
+            ],
+        ];
 
-        $rolAdminDeportivo = Role::where('nombre_rol', 'adminDeportivo')->first();
-        $rolAdminSocial = Role::where('nombre_rol', 'adminSocial')->first();
+        foreach ($admins as $adminData) {
+            $role = Role::where('nombre_rol', $adminData['rol'])->firstOrFail();
+            $admin = User::firstOrNew(['correo_u' => $adminData['correo_u']]);
 
-        if ($rolAdminDeportivo) {
-            $admin->roles()->syncWithoutDetaching([
-                $rolAdminDeportivo->id_rol => ['contexto' => 'deportivo'],
+            if (!$admin->exists) {
+                $admin->fill([
+                    'tipo_documento_u' => 'CC',
+                    'documento_u' => $this->availableDocument($adminData['documento_u']),
+                    'nombre_u' => $adminData['nombre_u'],
+                    'apellido_u' => $adminData['apellido_u'],
+                    'rh_u' => 'O+',
+                    'telefono_u' => $this->availablePhone($adminData['telefono_u']),
+                    'fecha_nacimiento_u' => '1990-01-01',
+                    'estado_u' => 'activo',
+                ]);
+            }
+
+            $admin->contrasena_u = Hash::make('password123');
+            $admin->estado_u = 'activo';
+            $admin->save();
+
+            $admin->roles()->sync([
+                $role->id_rol => ['contexto' => $adminData['contexto']],
             ]);
         }
+    }
 
-        if ($rolAdminSocial) {
-            $admin->roles()->syncWithoutDetaching([
-                $rolAdminSocial->id_rol => ['contexto' => 'social'],
-            ]);
+    private function availablePhone(string $phone): string
+    {
+        while (User::where('telefono_u', $phone)->exists()) {
+            $phone = (string) ((int) $phone + 1);
         }
+
+        return $phone;
+    }
+
+    private function availableDocument(int $document): int
+    {
+        while (User::where('documento_u', $document)->exists()) {
+            $document++;
+        }
+
+        return $document;
     }
 }
