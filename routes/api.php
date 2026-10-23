@@ -21,7 +21,9 @@ use App\Http\Controllers\InvitadoController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SkaiController;
 use App\Http\Controllers\UserRoleController;
+
 use App\Models\TipoEvento;
+
 
 
 // AGREGADOS: Importaciones de los controladores generales que faltaban
@@ -33,6 +35,7 @@ use App\Http\Controllers\EstacionController;
 use App\Http\Controllers\ResultadoController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\KitController;
+
 
 // ALIAS PARA ADMIN: Para evitar choque de nombres con los de arriba, les damos un alias (As)
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
@@ -295,7 +298,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/reservas/{id}', [ReservaController::class, 'update']);
         Route::delete('/reservas/{id}', [ReservaController::class, 'destroy']);
         Route::post('/reservas/{id}/seguimiento', [ReservaController::class, 'seguimiento']);
-        Route::put('/pqr/{id}', [PqrController::class, 'update']);
+        
+Route::middleware('role.context:adminSocial')->group(function () {
+    Route::put('/pqr/{id}', [
+        PqrController::class,
+        'update'
+    ]);
+
+    Route::post('/pqr/{id}/seguimiento', [
+        PqrController::class,
+        'seguimiento'
+    ]);
+});
+
+
         
     });
 
