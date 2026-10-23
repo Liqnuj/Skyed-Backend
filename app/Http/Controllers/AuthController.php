@@ -6,6 +6,8 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
+use App\Http\Requests\ForgotPasswordDocumentRequest;
+use Illuminate\Support\Facades\Password;
 use App\Mail\CodigoVerificacionMail;
 use App\Models\User;
 use App\Models\Role;
@@ -81,6 +83,48 @@ class AuthController extends Controller
             'token' => $token,
             'user' => $this->formatUser($user),
         ], 201);
+    }
+
+    /**
+     * Recuperación de contraseña mediante documento (tipo y número).
+     */
+    public function enviarCodigoPorDocumento(ForgotPasswordDocumentRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+
+        // 1. Buscar al usuario por documento
+        $user = User::where('tipo_documento_u', $validated['tipo_documento_u'])
+                    ->where('documento_u', $validated['documento_u'])
+                    ->first();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'No se encontró ninguna cuenta asociada a este documento.'
+            ], 404);
+        }
+
+        $codigoGenerado = random_int(100000, 999999);
+        $user->codigo = $codigoGenerado;
+        $user->codigo_expira_at = now()->addMinutes(15);
+        $user->save();
+        RateLimiter::clear($this->claveIntentosCodigo($user));
+        
+        $emailParts = explode('@', $user->correo_u);
+        $emailEnmascarado = substr($emailParts[0], 0, 2) . '***@' . $emailParts[1];
+
+        try {
+            Mail::to($user->correo_u)->send(new CodigoVerificacionMail((string)$codigoGenerado));
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'No hay conexión a internet o el servidor de correos no responde. Por favor, intenta de nuevo.'
+            ], 500);
+        }
+
+        return response()->json([
+            'message' => 'Código de verificación enviado con éxito',
+            'email_real' => $user->correo_u,
+            'email_enmascarado' => $emailEnmascarado
+        ], 200);
     }
 
     /**
