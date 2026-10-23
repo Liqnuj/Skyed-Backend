@@ -84,7 +84,7 @@ Route::post('/register', [AuthController::class, 'register'])->middleware('throt
 // bruta y enviar correos de recuperación sin límite (spam al usuario).
 Route::post('/enviar-codigo-recuperacion', [AuthController::class, 'enviarCodigoRecuperacion'])->middleware('throttle:3,1,enviar-codigo');
 Route::post('/verificar-codigo', [AuthController::class, 'verificarCodigo'])->middleware('throttle:6,1,verificar-codigo');
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1,forgot-password');
+Route::post('/enviar-codigo-documento', [AuthController::class, 'enviarCodigoPorDocumento'])->middleware('throttle:3,1,enviar-codigo-doc');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:3,1,reset-password');
 
 // Catálogos públicos (Lectura)
