@@ -21,6 +21,8 @@ use App\Http\Controllers\InvitadoController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SkaiController;
 use App\Http\Controllers\UserRoleController;
+use App\Models\TipoEvento;
+
 
 // AGREGADOS: Importaciones de los controladores generales que faltaban
 use App\Http\Controllers\NotificacionController;
@@ -52,12 +54,11 @@ use App\Http\Controllers\Admin\RespaldoController as AdminRespaldoController;
 use App\Http\Middleware\CheckRoleContext;
 
 
-use App\Models\TipoEvento;
-
 Route::get('/tipos-evento', function () {
-    $tipos = TipoEvento::where('modulo_tipo_eves', 'Social')->get();
-    return response()->json($tipos);
+    return response()->json(TipoEvento::where('modulo_tipo_eves', 'Social')->get());
 });
+
+Route::post('/reservas', [ReservaController::class, 'store']);
 
 /*
 |--------------------------------------------------------------------------
