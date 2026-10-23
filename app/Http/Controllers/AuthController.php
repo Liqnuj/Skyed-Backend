@@ -191,21 +191,50 @@ class AuthController extends Controller
     /**
      * Restablecer la contraseña con el token recibido por correo.
      */
+    /**
+     * Restablecer la contraseña con el token recibido por correo.
+     */
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
         $validated = $request->validated();
-
         $user = ReglasUsuario::buscarPorCorreo($validated['correo_u']);
 
         if ($error = $this->validarCodigoRecuperacion($user, $validated['token'])) {
             return $error;
         }
 
-        $user->contrasena_u = Hash::make($validated['contrasena_u']);
+        if (Hash::check($validated['contrasena_u'], $user->contrasena_u)) {
+            return response()->json([
+                'message' => 'La nueva contraseña no puede ser igual a la contraseña actual.'
+            ], 400);
+        }
 
+        $historial = DB::table('historial_contrasena')
+                        ->where('id_u', $user->id_u)
+                        ->orderBy('created_at', 'desc')
+                        ->take(3) 
+                        ->get();
+
+        foreach ($historial as $registro) {
+            if (Hash::check($validated['contrasena_u'], $registro->contrasena_hash)) {
+                return response()->json([
+                    'message' => 'No puedes reutilizar contraseñas recientes. Por favor, elige una nueva.'
+                ], 400);
+            }
+        }
+
+        DB::table('historial_contrasena')->insert([
+            'id_u' => $user->id_u,
+            'contrasena_hash' => $user->contrasena_u,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $user->contrasena_u = Hash::make($validated['contrasena_u']);
         $user->codigo = null;
         $user->codigo_expira_at = null;
         $user->save();
+        
         $user->tokens()->delete();
         RateLimiter::clear($this->claveIntentosCodigo($user));
 
@@ -213,7 +242,7 @@ class AuthController extends Controller
             'message' => 'Contraseña actualizada correctamente'
         ], 200);
     }
-    
+
     /**
      * Obtener el usuario autenticado
      */

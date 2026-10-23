@@ -46,6 +46,11 @@ class User extends Authenticatable
         return $this->contrasena_u;
     }
 
+    public function historialContrasenas()
+    {
+        return $this->hasMany(\App\Models\HistorialContrasena::class, 'id_u', 'id_u');
+    }
+
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(
