@@ -69,6 +69,12 @@ Route::post('/reservas', [ReservaController::class, 'store']);
 // El tercer parámetro de throttle es el nombre del contador. Sin él, TODAS
 // las rutas con throttle compartían un solo contador por IP: 3 mensajes a
 // SKAI (que está también en /login) bloqueaban el inicio de sesión.
+
+Route::get('/pagos/{id}/comprobante/archivo', [PagoController::class, 'archivoComprobante'])
+    ->name('pagos.comprobante')
+    ->middleware('signed');
+
+
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:3,1,login');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1,register');
 // FIX: sin throttle se podía probar el código de 6 dígitos por fuerza
@@ -152,6 +158,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/servicios/{id}', [ServicioController::class, 'show']);
     Route::get('/pagos', [PagoController::class, 'index']);
     Route::get('/pagos/{id}', [PagoController::class, 'show']);
+    Route::post('/pagos/{id}/comprobante', [PagoController::class, 'subirComprobante']);   
+    Route::get('/pagos/{id}/comprobante', [PagoController::class, 'verComprobante']);    
     Route::get('/qr/{id}', [QrEntradaController::class, 'show']);
     Route::get('/premios', [PremioController::class, 'index']);
     Route::get('/premios/{id}', [PremioController::class, 'show']);
