@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Pago;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use App\Services\NotificacionService;
 
 class PagoController extends Controller
@@ -72,6 +74,154 @@ class PagoController extends Controller
 
         return response()->json([
             'pago' => $pago,
+        ]);
+    }
+
+    /**
+     * Subir (o reemplazar) la imagen del comprobante de un pago.
+     * Solo el dueño de la inscripción, y solo mientras el pago esté
+     * pendiente. La imagen va al disco PRIVADO (no queda en /public):
+     * un comprobante es un dato sensible y solo se entrega a través de
+     * verComprobante().
+     *
+     * POST /pagos/{id}/comprobante (multipart/form-data)
+     *   - comprobante: archivo (jpg/png/webp, máx 5MB)
+     */
+    public function subirComprobante(Request $request, $id)
+    {
+        $pago = Pago::with('inscripcion')->find($id);
+
+        if (!$pago) {
+            return response()->json(['message' => 'Pago no encontrado'], 404);
+        }
+
+        if (!$pago->inscripcion || $pago->inscripcion->id_u !== $request->user()->id_u) {
+            return response()->json([
+                'message' => 'No tienes permisos para modificar este pago'
+            ], 403);
+        }
+
+        if ($pago->estado_p !== 'pendiente') {
+            return response()->json([
+                'message' => 'Solo puedes subir o cambiar el comprobante mientras el pago está pendiente'
+            ], 422);
+        }
+
+        $request->validate([
+            'comprobante' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+        ], [
+            'comprobante.required' => 'No llegó ninguna imagen del comprobante.',
+            'comprobante.uploaded' => 'El servidor no pudo recibir la imagen. Intenta con otra foto.',
+            'comprobante.image' => 'El archivo no es una imagen válida.',
+            'comprobante.mimes' => 'Solo se aceptan imágenes JPG, PNG o WEBP.',
+            'comprobante.max' => 'El comprobante no debe superar 5 MB.',
+        ]);
+
+        $archivo = $request->file('comprobante');
+        // extension() se deduce del contenido real, no del nombre que manda el navegador.
+        $ruta = 'comprobantes/' . $pago->id_pago . '_' . uniqid() . '.' . $archivo->extension();
+
+        Storage::disk('local')->put($ruta, $archivo->get());
+
+        // Si ya había un comprobante guardado por este sistema, se borra
+        // (los valores viejos, que eran solo el nombre del archivo, se ignoran).
+        $anterior = $pago->comprobante_p;
+        if ($anterior && str_starts_with($anterior, 'comprobantes/')) {
+            Storage::disk('local')->delete($anterior);
+        }
+
+        $pago->update(['comprobante_p' => $ruta]);
+
+        return response()->json([
+            'message' => 'Comprobante subido correctamente',
+            'tiene_comprobante' => true,
+        ], 201);
+    }
+
+    /**
+     * Ruta interna (en el disco privado) del comprobante, o null si el pago
+     * no tiene una imagen guardada por este sistema. Los pagos antiguos solo
+     * guardaron el NOMBRE del archivo, no la imagen.
+     */
+    private function rutaComprobante(Pago $pago): ?string
+    {
+        $ruta = $pago->comprobante_p;
+
+        if (
+            !$ruta ||
+            !str_starts_with($ruta, 'comprobantes/') ||
+            !Storage::disk('local')->exists($ruta)
+        ) {
+            return null;
+        }
+
+        return $ruta;
+    }
+
+    /**
+     * Devuelve una URL FIRMADA y temporal (10 min) para ver la imagen del
+     * comprobante. Solo el dueño de la inscripción o un adminDeportivo.
+     * Se usa una URL firmada porque una etiqueta <img> no puede enviar el
+     * token de sesión.
+     *
+     * GET /pagos/{id}/comprobante
+     */
+    public function verComprobante(Request $request, $id)
+    {
+        $pago = Pago::with('inscripcion')->find($id);
+
+        if (!$pago) {
+            return response()->json(['message' => 'Pago no encontrado'], 404);
+        }
+
+        $esDueno = $pago->inscripcion && $pago->inscripcion->id_u === $request->user()->id_u;
+        $esAdmin = $request->user()->hasRole('adminDeportivo');
+
+        if (!$esDueno && !$esAdmin) {
+            return response()->json([
+                'message' => 'No tienes permisos para ver este comprobante'
+            ], 403);
+        }
+
+        if (!$this->rutaComprobante($pago)) {
+            return response()->json([
+                'message' => 'Este pago no tiene una imagen de comprobante'
+            ], 404);
+        }
+
+        return response()->json([
+            'url' => URL::temporarySignedRoute(
+                'pagos.comprobante',
+                now()->addMinutes(10),
+                ['id' => $pago->id_pago]
+            ),
+            'expira_en_minutos' => 10,
+        ]);
+    }
+
+    /**
+     * Entrega el archivo. NO lleva auth:sanctum: la protección es la firma
+     * (middleware "signed") y que la URL expira a los 10 minutos.
+     *
+     * GET /pagos/{id}/comprobante/archivo?signature=...
+     */
+    public function archivoComprobante(Request $request, $id)
+    {
+        $pago = Pago::find($id);
+        $ruta = $pago ? $this->rutaComprobante($pago) : null;
+
+        if (!$ruta) {
+            return response()->json([
+                'message' => 'Este pago no tiene una imagen de comprobante'
+            ], 404);
+        }
+
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disco */
+        $disco = Storage::disk('local');
+
+        return $disco->response($ruta, null, [
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, max-age=300',
         ]);
     }
 
