@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Pqr extends Model
 {
@@ -34,5 +35,14 @@ class Pqr extends Model
             'id_u',
             'id_u'
         );
+    }
+
+    public function seguimientos(): HasMany
+    {
+            return $this->hasMany(
+        PqrSeguimiento::class,
+        'id_pqr',
+        'id_pqr'
+    )->orderBy('created_at');
     }
 }   
