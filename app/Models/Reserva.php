@@ -13,6 +13,7 @@ class Reserva extends Model
     protected $primaryKey = 'id_rese';
 
     protected $fillable = [
+        'nombre_rese',
         'fecha_evento_rese',
         'invitados_rese',
         'presupuesto_rese',
