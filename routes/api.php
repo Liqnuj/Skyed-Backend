@@ -173,9 +173,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reservas', [ReservaController::class, 'index']);
     Route::get('/reservas/{id}', [ReservaController::class, 'show']);
     Route::post('/reservas', [ReservaController::class, 'store']);
+    Route::patch('/reservas/{id}/nombre', [ReservaController::class, 'renombrar']);
     Route::get('/pqr', [PqrController::class, 'index']);
     Route::get('/pqr/{id}', [PqrController::class, 'show']);
     Route::post('/pqr', [PqrController::class, 'store']);
+    Route::post('/pqr/{id}/responder', [PqrController::class, 'responder'])->middleware('throttle:20,1');
 
 
     // ========================================================

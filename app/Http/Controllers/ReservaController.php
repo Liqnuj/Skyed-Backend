@@ -74,6 +74,7 @@ class ReservaController extends Controller
                     'Observaciones_rese' => 'required|string|max:255', // También puedes poner 'nullable' si no es obligatorio
                     'total_rese' => 'nullable|numeric|min:0',
                     'id_er' => 'nullable|exists:evento_realizado,id_er', // Aquí está la corrección principal
+                    'nombre_rese' => 'nullable|string|max:80', // Nombre que el cliente le pone a su reserva
                 ]);
 
         $reserva = DB::transaction(function () use (
@@ -89,6 +90,9 @@ class ReservaController extends Controller
                         'total_rese' => $validated['total_rese'] ?? 0,
                         'estado_rese' => 'pendiente',
                         'creado_en_rese' => now(),
+                        'nombre_rese' => isset($validated['nombre_rese']) && trim($validated['nombre_rese']) !== ''
+                            ? trim($validated['nombre_rese'])
+                            : null,
                         'id_u' => $request->user()->id_u,
                         'id_tipo_eves' => $validated['id_tipo_eves'], 
                         'id_er' => $validated['id_er'] ?? null, 
@@ -156,6 +160,41 @@ class ReservaController extends Controller
                 'evento',
                 'seguimientos',
             ])
+        ]);
+    }
+
+    /**
+     * El cliente le pone (o cambia) el nombre a su propia reserva.
+     * Un nombre vacío lo quita.
+     */
+    public function renombrar(Request $request, $id)
+    {
+        $reserva = Reserva::find($id);
+
+        if (!$reserva) {
+            return response()->json([
+                'message' => 'Reserva no encontrada'
+            ], 404);
+        }
+
+        if ((int) $reserva->id_u !== (int) $request->user()->id_u) {
+            return response()->json([
+                'message' => 'Solo puedes cambiar el nombre de tus propias reservas.'
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'nombre_rese' => 'nullable|string|max:80',
+        ]);
+
+        $nombre = trim($validated['nombre_rese'] ?? '');
+
+        $reserva->nombre_rese = $nombre !== '' ? $nombre : null;
+        $reserva->save();
+
+        return response()->json([
+            'message' => 'Nombre guardado correctamente',
+            'reserva' => $reserva->only(['id_rese', 'nombre_rese']),
         ]);
     }
 
