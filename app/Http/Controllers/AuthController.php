@@ -430,6 +430,8 @@ class AuthController extends Controller
             'contrasena_u' => Hash::make($request->nueva_contrasena)
         ]);
 
+        $user->tokens()->where('id', '!=', $request->user()->currentAccessToken()->id)->delete();
+
         return response()->json([
             'message' => 'Contraseña actualizada correctamente'
         ], 200);
