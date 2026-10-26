@@ -22,8 +22,13 @@ class ReservaController extends Controller
             'seguimientos',
         ]);
 
+        $ocultas = $request->boolean('ocultas');
+
         if (!$request->user()->hasRole('adminSocial')) {
-            $query->where('id_u', $request->user()->id_u);
+            $query->where('id_u', $request->user()->id_u)
+                ->where('oculta_usuario', $ocultas);
+        } else {
+            $query->where('oculta_admin', $ocultas);
         }
 
         return response()->json(
@@ -196,6 +201,54 @@ class ReservaController extends Controller
             'message' => 'Nombre guardado correctamente',
             'reserva' => $reserva->only(['id_rese', 'nombre_rese']),
         ]);
+    }
+
+    /**
+     * POST /reservas/{id}/ocultar
+     *
+     * Oculta (o vuelve a mostrar) la reserva en la lista de quien la pide:
+     *  - vista=usuario (por defecto): solo el dueño; no afecta al admin.
+     *  - vista=admin: solo un admin; no afecta al usuario.
+     *  - oculta=false: la vuelve a mostrar.
+     * Solo se pueden ocultar reservas canceladas o completadas.
+     */
+    public function ocultar(Request $request, $id)
+    {
+        $reserva = Reserva::find($id);
+
+        if (!$reserva) {
+            return response()->json(['message' => 'Reserva no encontrada'], 404);
+        }
+
+        $request->validate([
+            'vista' => 'sometimes|in:usuario,admin',
+            'oculta' => 'sometimes|boolean',
+        ]);
+
+        $vista = $request->input('vista', 'usuario');
+        $oculta = $request->boolean('oculta', true);
+
+        if ($vista === 'admin') {
+            if (!$request->user()->hasRole('adminSocial')) {
+                return response()->json(['message' => 'No tienes permisos.'], 403);
+            }
+            $columna = 'oculta_admin';
+        } else {
+            if ((int) $reserva->id_u !== (int) $request->user()->id_u) {
+                return response()->json(['message' => 'Solo puedes ocultar tus propias reservas.'], 403);
+            }
+            $columna = 'oculta_usuario';
+        }
+
+        if ($oculta && !in_array($reserva->estado_rese, ['cancelada', 'completada'], true)) {
+            return response()->json([
+                'message' => 'Solo se pueden ocultar reservas canceladas o completadas.'
+            ], 422);
+        }
+
+        $reserva->forceFill([$columna => $oculta])->save();
+
+        return response()->json(['message' => $oculta ? 'Reserva oculta' : 'Reserva visible']);
     }
 
     public function destroy($id)
