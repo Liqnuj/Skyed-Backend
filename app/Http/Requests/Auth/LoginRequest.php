@@ -12,18 +12,18 @@ class LoginRequest extends FormRequest
         return true;
     }
 
-    /** "  Ana@Gmail.com " y "ana@gmail.com" son la misma cuenta. */
     protected function prepareForValidation(): void
     {
-        if (is_string($this->correo_u)) {
-            $this->merge(['correo_u' => ReglasUsuario::normalizarCorreo($this->correo_u)]);
+        // Si es un correo válido, lo normalizamos
+        if (is_string($this->identificacion) && filter_var($this->identificacion, FILTER_VALIDATE_EMAIL)) {
+            $this->merge(['identificacion' => ReglasUsuario::normalizarCorreo($this->identificacion)]);
         }
     }
 
     public function rules(): array
     {
         return [
-            'correo_u' => 'required|email',
+            'identificacion' => 'required|string',
             'contrasena_u' => 'required|string',
         ];
     }
@@ -31,8 +31,7 @@ class LoginRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'correo_u.required' => 'El correo electrónico es obligatorio.',
-            'correo_u.email' => 'Debes ingresar un correo electrónico válido.',
+            'identificacion.required' => 'Debes ingresar tu correo electrónico o número de documento.',
             'contrasena_u.required' => 'La contraseña es obligatoria.',
         ];
     }
