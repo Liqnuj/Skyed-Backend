@@ -169,6 +169,238 @@ class PqrController extends Controller
         return $this->registrarActuacion($request, $id, 201);
     }
 
+
+    
+    /**
+     * POST /pqr/{id}/abrir (solo adminSocial).
+     *
+     * El administrador abre el detalle de una PQR: si todavía está en
+     * "abierto" pasa automáticamente a "en_revision". Si ya estaba más
+     * adelante no cambia nada (se puede abrir las veces que se quiera).
+     */
+    public function abrir(Request $request, $id): JsonResponse
+    {
+        if (!$this->esAdmin($request)) {
+            return response()->json([
+                'message' => 'No tienes permisos para gestionar PQR.'
+            ], 403);
+        }
+
+        $cambio = false;
+        $texto = 'Un integrante del equipo abrió tu solicitud y la está revisando.';
+
+        $pqr = DB::transaction(function () use ($request, $id, $texto, &$cambio) {
+            $pqr = Pqr::lockForUpdate()->find($id);
+
+            if ($pqr && $pqr->estado_pqr === 'abierto') {
+                $this->aplicarTransicion(
+                    $pqr,
+                    (int) $request->user()->id_u,
+                    'en_revision',
+                    'cambio_estado',
+                    $texto
+                );
+                $cambio = true;
+            }
+
+            return $pqr;
+        });
+
+        if (!$pqr) {
+            return response()->json([
+                'message' => 'PQR no encontrada'
+            ], 404);
+        }
+
+        if ($cambio) {
+            $this->notificarUsuario($pqr, true, 'en_revision', $texto);
+        }
+
+        return response()->json([
+            'message' => $cambio ? 'La PQR pasó a «En revisión».' : 'PQR consultada.',
+            'cambio' => $cambio,
+            'pqr' => $this->cargarYPresentar($pqr->fresh(), true),
+        ]);
+    }
+
+    /**
+     * POST /pqr/{id}/iniciar-gestion (solo adminSocial).
+     *
+     * Solo válido desde "en_revision": la PQR pasa a "en_proceso".
+     * Opcional: comentario_publico (lo ve el usuario) y nota_interna.
+     */
+    public function iniciarGestion(Request $request, $id): JsonResponse
+    {
+        if (!$this->esAdmin($request)) {
+            return response()->json([
+                'message' => 'No tienes permisos para gestionar PQR.'
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'comentario_publico' => 'sometimes|nullable|string|max:1000',
+            'nota_interna' => 'sometimes|nullable|string|max:1000',
+        ]);
+
+        $texto = $this->textoOpcional($validated['comentario_publico'] ?? null)
+            ?? 'Ya estamos gestionando tu solicitud. Te avisaremos cuando tengamos una respuesta.';
+        $nota = $this->textoOpcional($validated['nota_interna'] ?? null);
+
+        $resultado = DB::transaction(function () use ($request, $id, $texto, $nota) {
+            $pqr = Pqr::lockForUpdate()->find($id);
+
+            if (!$pqr) {
+                return ['http' => 404, 'message' => 'PQR no encontrada'];
+            }
+
+            if (!in_array('en_proceso', Pqr::TRANSICIONES[$pqr->estado_pqr] ?? [], true)) {
+                return [
+                    'http' => 422,
+                    'message' => $this->mensajeTransicion($pqr->estado_pqr, 'en_proceso'),
+                ];
+            }
+
+            $this->aplicarTransicion(
+                $pqr,
+                (int) $request->user()->id_u,
+                'en_proceso',
+                'cambio_estado',
+                $texto,
+                $nota
+            );
+
+            return ['http' => 200, 'pqr' => $pqr];
+        });
+
+        if ($resultado['http'] !== 200) {
+            return response()->json(['message' => $resultado['message']], $resultado['http']);
+        }
+
+        $pqr = $resultado['pqr'];
+        $this->notificarUsuario($pqr, true, 'en_proceso', $texto);
+
+        return response()->json([
+            'message' => 'La PQR pasó a «En proceso».',
+            'pqr' => $this->cargarYPresentar($pqr->fresh(), true),
+        ]);
+    }
+
+    /**
+     * POST /pqr/{id}/resolver (solo adminSocial).
+     *
+     * Solo válido desde "en_proceso". Guarda la respuesta oficial, la
+     * fecha, el administrador responsable y pasa la PQR a "resuelto".
+     * Body: respuesta (obligatoria, 10-2000 caracteres), nota_interna (opcional).
+     */
+    public function resolver(Request $request, $id): JsonResponse
+    {
+        if (!$this->esAdmin($request)) {
+            return response()->json([
+                'message' => 'No tienes permisos para gestionar PQR.'
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'respuesta' => 'required|string|min:10|max:2000',
+            'nota_interna' => 'sometimes|nullable|string|max:1000',
+        ], [
+            'respuesta.required' => 'Escribe la respuesta que recibirá el usuario.',
+            'respuesta.min' => 'La respuesta debe tener al menos 10 caracteres.',
+            'respuesta.max' => 'La respuesta no puede superar los 2000 caracteres.',
+        ]);
+
+        $respuesta = $this->textoOpcional($validated['respuesta']);
+        $nota = $this->textoOpcional($validated['nota_interna'] ?? null);
+
+        if (!$respuesta || mb_strlen($respuesta) < 10) {
+            return $this->rechazo('La respuesta debe tener al menos 10 caracteres.');
+        }
+
+        $resultado = DB::transaction(function () use ($request, $id, $respuesta, $nota) {
+            $pqr = Pqr::lockForUpdate()->find($id);
+
+            if (!$pqr) {
+                return ['http' => 404, 'message' => 'PQR no encontrada'];
+            }
+
+            if (!in_array('resuelto', Pqr::TRANSICIONES[$pqr->estado_pqr] ?? [], true)) {
+                return [
+                    'http' => 422,
+                    'message' => $this->mensajeTransicion($pqr->estado_pqr, 'resuelto'),
+                ];
+            }
+
+            $this->aplicarTransicion(
+                $pqr,
+                (int) $request->user()->id_u,
+                'resuelto',
+                'respuesta',
+                $respuesta,
+                $nota,
+                $respuesta
+            );
+
+            return ['http' => 200, 'pqr' => $pqr];
+        });
+
+        if ($resultado['http'] !== 200) {
+            return response()->json(['message' => $resultado['message']], $resultado['http']);
+        }
+
+        $pqr = $resultado['pqr'];
+        $this->notificarUsuario($pqr, true, 'resuelto', $respuesta);
+
+        return response()->json([
+            'message' => 'Respuesta enviada. La PQR quedó «Resuelta».',
+            'pqr' => $this->cargarYPresentar($pqr->fresh(), true),
+        ]);
+    }
+
+    /**
+     * Cambia la fase y deja el rastro en pqr_seguimientos (con el admin
+     * responsable). Debe llamarse dentro de una transacción.
+     */
+    private function aplicarTransicion(
+        Pqr $pqr,
+        int $idAdmin,
+        string $estadoNuevo,
+        string $tipoEvento,
+        ?string $textoPublico,
+        ?string $nota = null,
+        ?string $respuesta = null
+    ): void {
+        $estadoAnterior = $pqr->estado_pqr;
+
+        $datos = ['estado_pqr' => $estadoNuevo];
+
+        if ($respuesta !== null) {
+            $datos['respuesta_pqr'] = $respuesta;
+            $datos['respondido_en_pqr'] = now();
+        }
+
+        $pqr->update($datos);
+
+        $pqr->seguimientos()->create([
+            'id_admin' => $idAdmin,
+            'estado_anterior' => $estadoAnterior,
+            'estado_nuevo' => $estadoNuevo,
+            'tipo_evento' => $tipoEvento,
+            'comentario_publico' => $textoPublico,
+            'nota_interna' => $nota,
+        ]);
+    }
+
+    private function mensajeTransicion(string $actual, string $destino): string
+    {
+        $de = Pqr::ETIQUETAS_ESTADO[$actual] ?? $actual;
+        $a = Pqr::ETIQUETAS_ESTADO[$destino] ?? $destino;
+
+        return 'No se puede pasar de «' . $de . '» a «' . $a . '». '
+            . 'El orden es: Radicada → En revisión → En proceso → Resuelta.';
+    }
+
+    
+
     /**
      * POST /pqr/{id}/responder (solo el dueño de la PQR).
      *
@@ -226,6 +458,14 @@ class PqrController extends Controller
 
     private function registrarActuacion(Request $request, $id, int $status): JsonResponse
     {
+
+                if (!$this->esAdmin($request)) {
+            return response()->json([
+                'message' => 'No tienes permisos para gestionar PQR.'
+            ], 403);
+        }
+
+
         $pqr = Pqr::find($id);
 
         if (!$pqr) {
@@ -264,6 +504,21 @@ class PqrController extends Controller
                 'Una PQR ya radicada no puede volver a la fase "Radicada".'
             );
         }
+
+        
+        if (
+            $cambiaEstado
+            && !in_array($estadoNuevo, Pqr::TRANSICIONES[$estadoActual] ?? [], true)
+        ) {
+            return $this->rechazo($this->mensajeTransicion($estadoActual, $estadoNuevo));
+        }
+
+        if ($respuesta && !($cambiaEstado && $estadoNuevo === 'resuelto')) {
+            return $this->rechazo(
+                'La respuesta oficial solo se registra al resolver la PQR.'
+            );
+        }
+
 
         if (
             $cambiaEstado

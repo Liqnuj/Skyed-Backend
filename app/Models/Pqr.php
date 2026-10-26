@@ -45,6 +45,22 @@ class Pqr extends Model
     /** Estados en los que la PQR ya no está "en curso". */
     public const ESTADOS_FINALES = ['resuelto', 'cerrado'];
 
+   
+    
+    /**
+     * Transiciones válidas de una PQR. El backend nunca acepta
+     * saltarse una fase ni volver atrás.
+     */
+    public const TRANSICIONES = [
+        'abierto' => ['en_revision'],
+        'en_revision' => ['en_proceso'],
+        'en_proceso' => ['resuelto'],
+        'resuelto' => ['cerrado'],
+        'cerrado' => [],
+    ];
+
+    
+
     /**
      * Plazo de respuesta en días hábiles por tipo. Son los mismos que
      * se le muestran al usuario en la página de PQR. La felicitación
