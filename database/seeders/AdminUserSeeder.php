@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Hash;
 class AdminUserSeeder extends Seeder
 {
     /**
-     * Crea usuarios administradores independientes para los dominios
-     * deportivo y social.
+     * Crea administradores por dominio y un super admin con acceso a
+     * ambos dominios y los paneles de cliente y participante.
      */
     public function run(): void
     {
@@ -22,8 +22,9 @@ class AdminUserSeeder extends Seeder
                 'nombre_u' => 'Admin Deportivo',
                 'apellido_u' => 'SkyEd',
                 'telefono_u' => '3000000001',
-                'rol' => 'adminDeportivo',
-                'contexto' => 'deportivo',
+                'roles' => [
+                    'adminDeportivo' => 'deportivo',
+                ],
             ],
             [
                 'correo_u' => 'adminsocial@skyed.test',
@@ -31,16 +32,29 @@ class AdminUserSeeder extends Seeder
                 'nombre_u' => 'Admin Social',
                 'apellido_u' => 'SkyEd',
                 'telefono_u' => '3000000002',
-                'rol' => 'adminSocial',
-                'contexto' => 'social',
+                'roles' => [
+                    'adminSocial' => 'social',
+                ],
+            ],
+            [
+                'correo_u' => 'superadmin@skyed.test',
+                'documento_u' => 100000003,
+                'nombre_u' => 'Super Admin',
+                'apellido_u' => 'SkyEd',
+                'telefono_u' => '3000000003',
+                'roles' => [
+                    'adminDeportivo' => 'deportivo',
+                    'adminSocial' => 'social',
+                    'participante' => 'deportivo',
+                    'cliente' => 'social',
+                ],
             ],
         ];
 
         foreach ($admins as $adminData) {
-            $role = Role::where('nombre_rol', $adminData['rol'])->firstOrFail();
             $admin = User::firstOrNew(['correo_u' => $adminData['correo_u']]);
 
-            if (!$admin->exists) {
+            if (! $admin->exists) {
                 $admin->fill([
                     'tipo_documento_u' => 'CC',
                     'documento_u' => $this->availableDocument($adminData['documento_u']),
@@ -57,9 +71,13 @@ class AdminUserSeeder extends Seeder
             $admin->estado_u = 'activo';
             $admin->save();
 
-            $admin->roles()->sync([
-                $role->id_rol => ['contexto' => $adminData['contexto']],
-            ]);
+            $roles = [];
+            foreach ($adminData['roles'] as $roleName => $context) {
+                $role = Role::where('nombre_rol', $roleName)->firstOrFail();
+                $roles[$role->id_rol] = ['contexto' => $context];
+            }
+
+            $admin->roles()->sync($roles);
         }
     }
 
