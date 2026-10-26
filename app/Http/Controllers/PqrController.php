@@ -40,8 +40,13 @@ class PqrController extends Controller
             ->orderByDesc('created_at')
             ->orderByDesc('id_pqr');
 
+        $ocultas = $request->boolean('ocultas');
+
         if (!$esAdmin || $request->boolean('mias')) {
-            $query->where('id_u', $request->user()->id_u);
+            $query->where('id_u', $request->user()->id_u)
+                ->where('oculta_usuario', $ocultas);
+        } else {
+            $query->where('oculta_admin', $ocultas);
         }
 
         if ($request->filled('estado')) {
@@ -64,6 +69,7 @@ class PqrController extends Controller
         if ($esAdmin && !$request->boolean('mias')) {
             // Conteo por fase de TODAS las PQR (no solo de la página).
             $respuesta['resumen'] = Pqr::query()
+                ->where('oculta_admin', false)
                 ->select('estado_pqr', DB::raw('count(*) as total'))
                 ->groupBy('estado_pqr')
                 ->pluck('total', 'estado_pqr');
@@ -224,6 +230,51 @@ class PqrController extends Controller
         ], 201);
     }
 
+    /**
+     * POST /pqr/{id}/ocultar
+     *
+     * Oculta (o vuelve a mostrar) la PQR en la lista de quien la pide:
+     *  - vista=usuario (por defecto): solo el dueño; no afecta al admin.
+     *  - vista=admin: solo un admin; no afecta al usuario.
+     *  - oculta=false: la vuelve a mostrar.
+     */
+    public function ocultar(Request $request, $id)
+    {
+        $pqr = Pqr::find($id);
+
+        if (!$pqr) {
+            return response()->json(['message' => 'PQR no encontrada'], 404);
+        }
+
+        $request->validate([
+            'vista' => 'sometimes|in:usuario,admin',
+            'oculta' => 'sometimes|boolean',
+        ]);
+
+        $vista = $request->input('vista', 'usuario');
+        $oculta = $request->boolean('oculta', true);
+
+        if ($vista === 'admin') {
+            if (!$this->esAdmin($request)) {
+                return response()->json(['message' => 'No tienes permisos.'], 403);
+            }
+            $columna = 'oculta_admin';
+        } else {
+            if ((int) $pqr->id_u !== (int) $request->user()->id_u) {
+                return response()->json(['message' => 'Solo puedes ocultar tus propias solicitudes.'], 403);
+            }
+            $columna = 'oculta_usuario';
+        }
+
+        if ($oculta && in_array($pqr->estado_pqr, ['en_proceso', 'en_revision'], true)) {
+            return $this->rechazo('Una solicitud en proceso no se puede ocultar.');
+        }
+
+        $pqr->forceFill([$columna => $oculta])->save();
+
+        return response()->json(['message' => $oculta ? 'PQR oculta' : 'PQR visible']);
+    }
+
     private function registrarActuacion(Request $request, $id, int $status): JsonResponse
     {
         $pqr = Pqr::find($id);
@@ -253,9 +304,12 @@ class PqrController extends Controller
             return $this->rechazo('No hay ningún cambio ni mensaje para registrar.');
         }
 
-        if ($estadoActual === 'cerrado' && ($cambiaEstado || $comentario || $respuesta)) {
+        if (
+            in_array($estadoActual, Pqr::ESTADOS_FINALES, true)
+            && ($cambiaEstado || $comentario || $respuesta)
+        ) {
             return $this->rechazo(
-                'Esta PQR está cerrada. Solo se pueden agregar notas internas.'
+                'Esta PQR ya fue resuelta. Solo se pueden agregar notas internas.'
             );
         }
 
