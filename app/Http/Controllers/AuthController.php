@@ -24,21 +24,29 @@ use Carbon\Carbon;
 
 class AuthController extends Controller
 {
-    /**
-     * Iniciar sesión
+/**
+     * Iniciar sesión (por correo o documento)
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        $user = ReglasUsuario::buscarPorCorreo($request->correo_u);
+        $identificacion = $request->identificacion;
+        $user = null;
+
+        // Si tiene formato de correo, buscamos por correo
+        if (filter_var($identificacion, FILTER_VALIDATE_EMAIL)) {
+            $user = ReglasUsuario::buscarPorCorreo($identificacion);
+        } else {
+            // De lo contrario, asumimos que es un documento (limpiamos espacios por si acaso)
+            $documentoLimpio = preg_replace('/\D/', '', $identificacion);
+            $user = User::where('documento_u', $documentoLimpio)->first();
+        }
 
         if (!$user || !Hash::check($request->contrasena_u, $user->contrasena_u)) {
             return response()->json([
-                'message' => 'Correo o contraseña incorrectos'
+                'message' => 'Credenciales incorrectas. Verifica tus datos.'
             ], 401);
         }
 
-        // FIX: una cuenta desactivada (por el propio usuario desde su
-        // perfil o por un administrador) podía volver a iniciar sesión.
         if ($user->estado_u === 'inactivo') {
             return response()->json([
                 'message' => 'Tu cuenta está desactivada. Comunícate con el administrador de Skyed para reactivarla.'
