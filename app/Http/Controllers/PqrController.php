@@ -3,176 +3,80 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pqr;
-use Illuminate\Http\Request;
-use App\Services\NotificacionService;
-
 use App\Models\PqrSeguimiento;
+use App\Services\NotificacionService;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
-
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class PqrController extends Controller
 {
-
-
-
-
     /**
-     * Listar PQR. Un admin social ve todas; un usuario normal
-     * solo ve las suyas.
+     * Listar PQR. Un admin social ve todas; un usuario normal solo ve
+     * las suyas. Un admin puede pasar ?mias=1 para ver únicamente las
+     * que él mismo radicó (lo usa su pestaña "Mis PQR" del perfil).
+     *
+     * Filtros opcionales: ?estado=, ?tipo=, ?per_page= (máx. 100).
      */
-
-public function index(Request $request)
-{
-    $usuario = $request->user();
-
-    $esAdminSocial = $usuario->hasRole('adminSocial');
-
-    $query = Pqr::with([
-        'usuario',
-        'seguimientos' => function ($query) use ($esAdminSocial) {
-            $query->select([
-                'id_seguimiento',
-                'id_pqr',
-                'id_admin',
-                'estado_anterior',
-                'estado_nuevo',
-                'tipo_evento',
-                'comentario_publico',
-                'nota_interna',
-                'created_at',
-            ]);
-
-            if (!$esAdminSocial) {
-                $query->select([
-                    'id_seguimiento',
-                    'id_pqr',
-                    'estado_anterior',
-                    'estado_nuevo',
-                    'tipo_evento',
-                    'comentario_publico',
-                    'created_at',
-                ]);
-            }
-        }
-    ])->orderByDesc('created_at');
-
-    // El ciudadano solo consulta sus propias solicitudes.
-    if (!$esAdminSocial) {
-        $query->where('id_u', $usuario->id_u);
-    }
-
-    $perPage = min(
-        max((int) $request->input('per_page', 15), 1),
-        100
-    );
-
-    return response()->json(
-        $query->paginate($perPage)
-    );
-}
-
-
-    /**
-     * Mostrar una PQR. Un usuario normal solo puede ver la suya.
-     */
-
-public function show(Request $request, $id)
-{
-    $usuario = $request->user();
-
-    $esAdminSocial = $usuario->hasRole('adminSocial');
-
-    $pqr = Pqr::with([
-        'usuario',
-        'seguimientos' => function ($query) use ($esAdminSocial) {
-            $query->orderBy('created_at', 'asc');
-
-            if ($esAdminSocial) {
-                $query->with('administrador');
-            } else {
-                // No cargar ni devolver notas internas.
-                $query->select([
-                    'id_seguimiento',
-                    'id_pqr',
-                    'estado_anterior',
-                    'estado_nuevo',
-                    'tipo_evento',
-                    'comentario_publico',
-                    'created_at',
-                ]);
-            }
-        }
-    ])->find($id);
-
-    if (!$pqr) {
-        return response()->json([
-            'message' => 'PQR no encontrada'
-        ], 404);
-    }
-
-    $esDueno = (int) $pqr->id_u === (int) $usuario->id_u;
-
-    if (!$esDueno && !$esAdminSocial) {
-        return response()->json([
-            'message' => 'No tienes permisos para ver esta PQR'
-        ], 403);
-    }
-
-    // Eliminar la posibilidad de exponer notas internas
-    // al ciudadano mediante esta respuesta.
-    if (!$esAdminSocial) {
-        $pqr->seguimientos->each(function ($seguimiento) {
-            $seguimiento->makeHidden([
-                'nota_interna',
-                'id_admin',
-                'administrador',
-            ]);
-        });
-    }
-
-    return response()->json([
-        'pqr' => $pqr
-    ]);
-}
-
-
-    /**
-     * Crear una PQR.
-     */
-    public function store(Request $request)
+    public function index(Request $request)
     {
-        $validated = $request->validate([
-            'tipo_pqr' => 'required|in:peticion,queja,reclamo,sugerencia,felicitacion',
-            'asunto_pqr' => 'required|string|max:150',
-            // El formulario limita a 1000 caracteres; sin max se podían
-            // guardar textos de varios MB llamando a la API directamente.
-            'mensaje_pqr' => 'required|string|max:2000',
+        $esAdmin = $this->esAdmin($request);
+
+        $request->validate([
+            'estado' => ['sometimes', Rule::in(Pqr::ESTADOS)],
+            'tipo' => ['sometimes', Rule::in(Pqr::TIPOS)],
         ]);
 
-        $pqr = Pqr::create([
-            'tipo_pqr' => $validated['tipo_pqr'],
-            'asunto_pqr' => $validated['asunto_pqr'],
-            'mensaje_pqr' => $validated['mensaje_pqr'],
-            'estado_pqr' => 'abierto',
-            'respuesta_pqr' => null,
-            'respondido_en_pqr' => null,
-            'creado_en_pqr' => now(),
-            'id_u' => $request->user()->id_u,
-        ]);
+        $query = Pqr::with('usuario:id_u,nombre_u,apellido_u,correo_u,telefono_u')
+            // Fecha de la última actuación visible para quien consulta.
+            ->withMax(['seguimientos as ultima_actuacion_en' => function ($q) use ($esAdmin) {
+                if (!$esAdmin) {
+                    $q->where('tipo_evento', '!=', 'nota_interna');
+                }
+            }], 'created_at')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id_pqr');
 
-        return response()->json([
-            'message' => 'PQR creada correctamente',
-            'pqr' => $pqr->load('usuario')
-        ], 201);
+        if (!$esAdmin || $request->boolean('mias')) {
+            $query->where('id_u', $request->user()->id_u);
+        }
+
+        if ($request->filled('estado')) {
+            $query->where('estado_pqr', $request->input('estado'));
+        }
+
+        if ($request->filled('tipo')) {
+            $query->where('tipo_pqr', $request->input('tipo'));
+        }
+
+        $porPagina = min(100, max(1, (int) $request->input('per_page', 15)));
+        $pagina = $query->paginate($porPagina);
+
+        $respuesta = $pagina->toArray();
+
+        $respuesta['data'] = collect($pagina->items())
+            ->map(fn (Pqr $pqr) => $this->presentar($pqr, $esAdmin))
+            ->all();
+
+        if ($esAdmin && !$request->boolean('mias')) {
+            // Conteo por fase de TODAS las PQR (no solo de la página).
+            $respuesta['resumen'] = Pqr::query()
+                ->select('estado_pqr', DB::raw('count(*) as total'))
+                ->groupBy('estado_pqr')
+                ->pluck('total', 'estado_pqr');
+        }
+
+        return response()->json($respuesta);
     }
 
     /**
-     * Actualizar estado o responder PQR (panel de administración).
-     * Cada respuesta y cada cambio de estado queda en el historial
-     * (pqr_seguimientos) para que el cliente vea la conversación completa.
+     * Mostrar una PQR con su seguimiento completo. Un usuario normal
+     * solo puede ver la suya y nunca recibe las notas internas.
      */
-    public function update(Request $request, $id)
+    public function show(Request $request, $id)
     {
         $pqr = Pqr::find($id);
 
@@ -182,116 +86,97 @@ public function show(Request $request, $id)
             ], 404);
         }
 
-        $validated = $request->validate([
-            'estado_pqr' => 'sometimes|in:abierto,en_revision,en_proceso,resuelto,cerrado',
-            'respuesta_pqr' => 'sometimes|nullable|string|max:2000',
-        ]);
+        $esDueno = (int) $pqr->id_u === (int) $request->user()->id_u;
+        $esAdmin = $this->esAdmin($request);
 
-        $respuesta = trim($validated['respuesta_pqr'] ?? '');
-        $hayRespuesta = $respuesta !== '';
-
-        // Una respuesta vacía no borra la anterior: el historial se conserva.
-        $datos = $validated;
-        unset($datos['respuesta_pqr']);
-
-        if ($hayRespuesta) {
-            $datos['respuesta_pqr'] = $respuesta;
-            $datos['respondido_en_pqr'] = now();
-        }
-
-        $idAdmin = $request->user()->id_u;
-        $estadoAnterior = $pqr->estado_pqr;
-        $respuestaAnterior = $pqr->respuesta_pqr;
-        $respondidoAnterior = $pqr->respondido_en_pqr;
-
-        DB::transaction(function () use (
-            $pqr,
-            $datos,
-            $hayRespuesta,
-            $respuesta,
-            $idAdmin,
-            $estadoAnterior,
-            $respuestaAnterior,
-            $respondidoAnterior
-        ) {
-            // PQR respondidas antes de que existiera el historial: se guarda
-            // la respuesta anterior para no perderla al sobrescribirla.
-            if (
-                $hayRespuesta &&
-                $respuestaAnterior &&
-                !PqrSeguimiento::where('id_pqr', $pqr->id_pqr)
-                    ->where('tipo_evento', 'respuesta')
-                    ->exists()
-            ) {
-                $viejo = PqrSeguimiento::create([
-                    'id_pqr' => $pqr->id_pqr,
-                    'id_admin' => $idAdmin,
-                    'estado_anterior' => null,
-                    'estado_nuevo' => $estadoAnterior,
-                    'tipo_evento' => 'respuesta',
-                    'comentario_publico' => $respuestaAnterior,
-                    'nota_interna' => null,
-                ]);
-
-                if ($respondidoAnterior) {
-                    $viejo->created_at = $respondidoAnterior;
-                    $viejo->save();
-                }
-            }
-
-            $pqr->update($datos);
-
-            $estadoNuevo = $pqr->estado_pqr;
-
-            if ($estadoNuevo !== $estadoAnterior) {
-                PqrSeguimiento::create([
-                    'id_pqr' => $pqr->id_pqr,
-                    'id_admin' => $idAdmin,
-                    'estado_anterior' => $estadoAnterior,
-                    'estado_nuevo' => $estadoNuevo,
-                    'tipo_evento' => 'actualizacion',
-                    'comentario_publico' => null,
-                    'nota_interna' => null,
-                ]);
-            }
-
-            if ($hayRespuesta) {
-                PqrSeguimiento::create([
-                    'id_pqr' => $pqr->id_pqr,
-                    'id_admin' => $idAdmin,
-                    'estado_anterior' => null,
-                    'estado_nuevo' => $estadoNuevo,
-                    'tipo_evento' => 'respuesta',
-                    'comentario_publico' => $respuesta,
-                    'nota_interna' => null,
-                ]);
-            }
-        });
-
-        // Notificar al usuario si se ha respondido a la PQR.
-        if ($hayRespuesta) {
-            NotificacionService::crear(
-                $pqr->id_u,
-                'Respuesta a tu PQR',
-                'Tu PQR "' . $pqr->asunto_pqr . '" fue respondida.',
-                'pqr'
-            );
+        if (!$esDueno && !$esAdmin) {
+            return response()->json([
+                'message' => 'No tienes permisos para ver esta PQR'
+            ], 403);
         }
 
         return response()->json([
-            'message' => 'PQR actualizada correctamente',
-            'pqr' => $pqr->fresh()->load(['usuario', 'seguimientos'])
+            'pqr' => $this->cargarYPresentar($pqr, $esAdmin)
         ]);
     }
 
     /**
-     * El cliente escribe un mensaje nuevo en su propia PQR (conversación).
-     * Se guarda en el historial (pqr_seguimientos) sin administrador asociado.
+     * Crear una PQR. Queda radicada en fase "abierto" y se registra
+     * el primer evento del seguimiento.
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'tipo_pqr' => ['required', Rule::in(Pqr::TIPOS)],
+            'asunto_pqr' => 'required|string|max:150',
+            // El formulario limita a 1000 caracteres; sin max se podían
+            // guardar textos de varios MB llamando a la API directamente.
+            'mensaje_pqr' => 'required|string|max:2000',
+        ]);
+
+        $pqr = DB::transaction(function () use ($validated, $request) {
+            $pqr = Pqr::create([
+                'tipo_pqr' => $validated['tipo_pqr'],
+                'asunto_pqr' => $validated['asunto_pqr'],
+                'mensaje_pqr' => $validated['mensaje_pqr'],
+                'estado_pqr' => 'abierto',
+                'respuesta_pqr' => null,
+                'respondido_en_pqr' => null,
+                'creado_en_pqr' => now(),
+                'id_u' => $request->user()->id_u,
+            ]);
+
+            $pqr->seguimientos()->create([
+                'id_admin' => null,
+                'estado_anterior' => null,
+                'estado_nuevo' => 'abierto',
+                'tipo_evento' => 'radicacion',
+                'comentario_publico' => 'Tu solicitud fue radicada y está '
+                    . 'en la cola de revisión de nuestro equipo.',
+            ]);
+
+            return $pqr;
+        });
+
+        return response()->json([
+            'message' => 'PQR creada correctamente',
+            'pqr' => $this->cargarYPresentar($pqr, false)
+        ], 201);
+    }
+
+    /**
+     * Compatibilidad: PUT /pqr/{id}. Hace lo mismo que
+     * POST /pqr/{id}/seguimiento (cambia de fase y/o responde), así que
+     * el cambio también queda en el historial del usuario.
+     */
+    public function update(Request $request, $id)
+    {
+        return $this->registrarActuacion($request, $id, 200);
+    }
+
+    /**
+     * POST /pqr/{id}/seguimiento (solo adminSocial).
+     *
+     * Registra una actuación sobre la PQR. Se puede enviar cualquier
+     * combinación de:
+     *  - estado_pqr:         nueva fase
+     *  - comentario_publico: mensaje que ve el usuario en su seguimiento
+     *  - respuesta_pqr:      respuesta oficial (obligatoria al resolver)
+     *  - nota_interna:       nota que solo ven los administradores
+     */
+    public function seguimiento(Request $request, $id)
+    {
+        return $this->registrarActuacion($request, $id, 201);
+    }
+
+    /**
+     * POST /pqr/{id}/responder (solo el dueño de la PQR).
+     *
+     * El usuario escribe un mensaje más en su propia PQR mientras no esté
+     * resuelta ni cerrada. Queda en el historial como "respuesta_cliente".
      */
     public function responder(Request $request, $id)
     {
-        $usuario = $request->user();
-
         $pqr = Pqr::find($id);
 
         if (!$pqr) {
@@ -301,34 +186,32 @@ public function show(Request $request, $id)
         }
 
         // Solo la persona que radicó la solicitud puede escribir en ella.
-        if ((int) $pqr->id_u !== (int) $usuario->id_u) {
+        if ((int) $pqr->id_u !== (int) $request->user()->id_u) {
             return response()->json([
                 'message' => 'Solo puedes responder en tus propias solicitudes.'
             ], 403);
         }
 
-        if (!in_array($pqr->estado_pqr, ['abierto', 'en_revision', 'en_proceso'], true)) {
-            return response()->json([
-                'message' => 'Esta solicitud ya fue resuelta o cerrada. Si necesitas algo más, radica una nueva PQR.'
-            ], 422);
+        if (in_array($pqr->estado_pqr, Pqr::ESTADOS_FINALES, true)) {
+            return $this->rechazo(
+                'Esta solicitud ya fue resuelta o cerrada. '
+                . 'Si necesitas algo más, radica una nueva PQR.'
+            );
         }
 
-        $datos = $request->validate([
+        $validated = $request->validate([
             'mensaje' => 'required|string|max:2000',
         ]);
 
-        $mensaje = trim($datos['mensaje']);
+        $mensaje = $this->textoOpcional($validated['mensaje']);
 
-        if ($mensaje === '') {
-            throw ValidationException::withMessages([
-                'mensaje' => 'Escribe tu mensaje.'
-            ]);
+        if (!$mensaje) {
+            return $this->rechazo('Escribe tu mensaje.');
         }
 
-        $seguimiento = PqrSeguimiento::create([
-            'id_pqr' => $pqr->id_pqr,
+        $seguimiento = $pqr->seguimientos()->create([
             'id_admin' => null,
-            'estado_anterior' => null,
+            'estado_anterior' => $pqr->estado_pqr,
             'estado_nuevo' => $pqr->estado_pqr,
             'tipo_evento' => 'respuesta_cliente',
             'comentario_publico' => $mensaje,
@@ -337,178 +220,226 @@ public function show(Request $request, $id)
 
         return response()->json([
             'message' => 'Tu mensaje fue enviado.',
-            'seguimiento' => $seguimiento
-                ->makeHidden(['nota_interna', 'id_admin', 'updated_at'])
-                ->toArray(),
+            'seguimiento' => $this->presentarSeguimiento($seguimiento, false),
         ], 201);
     }
 
-public function seguimiento(Request $request, $id)
-{
-    // 1. Solo el administrador social puede gestionar PQRS.
-    if (!$request->user()->hasRole('adminSocial')) {
-        return response()->json([
-            'message' => 'No tienes permisos para gestionar PQRS.'
-        ], 403);
-    }
+    private function registrarActuacion(Request $request, $id, int $status): JsonResponse
+    {
+        $pqr = Pqr::find($id);
 
-    // 2. Buscar la solicitud.
-    $pqr = Pqr::find($id);
-
-    if (!$pqr) {
-        return response()->json([
-            'message' => 'No se encontró la PQRS.'
-        ], 404);
-    }
-
-    if ($pqr->estado_pqr === 'cerrado') {
-        return response()->json([
-            'message' => 'La PQRS está cerrada.'
-        ], 422);
-    }
-
-    // 3. Validar los datos recibidos del frontend.
-    $datos = $request->validate([
-        'estado_pqr' => [
-            'sometimes',
-            'required',
-            'in:abierto,en_revision,en_proceso,resuelto,cerrado'
-        ],
-        'tipo_evento' => [
-            'sometimes',
-            'in:actualizacion,respuesta,solicitud_informacion,nota'
-        ],
-        'comentario_publico' => 'nullable|string|max:2000',
-        'nota_interna' => 'nullable|string|max:2000',
-        'respuesta_pqr' => 'nullable|string|max:5000',
-    ]);
-
-    $estadoAnterior = $pqr->estado_pqr;
-    $estadoNuevo = $datos['estado_pqr'] ?? $estadoAnterior;
-
-    $comentario = trim($datos['comentario_publico'] ?? '');
-    $nota = trim($datos['nota_interna'] ?? '');
-    $respuesta = trim($datos['respuesta_pqr'] ?? '');
-
-    $cambioEstado = $estadoAnterior !== $estadoNuevo;
-
-    // 4. Definir las transiciones permitidas.
-    $transiciones = [
-        'abierto' => ['en_revision'],
-        'en_revision' => ['en_proceso', 'abierto'],
-        'en_proceso' => ['resuelto', 'en_revision'],
-        'resuelto' => ['cerrado', 'en_proceso'],
-        'cerrado' => [],
-    ];
-
-    if (
-        $cambioEstado &&
-        !in_array(
-            $estadoNuevo,
-            $transiciones[$estadoAnterior] ?? [],
-            true
-        )
-    ) {
-        throw ValidationException::withMessages([
-            'estado_pqr' =>
-                'El cambio de etapa no está permitido.'
-        ]);
-    }
-
-    // 5. Exigir que exista alguna actuación.
-    if (
-        !$cambioEstado &&
-        $comentario === '' &&
-        $nota === '' &&
-        $respuesta === ''
-    ) {
-        throw ValidationException::withMessages([
-            'comentario_publico' =>
-                'Debes registrar un avance, una nota o una respuesta.'
-        ]);
-    }
-
-    $tipoEvento = $datos['tipo_evento']
-        ?? ($respuesta !== ''
-            ? 'respuesta'
-            : ($cambioEstado ? 'actualizacion' : 'nota'));
-
-    // 6. Actualizar la PQRS y guardar el historial juntos.
-    DB::transaction(function () use (
-        $pqr,
-        $request,
-        $estadoAnterior,
-        $estadoNuevo,
-        $cambioEstado,
-        $comentario,
-        $nota,
-        $respuesta,
-        $tipoEvento
-    ) {
-        if ($cambioEstado) {
-            $pqr->estado_pqr = $estadoNuevo;
+        if (!$pqr) {
+            return response()->json([
+                'message' => 'PQR no encontrada'
+            ], 404);
         }
 
-        if ($respuesta !== '') {
-            $pqr->respuesta_pqr = $respuesta;
-            $pqr->respondido_en_pqr = now();
-        }
-
-        $pqr->save();
-
-        PqrSeguimiento::create([
-            'id_pqr' => $pqr->id_pqr,
-            'id_admin' => $request->user()->id_u,
-            'estado_anterior' => $cambioEstado
-                ? $estadoAnterior
-                : null,
-            'estado_nuevo' => $estadoNuevo,
-            'tipo_evento' => $tipoEvento,
-            // La respuesta se guarda completa en el historial para que el
-            // ciudadano vea toda la conversación, no solo la última respuesta.
-            'comentario_publico' => $respuesta !== ''
-                ? ($comentario !== ''
-                    ? $comentario . "\n\n" . $respuesta
-                    : $respuesta)
-                : ($comentario !== ''
-                    ? $comentario
-                    : ($cambioEstado
-                        ? 'Tu solicitud ha avanzado a una nueva etapa.'
-                        : null)),
-            'nota_interna' => $nota !== '' ? $nota : null,
+        $validated = $request->validate([
+            'estado_pqr' => ['sometimes', Rule::in(Pqr::ESTADOS)],
+            'comentario_publico' => 'sometimes|nullable|string|max:1000',
+            'respuesta_pqr' => 'sometimes|nullable|string|max:2000',
+            'nota_interna' => 'sometimes|nullable|string|max:1000',
         ]);
 
-        // 7. Notificar los cambios que debe conocer el ciudadano.
-        if (
-            $cambioEstado ||
-            $comentario !== '' ||
-            $respuesta !== ''
-        ) {
-            $titulo = $respuesta !== ''
-                ? 'Respuesta a tu PQRS'
-                : 'Actualización de tu PQRS';
+        $estadoActual = $pqr->estado_pqr;
+        $estadoNuevo = $validated['estado_pqr'] ?? $estadoActual;
+        $cambiaEstado = $estadoNuevo !== $estadoActual;
 
-            $mensaje = $respuesta !== ''
-                ? 'Se ha registrado una respuesta para tu solicitud.'
-                : 'Tu solicitud ha recibido una actualización.';
+        $comentario = $this->textoOpcional($validated['comentario_publico'] ?? null);
+        $respuesta = $this->textoOpcional($validated['respuesta_pqr'] ?? null);
+        $nota = $this->textoOpcional($validated['nota_interna'] ?? null);
 
-            NotificacionService::crear(
-                (int) $pqr->id_u,
-                $titulo,
-                $mensaje,
-                'pqr'
+        if (!$cambiaEstado && !$comentario && !$respuesta && !$nota) {
+            return $this->rechazo('No hay ningún cambio ni mensaje para registrar.');
+        }
+
+        if ($estadoActual === 'cerrado' && ($cambiaEstado || $comentario || $respuesta)) {
+            return $this->rechazo(
+                'Esta PQR está cerrada. Solo se pueden agregar notas internas.'
             );
         }
-    });
 
-    // 8. Devolver la información actualizada.
-    $actualizada = $pqr->fresh()
-        ->load('seguimientos');
+        if ($cambiaEstado && $estadoNuevo === 'abierto') {
+            return $this->rechazo(
+                'Una PQR ya radicada no puede volver a la fase "Radicada".'
+            );
+        }
 
-    return response()->json([
-        'message' => 'Seguimiento registrado correctamente.',
-        'pqr' => $actualizada,
-    ]);
-}
+        if (
+            $cambiaEstado
+            && $estadoNuevo === 'resuelto'
+            && !$respuesta
+            && !$pqr->respuesta_pqr
+        ) {
+            return $this->rechazo(
+                'Para marcar la PQR como resuelta escribe la respuesta '
+                . 'que recibirá el usuario.'
+            );
+        }
 
+        $tipoEvento = match (true) {
+            (bool) $respuesta => 'respuesta',
+            $cambiaEstado => 'cambio_estado',
+            (bool) $comentario => 'comentario',
+            default => 'nota_interna',
+        };
+
+        // Texto que ve el usuario en este paso del seguimiento.
+        $textoPublico = implode("\n\n", array_filter([$respuesta, $comentario])) ?: null;
+
+        DB::transaction(function () use (
+            $pqr, $request, $estadoActual, $estadoNuevo, $cambiaEstado,
+            $respuesta, $textoPublico, $nota, $tipoEvento
+        ) {
+            $datos = [];
+
+            if ($cambiaEstado) {
+                $datos['estado_pqr'] = $estadoNuevo;
+            }
+
+            if ($respuesta) {
+                $datos['respuesta_pqr'] = $respuesta;
+                $datos['respondido_en_pqr'] = now();
+            }
+
+            if ($datos) {
+                $pqr->update($datos);
+            }
+
+            $pqr->seguimientos()->create([
+                'id_admin' => $request->user()->id_u,
+                'estado_anterior' => $estadoActual,
+                'estado_nuevo' => $estadoNuevo,
+                'tipo_evento' => $tipoEvento,
+                'comentario_publico' => $textoPublico,
+                'nota_interna' => $nota,
+            ]);
+        });
+
+        // Avisar al usuario solo de lo que él puede ver.
+        if ($tipoEvento !== 'nota_interna') {
+            $this->notificarUsuario($pqr, $cambiaEstado, $estadoNuevo, $textoPublico);
+        }
+
+        return response()->json([
+            'message' => 'Seguimiento registrado correctamente',
+            'pqr' => $this->cargarYPresentar($pqr->fresh(), true),
+        ], $status);
+    }
+
+    private function notificarUsuario(
+        Pqr $pqr,
+        bool $cambiaEstado,
+        string $estadoNuevo,
+        ?string $textoPublico
+    ): void {
+        $etiqueta = Pqr::ETIQUETAS_ESTADO[$estadoNuevo] ?? $estadoNuevo;
+
+        if ($cambiaEstado) {
+            $titulo = 'Tu PQR avanzó a: ' . $etiqueta;
+            $mensaje = 'Tu PQR ' . $pqr->radicado . ' "' . $pqr->asunto_pqr
+                . '" ahora está en fase "' . $etiqueta . '".';
+        } else {
+            $titulo = 'Nuevo mensaje en tu PQR';
+            $mensaje = 'El equipo escribió en tu PQR ' . $pqr->radicado
+                . ' "' . $pqr->asunto_pqr . '".';
+        }
+
+        if ($textoPublico) {
+            $mensaje .= ' ' . Str::limit($textoPublico, 160);
+        }
+
+        NotificacionService::crear($pqr->id_u, $titulo, $mensaje, 'pqr');
+    }
+
+    /* ------------------------------------------------------------ */
+    /*  Utilidades                                                   */
+    /* ------------------------------------------------------------ */
+
+    private function esAdmin(Request $request): bool
+    {
+        return $request->user()->hasRole('adminSocial');
+    }
+
+    private function textoOpcional(?string $texto): ?string
+    {
+        $texto = trim((string) $texto);
+
+        return $texto === '' ? null : $texto;
+    }
+
+    private function rechazo(string $mensaje): JsonResponse
+    {
+        return response()->json(['message' => $mensaje], 422);
+    }
+
+    /** Carga el seguimiento (sin notas internas para el usuario) y arma la respuesta. */
+    private function cargarYPresentar(Pqr $pqr, bool $esAdmin): array
+    {
+        $pqr->load([
+            'usuario:id_u,nombre_u,apellido_u,correo_u,telefono_u',
+            'seguimientos' => function ($q) use ($esAdmin) {
+                if (!$esAdmin) {
+                    $q->where('tipo_evento', '!=', 'nota_interna');
+                }
+            },
+        ]);
+
+        if ($esAdmin) {
+            $pqr->seguimientos->load('administrador:id_u,nombre_u,apellido_u');
+        }
+
+        return $this->presentar($pqr, $esAdmin);
+    }
+
+    /**
+     * Convierte la PQR a arreglo controlando qué campos del seguimiento
+     * salen: nunca nota_interna ni datos del admin hacia el usuario.
+     */
+    private function presentar(Pqr $pqr, bool $esAdmin): array
+    {
+        $data = $pqr->toArray();
+        unset($data['seguimientos']);
+
+        if (isset($data['ultima_actuacion_en'])) {
+            $data['ultima_actuacion_en'] = Carbon::parse(
+                $data['ultima_actuacion_en']
+            )->toIso8601String();
+        }
+
+        if ($pqr->relationLoaded('seguimientos')) {
+            $data['seguimientos'] = $pqr->seguimientos
+                ->map(fn (PqrSeguimiento $s) => $this->presentarSeguimiento($s, $esAdmin))
+                ->values()
+                ->all();
+        }
+
+        return $data;
+    }
+
+    private function presentarSeguimiento(PqrSeguimiento $s, bool $esAdmin): array
+    {
+        $item = [
+            'id_seguimiento' => $s->id_seguimiento,
+            'tipo_evento' => $s->tipo_evento,
+            'estado_anterior' => $s->estado_anterior,
+            'estado_nuevo' => $s->estado_nuevo,
+            'comentario_publico' => $s->comentario_publico,
+            'created_at' => $s->created_at?->toIso8601String(),
+        ];
+
+        if ($esAdmin) {
+            $admin = $s->administrador;
+
+            $item['nota_interna'] = $s->nota_interna;
+            $item['autor'] = $admin
+                ? trim($admin->nombre_u . ' ' . $admin->apellido_u)
+                : ($s->tipo_evento === 'respuesta_cliente' ? 'Usuario' : 'Sistema');
+        } else {
+            // El usuario ve "Equipo", no el nombre personal del admin.
+            $item['autor'] = $s->id_admin ? 'Equipo Skyed Social' : 'Sistema';
+        }
+
+        return $item;
+    }
 }
