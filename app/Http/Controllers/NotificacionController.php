@@ -17,7 +17,7 @@ class NotificacionController extends Controller
             $request->user()->id_u
         )
         ->orderByDesc('created_at')
-        ->paginate($request->input('per_page', 15));
+        ->paginate($this->perPage($request));
 
         return response()->json([
             'message' => 'Notificaciones obtenidas correctamente',

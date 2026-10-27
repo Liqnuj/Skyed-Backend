@@ -32,7 +32,7 @@ class ReservaController extends Controller
         }
 
         return response()->json(
-            $query->paginate($request->input('per_page', 15))
+            $query->paginate($this->perPage($request))
         );
     }
 
@@ -70,14 +70,14 @@ class ReservaController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-                    'id_u' => 'required|exists:usuario,id_u', // Para vincular la reserva al usuario logueado
+                    // id_u ya no se recibe: la reserva siempre queda a nombre del usuario
+                    // autenticado. Antes se exigía en el body (aunque se ignoraba al guardar).
                     'id_tipo_eves' => 'required|exists:tipo_evento,id_tipo_eves', // Para saber qué tipo de evento es
-                    'fecha_evento_rese' => 'required|date',
-                    'invitados_rese' => 'required|integer|min:1',
-                    'presupuesto_rese' => 'required|numeric|min:0',
+                    'fecha_evento_rese' => 'required|date|after_or_equal:today',
+                    'invitados_rese' => 'required|integer|min:1|max:100000',
+                    'presupuesto_rese' => 'required|numeric|min:0|max:9999999999',
                     'ubicacion_rese' => 'required|string|max:120',
                     'Observaciones_rese' => 'required|string|max:255', // También puedes poner 'nullable' si no es obligatorio
-                    'total_rese' => 'nullable|numeric|min:0',
                     'id_er' => 'nullable|exists:evento_realizado,id_er', // Aquí está la corrección principal
                     'nombre_rese' => 'nullable|string|max:80', // Nombre que el cliente le pone a su reserva
                 ]);
@@ -92,7 +92,9 @@ class ReservaController extends Controller
                         'presupuesto_rese' => $validated['presupuesto_rese'],
                         'ubicacion_rese' => $validated['ubicacion_rese'],
                         'Observaciones_rese' => $validated['Observaciones_rese'],
-                        'total_rese' => $validated['total_rese'] ?? 0,
+                        // El total lo define el administrador al revisar la reserva
+                        // (PUT /reservas/{id}); el cliente no lo puede fijar.
+                        'total_rese' => 0,
                         'estado_rese' => 'pendiente',
                         'creado_en_rese' => now(),
                         'nombre_rese' => isset($validated['nombre_rese']) && trim($validated['nombre_rese']) !== ''
@@ -123,6 +125,12 @@ class ReservaController extends Controller
 
     public function update(Request $request, $id)
     {
+        // Cambiar estado o total es trabajo del admin social. El cliente solo
+        // puede renombrar su reserva (PUT /reservas/{id}/nombre).
+        if ($denegado = $this->exigirRol($request, 'adminSocial')) {
+            return $denegado;
+        }
+
         $reserva = Reserva::find($id);
 
         if (!$reserva) {
@@ -133,11 +141,11 @@ class ReservaController extends Controller
 
         $validated = $request->validate([
             'fecha_evento_rese' => 'sometimes|date',
-            'invitados_rese' => 'sometimes|integer|min:1',
-            'presupuesto_rese' => 'sometimes|numeric|min:0',
+            'invitados_rese' => 'sometimes|integer|min:1|max:100000',
+            'presupuesto_rese' => 'sometimes|numeric|min:0|max:9999999999',
             'ubicacion_rese' => 'sometimes|string|max:120',
             'Observaciones_rese' => 'sometimes|string|max:255',
-            'total_rese' => 'sometimes|numeric|min:0',
+            'total_rese' => 'sometimes|numeric|min:0|max:9999999999',
             'estado_rese' => 'sometimes|in:pendiente,confirmada,cancelada,completada',
             'id_er' => 'sometimes|exists:evento_realizado,id_er',
         ]);
@@ -251,8 +259,12 @@ class ReservaController extends Controller
         return response()->json(['message' => $oculta ? 'Reserva oculta' : 'Reserva visible']);
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
+        if ($denegado = $this->exigirRol($request, 'adminSocial')) {
+            return $denegado;
+        }
+
         $reserva = Reserva::find($id);
 
         if (!$reserva) {
@@ -270,6 +282,10 @@ class ReservaController extends Controller
 
     public function seguimiento(Request $request, $id)
     {
+        if ($denegado = $this->exigirRol($request, 'adminSocial')) {
+            return $denegado;
+        }
+
         $reserva = Reserva::find($id);
 
         if (!$reserva) {
@@ -279,7 +295,7 @@ class ReservaController extends Controller
         }
 
         $validated = $request->validate([
-            'comentario' => 'required|string',
+            'comentario' => 'required|string|max:500',
         ]);
 
         $seguimiento = $reserva->seguimientos()->create([

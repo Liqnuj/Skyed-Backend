@@ -57,7 +57,7 @@ class PqrController extends Controller
             $query->where('tipo_pqr', $request->input('tipo'));
         }
 
-        $porPagina = min(100, max(1, (int) $request->input('per_page', 15)));
+        $porPagina = min(100, max(1, (int) $this->perPage($request)));
         $pagina = $query->paginate($porPagina);
 
         $respuesta = $pagina->toArray();
@@ -463,59 +463,149 @@ class PqrController extends Controller
     }
 
     /**
-     * POST /pqr/{id}/ocultar
+     * POST /pqr/{id}/abrir (solo adminSocial).
      *
-     * Oculta (o vuelve a mostrar) la PQR en la lista de quien la pide:
-     *  - vista=usuario (por defecto): solo el dueño; no afecta al admin.
-     *  - vista=admin: solo un admin; no afecta al usuario.
-     *  - oculta=false: la vuelve a mostrar.
+     * El administrador abrió el detalle. Si la PQR estaba "abierto" (Radicada)
+     * pasa a "en_revision" y el usuario recibe el aviso. En cualquier otra
+     * fase no cambia nada. Responde { pqr, cambio }.
      */
-    public function ocultar(Request $request, $id)
+    public function abrir(Request $request, $id)
     {
-        $pqr = Pqr::find($id);
-
-        if (!$pqr) {
-            return response()->json(['message' => 'PQR no encontrada'], 404);
+        $pqr = $this->pqrParaAdmin($request, $id);
+        if ($pqr instanceof JsonResponse) {
+            return $pqr;
         }
 
-        $request->validate([
-            'vista' => 'sometimes|in:usuario,admin',
-            'oculta' => 'sometimes|boolean',
+        $cambio = false;
+
+        if ($pqr->estado_pqr === 'abierto') {
+            $this->cambiarFase($request, $pqr, 'en_revision', 'cambio_estado');
+            $cambio = true;
+        }
+
+        return response()->json([
+            'pqr' => $this->cargarYPresentar($pqr->fresh(), true),
+            'cambio' => $cambio,
+        ]);
+    }
+
+    /**
+     * POST /pqr/{id}/iniciar-gestion (solo adminSocial): "en_revision" -> "en_proceso".
+     */
+    public function iniciarGestion(Request $request, $id)
+    {
+        $pqr = $this->pqrParaAdmin($request, $id);
+        if ($pqr instanceof JsonResponse) {
+            return $pqr;
+        }
+
+        if ($pqr->estado_pqr !== 'en_revision') {
+            return $this->rechazo('Solo una PQR en revisión puede pasar a "En proceso".');
+        }
+
+        $this->cambiarFase($request, $pqr, 'en_proceso', 'cambio_estado');
+
+        return response()->json([
+            'message' => 'La PQR quedó en proceso.',
+            'pqr' => $this->cargarYPresentar($pqr->fresh(), true),
+        ]);
+    }
+
+    /**
+     * POST /pqr/{id}/resolver (solo adminSocial): guarda la respuesta oficial y
+     * pasa "en_proceso" -> "resuelto". Body: respuesta (obligatoria), nota_interna.
+     */
+    public function resolver(Request $request, $id)
+    {
+        $pqr = $this->pqrParaAdmin($request, $id);
+        if ($pqr instanceof JsonResponse) {
+            return $pqr;
+        }
+
+        $validated = $request->validate([
+            'respuesta' => 'required|string|max:2000',
+            'nota_interna' => 'sometimes|nullable|string|max:1000',
         ]);
 
-        $vista = $request->input('vista', 'usuario');
-        $oculta = $request->boolean('oculta', true);
-
-        if ($vista === 'admin') {
-            if (!$this->esAdmin($request)) {
-                return response()->json(['message' => 'No tienes permisos.'], 403);
-            }
-            $columna = 'oculta_admin';
-        } else {
-            if ((int) $pqr->id_u !== (int) $request->user()->id_u) {
-                return response()->json(['message' => 'Solo puedes ocultar tus propias solicitudes.'], 403);
-            }
-            $columna = 'oculta_usuario';
+        if ($pqr->estado_pqr !== 'en_proceso') {
+            return $this->rechazo('Solo una PQR en proceso puede marcarse como resuelta.');
         }
 
-        if ($oculta && in_array($pqr->estado_pqr, ['en_proceso', 'en_revision'], true)) {
-            return $this->rechazo('Una solicitud en proceso no se puede ocultar.');
+        $respuesta = $this->textoOpcional($validated['respuesta']);
+        if (!$respuesta) {
+            return $this->rechazo('Escribe la respuesta que recibirá el usuario.');
         }
 
-        $pqr->forceFill([$columna => $oculta])->save();
+        $this->cambiarFase(
+            $request,
+            $pqr,
+            'resuelto',
+            'respuesta',
+            $respuesta,
+            $this->textoOpcional($validated['nota_interna'] ?? null)
+        );
 
-        return response()->json(['message' => $oculta ? 'PQR oculta' : 'PQR visible']);
+        return response()->json([
+            'message' => 'PQR resuelta.',
+            'pqr' => $this->cargarYPresentar($pqr->fresh(), true),
+        ]);
+    }
+
+    /** Busca la PQR y exige ser adminSocial; devuelve la PQR o una respuesta de error. */
+    private function pqrParaAdmin(Request $request, $id): Pqr|JsonResponse
+    {
+        if (!$this->esAdmin($request)) {
+            return response()->json([
+                'message' => 'No tienes permisos para realizar esta acción'
+            ], 403);
+        }
+
+        return Pqr::find($id) ?? response()->json(['message' => 'PQR no encontrada'], 404);
+    }
+
+    /** Cambia de fase, deja el paso en el seguimiento y avisa al usuario. */
+    private function cambiarFase(
+        Request $request,
+        Pqr $pqr,
+        string $estadoNuevo,
+        string $tipoEvento,
+        ?string $textoPublico = null,
+        ?string $nota = null
+    ): void {
+        $estadoActual = $pqr->estado_pqr;
+
+        DB::transaction(function () use ($request, $pqr, $estadoActual, $estadoNuevo, $tipoEvento, $textoPublico, $nota) {
+            $datos = ['estado_pqr' => $estadoNuevo];
+
+            if ($tipoEvento === 'respuesta' && $textoPublico) {
+                $datos['respuesta_pqr'] = $textoPublico;
+                $datos['respondido_en_pqr'] = now();
+            }
+
+            $pqr->update($datos);
+
+            $pqr->seguimientos()->create([
+                'id_admin' => $request->user()->id_u,
+                'estado_anterior' => $estadoActual,
+                'estado_nuevo' => $estadoNuevo,
+                'tipo_evento' => $tipoEvento,
+                'comentario_publico' => $textoPublico,
+                'nota_interna' => $nota,
+            ]);
+        });
+
+        $this->notificarUsuario($pqr, true, $estadoNuevo, $textoPublico);
     }
 
     private function registrarActuacion(Request $request, $id, int $status): JsonResponse
     {
-
-                if (!$this->esAdmin($request)) {
+        // Antes la ruta quedaba abierta a cualquier usuario con sesión y aquí
+        // no se revisaba nada: se exige el rol también dentro del controlador.
+        if (!$this->esAdmin($request)) {
             return response()->json([
-                'message' => 'No tienes permisos para gestionar PQR.'
+                'message' => 'No tienes permisos para realizar esta acción'
             ], 403);
         }
-
 
         $pqr = Pqr::find($id);
 

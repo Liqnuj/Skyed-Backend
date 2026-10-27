@@ -15,7 +15,7 @@ class TipoEventoController extends Controller
             $query->where('modulo_tipo_eves', $request->input('modulo'));
         }
 
-        $tipos = $query->paginate($request->input('per_page', 15));
+        $tipos = $query->paginate($this->perPage($request));
 
         return response()->json($tipos);
     }

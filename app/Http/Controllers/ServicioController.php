@@ -13,7 +13,7 @@ class ServicioController extends Controller
     public function index(Request $request)
     {
         $servicios = Servicio::with('ambientes')
-            ->paginate($request->input('per_page', 15));
+            ->paginate($this->perPage($request));
 
         return ServicioResource::collection($servicios);
     }

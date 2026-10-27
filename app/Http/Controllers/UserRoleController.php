@@ -12,9 +12,9 @@ class UserRoleController extends Controller
     /**
      * Ver los roles actuales de un usuario.
      */
-    public function index($userId)
+    public function index(Request $request, $userId)
     {
-        $user = User::with('roles')->find($userId);
+        $user = User::with('roles')->visiblesPara($request->user())->find($userId);
 
         if (!$user) {
             return response()->json([
@@ -34,7 +34,7 @@ class UserRoleController extends Controller
      */
     public function store(AssignRoleRequest $request, $userId)
     {
-        $user = User::find($userId);
+        $user = User::visiblesPara($request->user())->find($userId);
 
         if (!$user) {
             return response()->json([
@@ -43,6 +43,12 @@ class UserRoleController extends Controller
         }
 
         $validated = $request->validated();
+
+        if (!$request->user()->puedeGestionarRol($validated['nombre_rol'])) {
+            return response()->json([
+                'message' => 'No tienes permisos para asignar ese rol'
+            ], 403);
+        }
 
         $rol = Role::where('nombre_rol', $validated['nombre_rol'])->first();
 
@@ -68,12 +74,19 @@ class UserRoleController extends Controller
      */
     public function destroy(Request $request, $userId, $rolId)
     {
-        $user = User::find($userId);
+        $user = User::visiblesPara($request->user())->find($userId);
 
         if (!$user) {
             return response()->json([
                 'message' => 'Usuario no encontrado'
             ], 404);
+        }
+
+        $rol = Role::find($rolId);
+        if ($rol && !$request->user()->puedeGestionarRol($rol->nombre_rol)) {
+            return response()->json([
+                'message' => 'No tienes permisos para quitar ese rol'
+            ], 403);
         }
 
         $contexto = $request->query('contexto');

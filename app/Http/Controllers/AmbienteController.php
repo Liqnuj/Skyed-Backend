@@ -12,7 +12,7 @@ class AmbienteController extends Controller
     public function index(Request $request)
     {
         $ambientes = Ambiente::with('servicios')
-            ->paginate($request->input('per_page', 15));
+            ->paginate($this->perPage($request));
 
         return response()->json($ambientes);
     }

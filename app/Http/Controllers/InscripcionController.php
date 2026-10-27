@@ -65,7 +65,7 @@ class InscripcionController extends Controller
         return response()->json([
             'evento' => new EventoDeportivoResource($evento),
             'inscripciones' => InscripcionResource::collection(
-                $query->paginate($request->input('per_page', 15))
+                $query->paginate($this->perPage($request))
             ),
         ]);
     }
@@ -192,8 +192,11 @@ class InscripcionController extends Controller
                 'referencia_p' =>
                     $validated['referencia_p'] ?? null,
 
-                'comprobante_p' =>
-                    $validated['comprobante_p'] ?? null,
+                // La imagen solo entra por POST /pagos/{id}/comprobante. Antes se
+                // guardaba el texto que mandara el navegador, y poniendo
+                // "comprobantes/<archivo de otra persona>" el endpoint de
+                // verComprobante entregaba el comprobante ajeno.
+                'comprobante_p' => null,
 
                 'monto_p' => $precio,
 

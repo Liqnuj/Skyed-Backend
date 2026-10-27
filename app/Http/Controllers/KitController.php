@@ -12,7 +12,7 @@ class KitController extends Controller
      */
     public function index(Request $request)
     {
-        $kits = Kit::paginate($request->input('per_page', 15));
+        $kits = Kit::paginate($this->perPage($request));
 
         return response()->json($kits);
     }

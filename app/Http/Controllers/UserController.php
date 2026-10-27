@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -16,7 +17,8 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $users = User::with('roles')
-            ->paginate($request->input('per_page', 15));
+            ->visiblesPara($request->user())
+            ->paginate($this->perPage($request));
 
         return response()->json($users);
     }
@@ -24,9 +26,9 @@ class UserController extends Controller
     /**
      * Mostrar un usuario específico.
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
-        $user = User::with('roles')->find($id);
+        $user = User::with('roles')->visiblesPara($request->user())->find($id);
 
         if (!$user) {
             return response()->json([
@@ -45,6 +47,15 @@ class UserController extends Controller
     public function store(StoreUserRequest $request)
     {
         $validated = $request->validated();
+
+        // No se puede crear a alguien con un rol que el actor no puede dar
+        // (p. ej. un admin social creando un admin deportivo).
+        $rol = Role::find($validated['id_rol']);
+        if ($rol && !$request->user()->puedeGestionarRol($rol->nombre_rol)) {
+            return response()->json([
+                'message' => 'No tienes permisos para asignar ese rol'
+            ], 403);
+        }
 
         // Encriptar contraseña
         $validated['contrasena_u'] = Hash::make(
@@ -87,7 +98,7 @@ class UserController extends Controller
      */
     public function update(UpdateUserRequest $request, $id)
     {
-        $user = User::find($id);
+        $user = User::visiblesPara($request->user())->find($id);
 
         if (!$user) {
             return response()->json([
@@ -122,7 +133,7 @@ class UserController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $user = User::find($id);
+        $user = User::visiblesPara($request->user())->find($id);
 
         if (!$user) {
             return response()->json([

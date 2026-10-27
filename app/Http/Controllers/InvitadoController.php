@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Invitado;
+use App\Support\ReglasUsuario;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class InvitadoController extends Controller
 {
@@ -12,8 +14,12 @@ class InvitadoController extends Controller
      */
     public function index(Request $request)
     {
+        if ($denegado = $this->exigirRol($request, 'adminDeportivo')) {
+            return $denegado;
+        }
+
         $invitados = Invitado::paginate(
-            $request->input('per_page', 15)
+            $this->perPage($request)
         );
 
         return response()->json($invitados);
@@ -22,8 +28,12 @@ class InvitadoController extends Controller
     /**
      * Mostrar un invitado específico.
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
+        if ($denegado = $this->exigirRol($request, 'adminDeportivo')) {
+            return $denegado;
+        }
+
         $invitado = Invitado::with('usuarios')->find($id);
 
         if (!$invitado) {
@@ -42,14 +52,18 @@ class InvitadoController extends Controller
      */
     public function store(Request $request)
     {
+        if ($denegado = $this->exigirRol($request, 'adminDeportivo')) {
+            return $denegado;
+        }
+
         $validated = $request->validate([
-            'tipo_documento' => 'required|string|max:30',
-            'documento_inv' => 'required|integer|unique:invitados,documento_inv',
-            'nombre_inv' => 'required|string|max:50',
-            'apellido_inv' => 'required|string|max:50',
-            'rh_inv' => 'required|string|max:5',
-            'telefono_inv' => 'required|string|max:50|unique:invitados,telefono_inv',
-            'fecha_nacimiento_inv' => 'required|date',
+            'tipo_documento' => 'required|in:CC,TI,CE,PA',
+            'documento_inv' => 'required|integer|digits_between:5,12|unique:invitados,documento_inv',
+            'nombre_inv' => ['required', 'string', 'max:50', 'regex:' . ReglasUsuario::NOMBRE],
+            'apellido_inv' => ['required', 'string', 'max:50', 'regex:' . ReglasUsuario::NOMBRE],
+            'rh_inv' => ['required', Rule::in(ReglasUsuario::RH)],
+            'telefono_inv' => 'required|digits_between:7,15|unique:invitados,telefono_inv',
+            'fecha_nacimiento_inv' => 'required|date|after:1900-01-01|before_or_equal:today',
             'correo_inv' => 'nullable|email|max:80|unique:invitados,correo_inv',
         ]);
 
@@ -66,6 +80,10 @@ class InvitadoController extends Controller
      */
     public function update(Request $request, $id)
     {
+        if ($denegado = $this->exigirRol($request, 'adminDeportivo')) {
+            return $denegado;
+        }
+
         $invitado = Invitado::find($id);
 
         if (!$invitado) {
@@ -75,13 +93,13 @@ class InvitadoController extends Controller
         }
 
         $validated = $request->validate([
-            'tipo_documento' => 'sometimes|required|string|max:30',
-            'documento_inv' => 'sometimes|required|integer|unique:invitados,documento_inv,' . $id . ',id_inv',
-            'nombre_inv' => 'sometimes|required|string|max:50',
-            'apellido_inv' => 'sometimes|required|string|max:50',
-            'rh_inv' => 'sometimes|required|string|max:5',
-            'telefono_inv' => 'sometimes|required|string|max:50|unique:invitados,telefono_inv,' . $id . ',id_inv',
-            'fecha_nacimiento_inv' => 'sometimes|required|date',
+            'tipo_documento' => 'sometimes|required|in:CC,TI,CE,PA',
+            'documento_inv' => 'sometimes|required|integer|digits_between:5,12|unique:invitados,documento_inv,' . $id . ',id_inv',
+            'nombre_inv' => ['sometimes', 'required', 'string', 'max:50', 'regex:' . ReglasUsuario::NOMBRE],
+            'apellido_inv' => ['sometimes', 'required', 'string', 'max:50', 'regex:' . ReglasUsuario::NOMBRE],
+            'rh_inv' => ['sometimes', 'required', Rule::in(ReglasUsuario::RH)],
+            'telefono_inv' => 'sometimes|required|digits_between:7,15|unique:invitados,telefono_inv,' . $id . ',id_inv',
+            'fecha_nacimiento_inv' => 'sometimes|required|date|after:1900-01-01|before_or_equal:today',
             'correo_inv' => 'nullable|email|max:80|unique:invitados,correo_inv,' . $id . ',id_inv',
         ]);
 
@@ -99,8 +117,12 @@ class InvitadoController extends Controller
      * No se puede borrar si sigue vinculado a un usuario (usuario.id_inv),
      * para no dejar esa referencia huérfana de forma silenciosa.
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
+        if ($denegado = $this->exigirRol($request, 'adminDeportivo')) {
+            return $denegado;
+        }
+
         $invitado = Invitado::find($id);
 
         if (!$invitado) {

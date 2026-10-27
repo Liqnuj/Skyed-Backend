@@ -37,7 +37,7 @@ class EntregaKitController extends Controller
             $query->where('id_u', $request->user()->id_u);
         }
 
-        $entregas = $query->paginate($request->input('per_page', 15));
+        $entregas = $query->paginate($this->perPage($request));
 
         return response()->json([
             'evento' => $evento,

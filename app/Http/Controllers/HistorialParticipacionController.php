@@ -24,7 +24,7 @@ class HistorialParticipacionController extends Controller
             $query->where('id_u', $request->user()->id_u);
         }
 
-        $historial = $query->paginate($request->input('per_page', 15));
+        $historial = $query->paginate($this->perPage($request));
 
         return response()->json($historial);
     }

@@ -21,7 +21,7 @@ class CategoriaCompetenciaController extends Controller
         }
 
         $categorias = CategoriaCompetencia::where('id_e', $eventoId)
-            ->paginate($request->input('per_page', 15));
+            ->paginate($this->perPage($request));
 
         // FIX: la respuesta no incluía la clave "evento" (solo las
         // categorías), aunque el propio test de este endpoint

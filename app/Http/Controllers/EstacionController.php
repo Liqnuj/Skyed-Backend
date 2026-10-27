@@ -17,7 +17,7 @@ class EstacionController extends Controller
         }
 
         $estaciones = Estacion::where('id_e', $eventoId)
-            ->paginate($request->input('per_page', 15));
+            ->paginate($this->perPage($request));
 
         return response()->json($estaciones);
     }
