@@ -173,6 +173,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/reservas', [ReservaController::class, 'store']);
     Route::patch('/reservas/{id}/nombre', [ReservaController::class, 'renombrar']);
     Route::post('/reservas/{id}/ocultar', [ReservaController::class, 'ocultar']);
+    Route::post('/pqr/{id}/ocultar', [PqrController::class, 'ocultar']);
     Route::get('/pqr', [PqrController::class, 'index']);
     Route::get('/pqr/{id}', [PqrController::class, 'show']);
     Route::post('/pqr', [PqrController::class, 'store']);
@@ -308,12 +309,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/reservas/{id}', [ReservaController::class, 'destroy']);
         Route::post('/reservas/{id}/seguimiento', [ReservaController::class, 'seguimiento']);
 
-        // PQR: solo adminSocial gestiona (cambia fase, responde, abre el detalle)
+        // PQR: solo adminSocial gestiona. abrir / iniciar-gestion / resolver
+        // están arriba, junto a las demás rutas de PQR (con su propio límite).
         Route::put('/pqr/{id}', [PqrController::class, 'update']);
         Route::post('/pqr/{id}/seguimiento', [PqrController::class, 'seguimiento']);
-        Route::post('/pqr/{id}/abrir', [PqrController::class, 'abrir']);
-        Route::post('/pqr/{id}/iniciar-gestion', [PqrController::class, 'iniciarGestion']);
-        Route::post('/pqr/{id}/resolver', [PqrController::class, 'resolver']);
     });
 
 });
