@@ -15,6 +15,12 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Solo PostgreSQL: en SQLite (pruebas automáticas) la tabla ya se crea
+        // así y este SQL no existe.
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         DB::statement('ALTER TABLE pqr_seguimientos ALTER COLUMN id_admin DROP NOT NULL');
 
         // Si tipo_evento se creó como enum, Laravel lo guarda con un CHECK

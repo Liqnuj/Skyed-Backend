@@ -278,7 +278,7 @@ it('da el mismo mensaje si el correo no existe (no revela qué cuentas existen)'
 it('pide correo y contraseña para iniciar sesión', function () {
     postJson('/api/login', [])
         ->assertStatus(422)
-        ->assertJsonValidationErrors(['correo_u', 'contrasena_u']);
+        ->assertJsonValidationErrors(['identificacion', 'contrasena_u']);
 });
 
 it('bloquea por un minuto tras 3 intentos de login', function () {

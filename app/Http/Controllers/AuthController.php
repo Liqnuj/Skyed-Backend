@@ -438,7 +438,11 @@ class AuthController extends Controller
             'contrasena_u' => Hash::make($request->nueva_contrasena)
         ]);
 
-        $user->tokens()->where('id', '!=', $request->user()->currentAccessToken()->id)->delete();
+        // Cierra las demás sesiones; la actual se conserva si es un token guardado.
+        $actual = $request->user()->currentAccessToken();
+        $user->tokens()
+            ->when($actual instanceof \Laravel\Sanctum\PersonalAccessToken, fn ($q) => $q->where('id', '!=', $actual->id))
+            ->delete();
 
         return response()->json([
             'message' => 'Contraseña actualizada correctamente'

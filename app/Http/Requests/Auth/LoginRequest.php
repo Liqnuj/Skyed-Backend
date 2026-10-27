@@ -14,6 +14,12 @@ class LoginRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        // Compatibilidad: antes el login enviaba 'correo_u'. Si llega así,
+        // se toma como la identificación (correo o documento).
+        if (! $this->filled('identificacion') && $this->filled('correo_u')) {
+            $this->merge(['identificacion' => $this->input('correo_u')]);
+        }
+
         // Si es un correo válido, lo normalizamos
         if (is_string($this->identificacion) && filter_var($this->identificacion, FILTER_VALIDATE_EMAIL)) {
             $this->merge(['identificacion' => ReglasUsuario::normalizarCorreo($this->identificacion)]);
