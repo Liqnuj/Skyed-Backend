@@ -176,8 +176,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/pqr', [PqrController::class, 'index']);
     Route::get('/pqr/{id}', [PqrController::class, 'show']);
     Route::post('/pqr', [PqrController::class, 'store']);
+    
     Route::post('/pqr/{id}/responder', [PqrController::class, 'responder'])->middleware('throttle:20,1');
 
+    // PQR: gestión del administrador social (el backend valida el flujo).
+    Route::post('/pqr/{id}/abrir', [PqrController::class, 'abrir'])
+        ->middleware('role.context:adminSocial');
+    Route::post('/pqr/{id}/iniciar-gestion', [PqrController::class, 'iniciarGestion'])
+        ->middleware(['role.context:adminSocial', 'throttle:30,1']);
+    Route::post('/pqr/{id}/resolver', [PqrController::class, 'resolver'])
+        ->middleware(['role.context:adminSocial', 'throttle:30,1']);
 
     // ========================================================
     // 2. ZONA GLOBAL (Cualquier Administrador)

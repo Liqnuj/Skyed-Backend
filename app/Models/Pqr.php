@@ -16,7 +16,7 @@ class Pqr extends Model
 
     /**
      * Fases por las que pasa una PQR, en orden.
-     * "abierto" se muestra al usuario como "Radicada".
+     * "abierto" se muestra al usuario como "Enviado".
      */
     public const ESTADOS = [
         'abierto',
@@ -27,10 +27,10 @@ class Pqr extends Model
     ];
 
     public const ETIQUETAS_ESTADO = [
-        'abierto' => 'Radicada',
+        'abierto' => 'Enviado',
         'en_revision' => 'En revisión',
         'en_proceso' => 'En proceso',
-        'resuelto' => 'Resuelta',
+        'resuelto' => 'Resuelto',
         'cerrado' => 'Cerrada',
     ];
 
@@ -44,6 +44,22 @@ class Pqr extends Model
 
     /** Estados en los que la PQR ya no está "en curso". */
     public const ESTADOS_FINALES = ['resuelto', 'cerrado'];
+
+   
+    
+    /**
+     * Transiciones válidas de una PQR. El backend nunca acepta
+     * saltarse una fase ni volver atrás.
+     */
+    public const TRANSICIONES = [
+        'abierto' => ['en_revision'],
+        'en_revision' => ['en_proceso'],
+        'en_proceso' => ['resuelto'],
+        'resuelto' => ['cerrado'],
+        'cerrado' => [],
+    ];
+
+    
 
     /**
      * Plazo de respuesta en días hábiles por tipo. Son los mismos que
