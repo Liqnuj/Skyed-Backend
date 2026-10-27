@@ -61,8 +61,6 @@ Route::get('/tipos-evento', function () {
     return response()->json(TipoEvento::where('modulo_tipo_eves', 'Social')->get());
 });
 
-Route::post('/reservas', [ReservaController::class, 'store']);
-
 /*
 |--------------------------------------------------------------------------
 | RUTAS PÚBLICAS (No requieren token)
@@ -179,9 +177,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/pqr/{id}', [PqrController::class, 'show']);
     Route::post('/pqr', [PqrController::class, 'store']);
     Route::post('/pqr/{id}/responder', [PqrController::class, 'responder'])->middleware('throttle:20,1');
-    Route::put('/pqr/{id}', [PqrController::class, 'update']);
-    Route::post('/pqr/{id}/seguimiento', [PqrController::class, 'seguimiento']);
-        Route::post('/pqr/{id}/responder', [PqrController::class, 'responder']);
 
 
     // ========================================================
@@ -304,21 +299,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/reservas/{id}', [ReservaController::class, 'update']);
         Route::delete('/reservas/{id}', [ReservaController::class, 'destroy']);
         Route::post('/reservas/{id}/seguimiento', [ReservaController::class, 'seguimiento']);
-        
-Route::middleware('role.context:adminSocial')->group(function () {
-    Route::put('/pqr/{id}', [
-        PqrController::class,
-        'update'
-    ]);
 
-    Route::post('/pqr/{id}/seguimiento', [
-        PqrController::class,
-        'seguimiento'
-    ]);
-});
-
-
-        
+        // PQR: solo adminSocial gestiona (cambia fase, responde, abre el detalle)
+        Route::put('/pqr/{id}', [PqrController::class, 'update']);
+        Route::post('/pqr/{id}/seguimiento', [PqrController::class, 'seguimiento']);
+        Route::post('/pqr/{id}/abrir', [PqrController::class, 'abrir']);
+        Route::post('/pqr/{id}/iniciar-gestion', [PqrController::class, 'iniciarGestion']);
+        Route::post('/pqr/{id}/resolver', [PqrController::class, 'resolver']);
     });
 
 });
