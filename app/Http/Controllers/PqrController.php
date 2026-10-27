@@ -402,7 +402,7 @@ class PqrController extends Controller
         $a = Pqr::ETIQUETAS_ESTADO[$destino] ?? $destino;
 
         return 'No se puede pasar de «' . $de . '» a «' . $a . '». '
-            . 'El orden es: Radicada → En revisión → En proceso → Resuelta.';
+            . 'El orden es: Enviado → En revisión → En proceso → Resuelto.';
     }
 
     
