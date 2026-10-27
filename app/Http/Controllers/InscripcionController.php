@@ -104,10 +104,13 @@ class InscripcionController extends Controller
         $validated = $request->validated();
 
         // Talla de camiseta (opcional). Se valida aquí para no depender de
-        // que StoreInscripcionRequest la incluya.
-        $talla = $request->validate([
+        // que StoreInscripcionRequest la incluya. El formulario de inscripción
+        // la envía como "talla_kit"; "talla_camiseta" se sigue aceptando.
+        $tallas = $request->validate([
             'talla_camiseta' => 'nullable|string|max:10',
-        ])['talla_camiseta'] ?? null;
+            'talla_kit' => 'nullable|string|max:10',
+        ]);
+        $talla = $tallas['talla_kit'] ?? $tallas['talla_camiseta'] ?? null;
 
         $user = $request->user();
 
