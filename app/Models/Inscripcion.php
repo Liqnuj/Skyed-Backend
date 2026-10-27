@@ -23,6 +23,8 @@ class Inscripcion extends Model
         'id_u',
         'id_e',
         'id_inv',
+        'talla_camiseta_i',
+        'numero_dorsal_i',
     ];
 
     protected $casts = [
