@@ -103,12 +103,19 @@ class InscripcionController extends Controller
     {
         $validated = $request->validated();
 
+        // Talla de camiseta (opcional). Se valida aquí para no depender de
+        // que StoreInscripcionRequest la incluya.
+        $talla = $request->validate([
+            'talla_camiseta' => 'nullable|string|max:10',
+        ])['talla_camiseta'] ?? null;
+
         $user = $request->user();
 
         $resultado = DB::transaction(function () use (
             $validated,
             $user,
-            $eventoId
+            $eventoId,
+            $talla
         ) {
             // Bloqueamos el evento durante la operación
             // para evitar problemas de cupos simultáneos.
@@ -176,6 +183,8 @@ class InscripcionController extends Controller
                 'contacto_emergencia_parentesco' =>
                     $validated['contacto_emergencia_parentesco'],
 
+                'talla_camiseta_i' => $talla,
+
                 'id_u' => $user->id_u,
                 'id_e' => $evento->id_e,
                 'id_inv' => $invitadoId,
@@ -214,6 +223,39 @@ class InscripcionController extends Controller
                 'estado_qr' => 'pendiente',
                 'id_i' => $inscripcion->id_i,
             ]);
+
+            // Historial del participante: queda "inscrito" hasta que se
+            // escanee su QR (asistio) o se cargue su resultado (finalizado).
+            DB::table('historial_participacion')->insert([
+                'fecha_hp' => now(),
+                'estado_hp' => 'inscrito',
+                'observaciones_hp' => null,
+                'id_u' => $user->id_u,
+                'id_e' => $evento->id_e,
+                'id_i' => $inscripcion->id_i,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Si el evento tiene kit, queda una entrega pendiente para que
+            // el participante vea dónde y cuándo recogerlo.
+            if ($evento->id_k) {
+                $yaTieneEntrega = DB::table('entrega_kit')
+                    ->where('id_u', $user->id_u)
+                    ->where('id_e', $evento->id_e)
+                    ->exists();
+
+                if (!$yaTieneEntrega) {
+                    DB::table('entrega_kit')->insert([
+                        'estado_ek' => 'pendiente',
+                        'id_k' => $evento->id_k,
+                        'id_u' => $user->id_u,
+                        'id_e' => $evento->id_e,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
 
             return $inscripcion->load([
                 'usuario',
@@ -333,6 +375,20 @@ class InscripcionController extends Controller
                     'estado_p' => 'cancelado'
                 ]);
             }
+
+            // Una inscripción cancelada no es participación: se quita su
+            // fila "inscrito" del historial y la entrega de kit pendiente.
+            // Si ya había asistido o entregado, se conserva el registro.
+            DB::table('historial_participacion')
+                ->where('id_i', $inscripcion->id_i)
+                ->where('estado_hp', 'inscrito')
+                ->delete();
+
+            DB::table('entrega_kit')
+                ->where('id_u', $inscripcion->id_u)
+                ->where('id_e', $inscripcion->id_e)
+                ->where('estado_ek', 'pendiente')
+                ->delete();
         });
 
         return response()->json([
