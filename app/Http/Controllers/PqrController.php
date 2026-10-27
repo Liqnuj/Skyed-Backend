@@ -52,7 +52,7 @@ class PqrController extends Controller
             $query->where('tipo_pqr', $request->input('tipo'));
         }
 
-        $porPagina = min(100, max(1, (int) $request->input('per_page', 15)));
+        $porPagina = min(100, max(1, (int) $this->perPage($request)));
         $pagina = $query->paginate($porPagina);
 
         $respuesta = $pagina->toArray();

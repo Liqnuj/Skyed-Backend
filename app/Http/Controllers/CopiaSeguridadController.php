@@ -14,7 +14,7 @@ class CopiaSeguridadController extends Controller
     public function index(Request $request)
     {
         $copias = CopiaSeguridad::orderByDesc('fecha_cs')
-            ->paginate($request->input('per_page', 15));
+            ->paginate($this->perPage($request));
 
         return response()->json($copias);
     }

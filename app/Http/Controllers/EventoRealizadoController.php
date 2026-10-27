@@ -16,7 +16,7 @@ class EventoRealizadoController extends Controller
             'ambiente.servicios',
             'creador',
             'reservas',
-        ])->paginate($request->input('per_page', 15));
+        ])->paginate($this->perPage($request));
 
         return response()->json($eventos);
     }

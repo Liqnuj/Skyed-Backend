@@ -13,7 +13,7 @@ class PremioController extends Controller
         $premios = Premio::with([
             'resultado.inscripcion.usuario',
             'resultado.inscripcion.evento',
-        ])->paginate($request->input('per_page', 15));
+        ])->paginate($this->perPage($request));
 
         return response()->json([
             'premios' => $premios

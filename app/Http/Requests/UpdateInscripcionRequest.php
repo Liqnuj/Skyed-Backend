@@ -17,12 +17,20 @@ class UpdateInscripcionRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $tel = $this->input('contacto_emergencia_telefono');
+        if (is_string($tel)) {
+            $this->merge(['contacto_emergencia_telefono' => preg_replace('/[\s\-()]/', '', $tel)]);
+        }
+    }
+
     public function rules(): array
     {
         return [
             'contacto_emergencia_nombre' => 'sometimes|string|max:100',
-            'contacto_emergencia_telefono' => 'sometimes|string|max:15',
-            'contacto_emergencia_parentesco' => 'sometimes|string|max:50',
+            'contacto_emergencia_telefono' => 'sometimes|digits_between:7,15',
+            'contacto_emergencia_parentesco' => ['sometimes', 'string', 'max:50', "regex:/^[\\pL\\s'_\\-\\/]+$/u"],
         ];
     }
 }

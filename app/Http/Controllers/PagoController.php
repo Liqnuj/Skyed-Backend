@@ -34,7 +34,7 @@ class PagoController extends Controller
             });
         }
 
-        $pagos = $query->paginate($request->input('per_page', 15));
+        $pagos = $query->paginate($this->perPage($request));
 
         return response()->json([
             'pagos' => $pagos,
@@ -241,6 +241,13 @@ class PagoController extends Controller
      */
     public function cambiarEstado(Request $request, $id)
     {
+        // Confirmar o rechazar pagos es solo del admin deportivo. Sin esto, si
+        // la ruta quedaba sin middleware de rol, un participante podía
+        // confirmar su propio pago (y activar su QR) desde la consola.
+        if ($denegado = $this->exigirRol($request, 'adminDeportivo')) {
+            return $denegado;
+        }
+
         $validated = $request->validate([
             'estado_p' => [
                 'required',

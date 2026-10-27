@@ -16,6 +16,9 @@ class ReglasUsuario
     /** Letras (con tildes y ñ), espacios, apóstrofe y guion. */
     public const NOMBRE = "/^[\\pL\\s'\\-]+$/u";
 
+    /** Tipos de sangre que ofrece el formulario. */
+    public const RH = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
+
     /** Edad mínima para registrarse (igual que RegisterPage.tsx). */
     public const EDAD_MINIMA = 10;
 

@@ -24,29 +24,21 @@ use Carbon\Carbon;
 
 class AuthController extends Controller
 {
-/**
-     * Iniciar sesión (por correo o documento)
+    /**
+     * Iniciar sesión
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        $identificacion = $request->identificacion;
-        $user = null;
-
-        // Si tiene formato de correo, buscamos por correo
-        if (filter_var($identificacion, FILTER_VALIDATE_EMAIL)) {
-            $user = ReglasUsuario::buscarPorCorreo($identificacion);
-        } else {
-            // De lo contrario, asumimos que es un documento (limpiamos espacios por si acaso)
-            $documentoLimpio = preg_replace('/\D/', '', $identificacion);
-            $user = User::where('documento_u', $documentoLimpio)->first();
-        }
+        $user = ReglasUsuario::buscarPorCorreo($request->correo_u);
 
         if (!$user || !Hash::check($request->contrasena_u, $user->contrasena_u)) {
             return response()->json([
-                'message' => 'Credenciales incorrectas. Verifica tus datos.'
+                'message' => 'Correo o contraseña incorrectos'
             ], 401);
         }
 
+        // FIX: una cuenta desactivada (por el propio usuario desde su
+        // perfil o por un administrador) podía volver a iniciar sesión.
         if ($user->estado_u === 'inactivo') {
             return response()->json([
                 'message' => 'Tu cuenta está desactivada. Comunícate con el administrador de Skyed para reactivarla.'
@@ -368,6 +360,7 @@ class AuthController extends Controller
             'ciudad_u' => $user->ciudad_u,
             'telefono_u' => $user->telefono_u,
             'tipo_documento_u' => $user->tipo_documento_u,
+            'rh_u' => $user->rh_u,
             'documento_u' => $user->documento_u,
             'fecha_nacimiento_u' => $user->fecha_nacimiento_u,
             'foto_url' => $user->foto_u ? asset('storage/' . $user->foto_u) : null,
@@ -403,6 +396,7 @@ class AuthController extends Controller
             'telefono_u' => 'sometimes|required|digits_between:7,15|unique:usuario,telefono_u,' . $user->id_u . ',id_u',
             'ciudad_u' => 'sometimes|nullable|string|max:80',
             'tipo_documento_u' => 'sometimes|required|string|max:30',
+            'rh_u' => 'sometimes|nullable|string|in:O+,O-,A+,A-,B+,B-,AB+,AB-',
             'documento_u' => 'sometimes|required|integer|digits_between:5,12|unique:usuario,documento_u,' . $user->id_u . ',id_u',
             'fecha_nacimiento_u' => 'sometimes|required|date|after:1900-01-01|before_or_equal:' . ReglasUsuario::fechaMaximaNacimiento(),
         ], ReglasUsuario::mensajes());

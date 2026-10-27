@@ -15,7 +15,7 @@ class ResultadoController extends Controller
             'inscripcion.usuario',
             'inscripcion.evento',
             'categoriaResultado.categoria',
-        ])->paginate($request->input('per_page', 15));
+        ])->paginate($this->perPage($request));
 
         return response()->json([
             'resultados' => $resultados

@@ -21,7 +21,7 @@ class EventoDeportivoController extends Controller
             'creador',
             'categorias',
             'patrocinadores',
-        ])->paginate($request->input('per_page', 15));
+        ])->paginate($this->perPage($request));
 
         return EventoDeportivoResource::collection($eventos);
     }

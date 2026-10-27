@@ -15,7 +15,7 @@ class PatrocinadorController extends Controller
     public function index(Request $request)
     {
         $patrocinadores = Patrocinador::with('eventos')
-            ->paginate($request->input('per_page', 15));
+            ->paginate($this->perPage($request));
 
         return response()->json($patrocinadores);
     }
