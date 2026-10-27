@@ -16,7 +16,7 @@ class Pqr extends Model
 
     /**
      * Fases por las que pasa una PQR, en orden.
-     * "abierto" se muestra al usuario como "Radicada".
+     * "abierto" se muestra al usuario como "Enviado".
      */
     public const ESTADOS = [
         'abierto',
@@ -27,10 +27,10 @@ class Pqr extends Model
     ];
 
     public const ETIQUETAS_ESTADO = [
-        'abierto' => 'Radicada',
+        'abierto' => 'Enviado',
         'en_revision' => 'En revisión',
         'en_proceso' => 'En proceso',
-        'resuelto' => 'Resuelta',
+        'resuelto' => 'Resuelto',
         'cerrado' => 'Cerrada',
     ];
 
