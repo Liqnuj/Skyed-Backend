@@ -129,6 +129,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notificaciones', [NotificacionController::class, 'index']);
     Route::get('/notificaciones/{id}', [NotificacionController::class, 'show']);
     Route::patch('/notificaciones/{id}/leer', [NotificacionController::class, 'marcarLeida']);
+    Route::patch('/notificaciones/leer-todas', [NotificacionController::class, 'marcarTodasLeidas']);
 
     // Inscripciones (Autoservicio)
     Route::get('/mis-inscripciones', [InscripcionController::class, 'misInscripciones']);
