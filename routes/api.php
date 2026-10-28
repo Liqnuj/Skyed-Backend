@@ -111,6 +111,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/cambiar-contrasena', [AuthController::class, 'changePassword']);
     Route::put('/perfil', [AuthController::class, 'updatePerfil']);
     Route::post('/perfil/foto', [AuthController::class, 'updateFoto']);
+    Route::post('/verificar-contrasena', [AuthController::class, 'verificarContrasena']);
+    Route::put('/cambiar-contrasena', [AuthController::class, 'cambiarContrasena']);
     Route::delete('/perfil', [AuthController::class, 'desactivarCuenta']);
 
     // Gestión de Roles de Usuario
