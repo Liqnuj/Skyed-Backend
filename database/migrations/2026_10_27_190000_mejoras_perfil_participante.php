@@ -45,7 +45,7 @@ return new class extends Migration
              SELECT
                 CASE WHEN q.estado_qr = 'usado' THEN COALESCE(q.fecha_uso_qr, i.fecha_i) ELSE i.fecha_i END,
                 CASE WHEN q.estado_qr = 'usado' THEN 'asistio' ELSE 'inscrito' END,
-                NULL, i.id_u, i.id_e, i.id_i, now(), now()
+                NULL, i.id_u, i.id_e, i.id_i, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
              FROM inscripcion i
              LEFT JOIN qr_entrada q ON q.id_i = i.id_i
              WHERE i.estado_i <> 'cancelada'
@@ -59,7 +59,7 @@ return new class extends Migration
         DB::statement(
             "INSERT INTO entrega_kit
                 (estado_ek, id_k, id_u, id_e, created_at, updated_at)
-             SELECT 'pendiente', e.id_k, i.id_u, i.id_e, now(), now()
+             SELECT 'pendiente', e.id_k, i.id_u, i.id_e, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
              FROM inscripcion i
              JOIN \"eventoDeportivo\" e ON e.id_e = i.id_e
              WHERE i.estado_i <> 'cancelada'

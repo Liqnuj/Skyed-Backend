@@ -57,10 +57,6 @@ use App\Http\Controllers\Admin\RespaldoController as AdminRespaldoController;
 use App\Http\Middleware\CheckRoleContext;
 
 
-Route::get('/tipos-evento', function () {
-    return response()->json(TipoEvento::where('modulo_tipo_eves', 'Social')->get());
-});
-
 /*
 |--------------------------------------------------------------------------
 | RUTAS PÚBLICAS (No requieren token)

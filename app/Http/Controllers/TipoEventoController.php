@@ -11,8 +11,9 @@ class TipoEventoController extends Controller
     {
         $query = TipoEvento::with('eventos');
 
+        // Sin distinguir mayúsculas ('social' o 'Social').
         if ($request->filled('modulo')) {
-            $query->where('modulo_tipo_eves', $request->input('modulo'));
+            $query->whereRaw('LOWER(modulo_tipo_eves) = ?', [mb_strtolower($request->input('modulo'))]);
         }
 
         $tipos = $query->paginate($this->perPage($request));
