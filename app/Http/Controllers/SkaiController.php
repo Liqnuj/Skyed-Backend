@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\SkaiConocimiento;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
@@ -30,6 +31,8 @@ class SkaiController extends Controller
             'history' => 'sometimes|array|max:20',
             'history.*.role' => 'required_with:history|string|in:user,assistant',
             'history.*.content' => 'required_with:history|string',
+            // Página en la que está la persona (p. ej. "/deportivo/eventos").
+            'ruta' => 'sometimes|nullable|string|max:200',
         ]);
 
         // Peor caso: el modelo principal agota su timeout y luego responde
@@ -52,8 +55,16 @@ class SkaiController extends Controller
         $userMessage = trim($validated['message']);
         $context = $validated['context'] ?? 'general';
         $history = $validated['history'] ?? [];
+        $ruta = $validated['ruta'] ?? null;
 
-        $systemPrompt = $this->buildSystemPrompt($context);
+        // La ruta es pública, pero si llega el token se sabe quién pregunta:
+        // así SKAI explica lo que esa persona puede hacer (participante,
+        // cliente o administrador) y no le ofrece paneles a los que no entra.
+        $usuario = $request->user('sanctum');
+        $roles = $usuario ? $usuario->roles->pluck('nombre_rol')->unique()->values()->all() : [];
+        $eventos = SkaiConocimiento::proximosEventos();
+
+        $systemPrompt = SkaiConocimiento::instrucciones($context, $usuario?->nombre_u, $roles, $ruta, $eventos);
 
         // Solo los últimos 10 turnos, igual que el prototipo original,
         // para no gastar tokens de más.
@@ -114,6 +125,10 @@ class SkaiController extends Controller
             // Puede pasar si Gemini bloqueó la respuesta (finishReason: SAFETY).
             $replyText = 'No obtuve una respuesta clara, ¿puedes reformular tu pregunta?';
         }
+
+        // Solo quedan los botones que llevan a páginas que existen y a las
+        // que esta persona puede entrar (el modelo podría inventar rutas).
+        $replyText = SkaiConocimiento::limpiarEnlaces($replyText, $roles, $eventos);
 
         return response()->json(['reply' => $replyText]);
     }
@@ -202,36 +217,5 @@ class SkaiController extends Controller
 
             return null;
         }
-    }
-
-    private function buildSystemPrompt(string $context): string
-    {
-        $fechaHoy = now('America/Bogota')->translatedFormat('l, j \d\e F \d\e Y');
-
-        return <<<PROMPT
-Te llamas SKAI, el Asistente Virtual de SKYED, una plataforma colombiana (con sede en Sogamoso, Boyacá) que reúne dos servicios bajo el mismo "universo":
-
-1. SKYED (eventos deportivos): carreras de ciclismo, ciclomontañismo, running y otros eventos deportivos. Los usuarios pueden explorar eventos, inscribirse, ver categorías, kits del corredor/ciclista y patrocinadores.
-
-2. SkyedSocial (eventos sociales): organización y planeación de bodas, cumpleaños, grados, baby showers y otras celebraciones. Ayuda a los usuarios a definir qué tipo de celebración quieren y qué servicios necesitan.
-
-Hoy es: {$fechaHoy} (hora de Colombia). Úsalo para resolver preguntas sobre fechas relativas ("el próximo fin de semana", "en un mes", etc.) y para calcular cuánto falta para una fecha que el usuario mencione.
-
-Tu trabajo principal:
-- Ayudar al usuario a decidir qué tipo de evento le interesa (deportivo o social) si aún no lo sabe.
-- Si busca un evento deportivo: pregunta por disciplina (ciclismo, running, etc.), nivel/categoría, fecha o ubicación aproximada, y orienta hacia la sección de inscripción.
-- Si busca planear un evento social: pregunta por el tipo de celebración, número aproximado de invitados, fecha tentativa y estilo/presupuesto, y sugiere qué servicios de SkyedSocial le convendrían.
-
-Además de tu enfoque principal:
-- Eres un asistente conversacional capaz, no un formulario. Si el usuario te pregunta algo general (una operación matemática, la fecha de hoy, una duda rápida de cultura general, etc.), respóndela con normalidad y naturalidad — no la evadas ni digas que "no puedes".
-- Después de responder, intenta siempre traer la conversación de vuelta a Skyed, pero hazlo de forma natural y conversacional, como lo haría una persona real charlando, no como un vendedor leyendo un guion. Varía la forma en que lo haces (a veces un comentario casual, a veces una pregunta ligera, a veces solo una idea conectada de paso) y evita repetir siempre la misma fórmula de cierre. Si el tema no tiene ninguna relación real con Skyed (como una operación matemática), que ese gesto de vuelta sea muy breve y liviano, casi de pasada, nunca una oferta larga o forzada.
-- Responde siempre en español, de forma cálida, cercana y breve (2-4 frases en general; un poco más si la pregunta lo amerita, como un cálculo). Evita párrafos largos: esto es un chat.
-- Escribe con buena ortografía en español, con todas sus tildes y la letra ñ. No uses formato Markdown (ni asteriscos ni almohadillas), porque el chat muestra el texto tal cual.
-- Si el usuario pide hablar con soporte humano o algo que realmente no puedes resolver (pagos, datos personales de su inscripción, reclamos), dile que puede usar el botón "Hablar con soporte".
-- No inventes fechas de eventos, precios ni datos específicos reales que no conoces; si no tienes ese dato, dilo con honestidad y sugiere dónde buscarlo dentro de la plataforma. Esto no aplica a la fecha de hoy (arriba) ni a cálculos matemáticos, que sí puedes resolver directamente.
-- No menciones páginas web, dominios, apps móviles, correos ni teléfonos: el usuario ya está dentro de SKYED. Oriéntalo con las secciones reales del menú: en SKYED Deportivo "Eventos" (y el botón "Inscribirme" de cada evento) y "Nosotros"; en SkyedSocial "Eventos", "Lugares", "Reservar ahora" y "PQRS".
-
-Contexto actual seleccionado por el usuario en la interfaz: {$context}
-PROMPT;
     }
 }
