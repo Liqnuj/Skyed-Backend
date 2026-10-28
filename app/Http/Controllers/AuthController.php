@@ -27,13 +27,13 @@ class AuthController extends Controller
     /**
      * Iniciar sesión
      */
-    public function login(LoginRequest $request): JsonResponse
+        public function login(LoginRequest $request): JsonResponse
     {
-        $user = ReglasUsuario::buscarPorCorreo($request->correo_u);
+        $user = ReglasUsuario::buscarPorIdentificacion($request->identificacion);
 
         if (!$user || !Hash::check($request->contrasena_u, $user->contrasena_u)) {
             return response()->json([
-                'message' => 'Correo o contraseña incorrectos'
+                'message' => 'Correo, documento o contraseña incorrectos'
             ], 401);
         }
 
@@ -496,4 +496,56 @@ class AuthController extends Controller
         ]);
     }
 
+    public function verificarContrasena(Request $request): JsonResponse
+    {
+        $request->validate(['contrasena_actual' => 'required|string']);
+
+        // Comparamos lo que digitó el usuario con su contraseña actual en la base de datos
+        if (!Hash::check($request->contrasena_actual, $request->user()->contrasena_u)) {
+            return response()->json(['message' => 'La contraseña actual es incorrecta.'], 400);
+        }
+
+        return response()->json(['message' => 'Contraseña validada correctamente.'], 200);
+    }
+
+    // Método para el Paso 2 (Guardar la nueva contraseña validando el historial)
+    public function cambiarContrasena(Request $request)
+    {
+        $request->validate([
+            'contrasena_actual' => 'required|string',
+            'nueva_contrasena' => 'required|string|min:8|confirmed', 
+        ]);
+
+        $user = $request->user();
+
+        // A. Consultar la tabla 'historial_contrasena' para ver las últimas 3 contraseñas usadas
+        $historial = DB::table('historial_contrasena')
+            ->where('id_u', $user->id_u)
+            ->latest('created_at') 
+            ->take(3)
+            ->get();
+
+        // B. Verificar que la nueva contraseña no sea igual a ninguna del historial
+        foreach ($historial as $registro) {
+            if (Hash::check($request->nueva_contrasena, $registro->contrasena_hash)) {
+                return response()->json([
+                    'message' => 'Por seguridad, no puedes usar una contraseña que ya hayas utilizado recientemente.'
+                ], 400);
+            }
+        }
+
+        // C. Registrar la contraseña ACTUAL en el historial antes de cambiarla
+        DB::table('historial_contrasena')->insert([
+            'id_u' => $user->id_u,
+            'contrasena_hash' => $user->contrasena_u,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        // D. Guardar la nueva contraseña en la tabla del usuario
+        $user->contrasena_u = Hash::make($request->nueva_contrasena);
+        $user->save();
+
+        return response()->json(['message' => 'Contraseña actualizada correctamente.']);
+    }
 }

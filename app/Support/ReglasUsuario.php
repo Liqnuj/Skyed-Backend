@@ -42,6 +42,32 @@ class ReglasUsuario
         return User::whereRaw('LOWER(correo_u) = ?', [self::normalizarCorreo($correo)])->first();
     }
 
+    /**
+     * Busca un usuario por correo O por número de documento.
+     * Si el texto tiene "@" se trata como correo; si no, como documento
+     * (se aceptan puntos de miles y espacios: "1.058.353.445").
+     */
+    public static function buscarPorIdentificacion(?string $identificacion): ?User
+    {
+        $identificacion = trim((string) $identificacion);
+
+        if ($identificacion === '') {
+            return null;
+        }
+
+        if (str_contains($identificacion, '@')) {
+            return self::buscarPorCorreo($identificacion);
+        }
+
+        $documento = preg_replace('/[\s.]/', '', $identificacion);
+
+        if (!ctype_digit($documento) || strlen($documento) > 12) {
+            return null;
+        }
+
+        return User::where('documento_u', $documento)->first();
+    }
+
     /** Regla "correo no registrado" que ignora mayúsculas. */
     public static function correoUnico(?int $exceptoId = null): Closure
     {
