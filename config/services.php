@@ -45,7 +45,7 @@ return [
         // siempre apunta a la versión vigente, así no se rompe cuando
         // Google retira un modelo. Déjalo vacío para no usar respaldo.
         'fallback_model' => env('GEMINI_FALLBACK_MODEL', 'gemini-flash-lite-latest'),
-        'max_tokens' => (int) env('GEMINI_MAX_TOKENS', 500),
+        'max_tokens' => (int) env('GEMINI_MAX_TOKENS', 900),
         // Los modelos 3.x "piensan" antes de responder (~400 tokens,
         // 5-15 s). Para un chat corto "minimal" responde en 1-3 s.
         // Valores: minimal, low, medium, high. Vacío = el del modelo.
