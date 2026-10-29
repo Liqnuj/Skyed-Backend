@@ -12,6 +12,31 @@ use App\Http\Resources\EventoDeportivoResource;
 class EventoDeportivoController extends Controller
 {
     /**
+     * Un kit es individual por evento: si ya está asignado a otro evento
+     * devuelve un 422; si está libre (o es el del propio evento) devuelve null.
+     */
+    private function kitYaAsignado($idKit, ?int $eventoActual = null)
+    {
+        if (!$idKit) {
+            return null;
+        }
+
+        $query = EventoDeportivo::where('id_k', $idKit);
+        if ($eventoActual) {
+            $query->where('id_e', '!=', $eventoActual);
+        }
+
+        $otro = $query->first();
+        if (!$otro) {
+            return null;
+        }
+
+        return response()->json([
+            'message' => "Ese kit ya está asignado al evento \"{$otro->nombre_e}\". Cada kit es de un solo evento: crea otro kit para este evento.",
+        ], 422);
+    }
+
+    /**
      * Listar eventos.
      */
     public function index(Request $request)
@@ -56,6 +81,10 @@ class EventoDeportivoController extends Controller
     {
         $validated = $request->validated();
 
+        if ($respuesta = $this->kitYaAsignado($validated['id_k'] ?? null)) {
+            return $respuesta;
+        }
+
         $validated['estado_e'] = 'activo';
         $validated['creado_e'] = now();
         $validated['id_u'] = $request->user()->id_u;
@@ -85,7 +114,13 @@ class EventoDeportivoController extends Controller
             ], 404);
         }
 
-        $evento->update($request->validated());
+        $validated = $request->validated();
+
+        if ($respuesta = $this->kitYaAsignado($validated['id_k'] ?? null, $evento->id_e)) {
+            return $respuesta;
+        }
+
+        $evento->update($validated);
 
         return response()->json([
             'message' => 'Evento actualizado correctamente',

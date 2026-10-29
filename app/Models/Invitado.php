@@ -20,10 +20,13 @@ class Invitado extends Model
         'telefono_inv',
         'fecha_nacimiento_inv',
         'correo_inv',
+        'desea_kit_inv',
+        'talla_kit_inv',
     ];
 
     protected $casts = [
         'fecha_nacimiento_inv' => 'date',
+        'desea_kit_inv' => 'boolean',
     ];
 
     /**
