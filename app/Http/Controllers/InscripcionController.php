@@ -6,6 +6,7 @@ use App\Mail\InscripcionQrMail;
 use App\Models\EventoDeportivo;
 use App\Models\Inscripcion;
 use App\Models\Invitado;
+use App\Models\Kit;
 use App\Models\Pago;
 use App\Models\QrEntrada;
 use Illuminate\Http\Request;
@@ -27,18 +28,37 @@ class InscripcionController extends Controller
     
     public function misInscripciones(Request $request)
     {
+        $user = $request->user();
+
         $inscripciones = Inscripcion::with([
-            'evento',
+            'evento.kit',
             'pago',
             'qr',
             'invitado',
         ])
-            ->where('id_u', $request->user()->id_u)
+            ->where('id_u', $user->id_u)
             ->orderByDesc('fecha_i')
             ->get();
 
+        // Estado de la entrega del kit por evento (dónde y cuándo recogerlo
+        // sale del kit del evento; aquí solo se agrega si ya se entregó).
+        $entregas = DB::table('entrega_kit')
+            ->where('id_u', $user->id_u)
+            ->get()
+            ->keyBy('id_e');
+
+        $items = $inscripciones->map(function ($insc) use ($request, $entregas) {
+            $data = (new InscripcionResource($insc))->resolve($request);
+            $entrega = $entregas->get($insc->id_e);
+            $data['entrega_kit'] = $entrega ? [
+                'estado' => $entrega->estado_ek,
+                'fecha_entrega_real' => $entrega->fecha_entrega_real_ek,
+            ] : null;
+            return $data;
+        })->values();
+
         return response()->json([
-            'inscripciones' => InscripcionResource::collection($inscripciones),
+            'inscripciones' => $items,
         ]);
     }
     public function index(Request $request, int $eventoId)
@@ -112,13 +132,41 @@ class InscripcionController extends Controller
         ]);
         $talla = $tallas['talla_kit'] ?? $tallas['talla_camiseta'] ?? null;
 
+        // Dorsal elegido por el participante (opcional). Si lo deja vacío
+        // queda null en numero_dorsal_i.
+        $dorsal = $request->validate([
+            'numero_dorsal_preferido' => 'nullable|integer|min:1|max:99999',
+        ])['numero_dorsal_preferido'] ?? null;
+
         $user = $request->user();
+
+        // El formulario manda desea_jersey=false cuando el participante no
+        // quiere kit. Si no llega el campo se mantiene el comportamiento anterior.
+        $deseaKit = $request->boolean('desea_jersey', true);
+
+        // Kit del invitado (opcional). Solo cuenta si hay invitado y el evento tiene kit.
+        $extraInv = $request->validate([
+            'invitado.desea_kit' => 'nullable|boolean',
+            'invitado.talla_kit' => 'nullable|string|max:10',
+        ]);
+        $invDeseaKit = (bool) data_get($extraInv, 'invitado.desea_kit', false);
+        $invTalla = data_get($extraInv, 'invitado.talla_kit');
+
+        if ($invDeseaKit && !$invTalla) {
+            return response()->json([
+                'message' => 'Selecciona la talla del kit del invitado'
+            ], 422);
+        }
 
         $resultado = DB::transaction(function () use (
             $validated,
             $user,
             $eventoId,
-            $talla
+            $talla,
+            $dorsal,
+            $deseaKit,
+            $invDeseaKit,
+            $invTalla
         ) {
             // Bloqueamos el evento durante la operación
             // para evitar problemas de cupos simultáneos.
@@ -159,16 +207,37 @@ class InscripcionController extends Controller
 
             // Invitado opcional: se crea primero para poder vincularlo
             // a la inscripción.
+            $kit = $evento->id_k ? Kit::find($evento->id_k) : null;
+
             $invitadoId = null;
             if (!empty($validated['invitado'])) {
-                $invitado = Invitado::create($validated['invitado']);
+                $datosInvitado = $validated['invitado'];
+                if ($kit && $invDeseaKit) {
+                    $datosInvitado['desea_kit_inv'] = true;
+                    $datosInvitado['talla_kit_inv'] = $invTalla;
+                }
+                $invitado = Invitado::create($datosInvitado);
                 $invitadoId = $invitado->id_inv;
             }
 
             // FIX: el precio lo decide el servidor con el precio del evento.
             // Antes se guardaba el precio_pagado_i que mandaba el navegador,
             // así que se podía inscribir pagando $1 a un evento de $90.000.
-            $precio = (float) $evento->precio_e;
+            // El total incluye: inscripción del titular, su kit si lo pidió, y si hay
+            // invitado, su inscripción (mismo precio del evento) y su kit si lo pidió.
+            $precioEvento = (float) $evento->precio_e;
+            $precioKit = $kit ? (float) $kit->precio_k : 0.0;
+
+            $precio = $precioEvento;
+            if ($deseaKit) {
+                $precio += $precioKit;
+            }
+            if ($invitadoId) {
+                $precio += $precioEvento;
+                if ($kit && $invDeseaKit) {
+                    $precio += $precioKit;
+                }
+            }
 
             // Crear inscripción.
             $inscripcion = Inscripcion::create([
@@ -187,6 +256,7 @@ class InscripcionController extends Controller
                     $validated['contacto_emergencia_parentesco'],
 
                 'talla_camiseta_i' => $talla,
+                'numero_dorsal_i' => $dorsal,
 
                 'id_u' => $user->id_u,
                 'id_e' => $evento->id_e,
@@ -242,7 +312,7 @@ class InscripcionController extends Controller
 
             // Si el evento tiene kit, queda una entrega pendiente para que
             // el participante vea dónde y cuándo recogerlo.
-            if ($evento->id_k) {
+            if ($evento->id_k && $deseaKit) {
                 $yaTieneEntrega = DB::table('entrega_kit')
                     ->where('id_u', $user->id_u)
                     ->where('id_e', $evento->id_e)

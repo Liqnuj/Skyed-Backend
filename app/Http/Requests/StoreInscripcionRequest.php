@@ -62,4 +62,45 @@ class StoreInscripcionRequest extends FormRequest
             'invitado.correo_inv' => 'nullable|email|max:80|unique:invitados,correo_inv',
         ];
     }
+
+    /** Mensajes en español para que el formulario no muestre texto en inglés. */
+    public function messages(): array
+    {
+        return [
+            'required' => 'El campo :attribute es obligatorio.',
+            'required_with' => 'El campo :attribute es obligatorio.',
+            'integer' => 'El campo :attribute debe ser un número.',
+            'digits_between' => 'El campo :attribute debe tener entre :min y :max dígitos.',
+            'email' => 'El campo :attribute debe ser un correo válido.',
+            'date' => 'El campo :attribute no es una fecha válida.',
+            'after' => 'El campo :attribute no es una fecha válida.',
+            'before_or_equal' => 'El campo :attribute no puede ser una fecha futura.',
+            'in' => 'El valor de :attribute no es válido.',
+            'regex' => 'El campo :attribute tiene un formato no válido.',
+            'max.string' => 'El campo :attribute no puede superar :max caracteres.',
+
+            'invitado.documento_inv.unique' => 'Ya hay un invitado registrado con ese documento.',
+            'invitado.telefono_inv.unique' => 'Ya hay un invitado registrado con ese teléfono.',
+            'invitado.correo_inv.unique' => 'Ya hay un invitado registrado con ese correo.',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'contacto_emergencia_nombre' => 'nombre del contacto de emergencia',
+            'contacto_emergencia_telefono' => 'teléfono del contacto de emergencia',
+            'contacto_emergencia_parentesco' => 'parentesco',
+            'metodo_pago_p' => 'método de pago',
+            'referencia_p' => 'referencia de pago',
+            'invitado.tipo_documento' => 'tipo de documento del invitado',
+            'invitado.documento_inv' => 'documento del invitado',
+            'invitado.nombre_inv' => 'nombre del invitado',
+            'invitado.apellido_inv' => 'apellido del invitado',
+            'invitado.rh_inv' => 'RH del invitado',
+            'invitado.telefono_inv' => 'teléfono del invitado',
+            'invitado.fecha_nacimiento_inv' => 'fecha de nacimiento del invitado',
+            'invitado.correo_inv' => 'correo del invitado',
+        ];
+    }
 }

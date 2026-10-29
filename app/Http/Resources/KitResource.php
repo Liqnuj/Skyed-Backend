@@ -12,6 +12,9 @@ class KitResource extends JsonResource
         return [
             'id' => $this->id_k,
             'nombre' => $this->nombre_k,
+            'precio' => (float) $this->precio_k,
+            'imagen' => $this->imagen_k,
+            'imagen_url' => $this->imagen_url,
             'stock' => $this->stock_k,
             'fecha_entrega' => $this->fecha_entrega_k,
             'lugar_entrega' => $this->lugar_entrega_k,
