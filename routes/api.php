@@ -20,6 +20,7 @@ use App\Http\Controllers\PremioController;
 use App\Http\Controllers\InvitadoController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SkaiController;
+use App\Http\Controllers\AyudaController;
 use App\Http\Controllers\UserRoleController;
 
 use App\Models\TipoEvento;
@@ -94,6 +95,18 @@ Route::get('/eventos-sociales/{id}', [EventoRealizadoController::class, 'show'])
 // Asistente virtual SKAI (funciona para visitantes sin sesión también).
 // Throttle para no dejar la key de Gemini abierta a abuso.
 Route::post('/asistente', [SkaiController::class, 'responder'])->middleware('throttle:20,1,skai');
+
+
+// Centro de Ayuda (público). Si llega token se reconoce a la persona para
+// filtrar por rol; sin token solo se ve el contenido 'publico' ya publicado.
+Route::prefix('ayuda')->middleware('throttle:120,1,ayuda')->group(function () {
+    Route::get('/', [AyudaController::class, 'inicio']);
+    Route::get('/categorias', [AyudaController::class, 'categorias']);
+    Route::get('/categorias/{slug}', [AyudaController::class, 'categoria'])->where('slug', '[a-z0-9-]+');
+    Route::get('/articulos', [AyudaController::class, 'articulos']);
+    Route::get('/articulos/{slug}', [AyudaController::class, 'mostrar'])->where('slug', '[a-z0-9-]+');
+    Route::get('/buscar', [AyudaController::class, 'buscar']);
+});
 
 
 /*
