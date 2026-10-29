@@ -173,6 +173,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/reservas/{id}/nombre', [ReservaController::class, 'renombrar']);
     Route::post('/reservas/{id}/ocultar', [ReservaController::class, 'ocultar']);
     Route::post('/pqr/{id}/ocultar', [PqrController::class, 'ocultar']);
+    Route::post('/reservas/{id}/cancelar', [ReservaController::class, 'cancelar']);
     Route::get('/pqr', [PqrController::class, 'index']);
     Route::get('/pqr/{id}', [PqrController::class, 'show']);
     Route::post('/pqr', [PqrController::class, 'store']);
