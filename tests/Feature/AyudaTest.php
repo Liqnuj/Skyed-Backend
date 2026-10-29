@@ -84,12 +84,12 @@ it('las guías de admin solo las ve el admin de ese módulo', function () {
     ayudaArticulo($cat, ['slug_aya' => 'guia-social', 'audiencia_aya' => 'admin', 'modulo_aya' => 'social']);
     ayudaArticulo($cat, ['slug_aya' => 'guia-deportivo', 'audiencia_aya' => 'admin', 'modulo_aya' => 'deportivo']);
 
-    $this->actingAs(userWithRole('cliente', 'social'))
+    $this->actingAs(userWithRole('cliente', 'social'), 'sanctum')
         ->getJson('/api/ayuda/articulos/guia-social')->assertStatus(404);
 
     $admin = userWithRole('adminSocial', 'social');
-    $this->actingAs($admin)->getJson('/api/ayuda/articulos/guia-social')->assertOk();
-    $this->actingAs($admin)->getJson('/api/ayuda/articulos/guia-deportivo')->assertStatus(404);
+    $this->actingAs($admin, 'sanctum')->getJson('/api/ayuda/articulos/guia-social')->assertOk();
+    $this->actingAs($admin, 'sanctum')->getJson('/api/ayuda/articulos/guia-deportivo')->assertStatus(404);
 });
 
 it('una categoría inactiva oculta sus artículos', function () {

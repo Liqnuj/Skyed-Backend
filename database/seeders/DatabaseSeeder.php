@@ -17,7 +17,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RoleSeeder::class,
             AdminUserSeeder::class,
-            TipoEventoSeeder::class
+            TipoEventoSeeder::class,
+            // Artículos del Centro de Ayuda (no duplica: usa firstOrCreate por slug).
+            AyudaSeeder::class,
         ]);
     }
 }
