@@ -9,6 +9,7 @@ use App\Models\Invitado;
 use App\Models\Kit;
 use App\Models\Pago;
 use App\Models\QrEntrada;
+use App\Support\StockTallas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -209,12 +210,30 @@ class InscripcionController extends Controller
             // a la inscripción.
             $kit = $evento->id_k ? Kit::find($evento->id_k) : null;
 
+            // Inventario por talla: se descuenta al inscribirse (titular e invitado)
+            // y se devuelve si la inscripción se cancela. Se hace antes de crear
+            // nada para que, si no alcanza, no quede ningún registro a medias.
+            $invitadoPideKit = !empty($validated['invitado']) && $invDeseaKit;
+            if ($kit && ($deseaKit || $invitadoPideKit)) {
+                $pedidas = [];
+                if ($deseaKit) {
+                    $pedidas[] = $talla;
+                }
+                if ($invitadoPideKit) {
+                    $pedidas[] = $invTalla;
+                }
+
+                if ($errorTalla = StockTallas::reservar($kit, $pedidas)) {
+                    return response()->json(['message' => $errorTalla], 422);
+                }
+            }
+
             $invitadoId = null;
             if (!empty($validated['invitado'])) {
                 $datosInvitado = $validated['invitado'];
                 if ($kit && $invDeseaKit) {
                     $datosInvitado['desea_kit_inv'] = true;
-                    $datosInvitado['talla_kit_inv'] = $invTalla;
+                    $datosInvitado['talla_kit_inv'] = StockTallas::normalizar($invTalla);
                 }
                 $invitado = Invitado::create($datosInvitado);
                 $invitadoId = $invitado->id_inv;
@@ -255,7 +274,7 @@ class InscripcionController extends Controller
                 'contacto_emergencia_parentesco' =>
                     $validated['contacto_emergencia_parentesco'],
 
-                'talla_camiseta_i' => $talla,
+                'talla_camiseta_i' => ($kit && $deseaKit) ? StockTallas::normalizar($talla) : null,
                 'numero_dorsal_i' => $dorsal,
 
                 'id_u' => $user->id_u,
@@ -433,6 +452,17 @@ class InscripcionController extends Controller
 
             if ($evento) {
                 $evento->increment('cupos_disponibles_e');
+            }
+
+            // Devolver al inventario las tallas del kit reservadas por esta inscripción.
+            $kitInscripcion = $evento && $evento->id_k ? Kit::find($evento->id_k) : null;
+            if ($kitInscripcion) {
+                StockTallas::devolver($kitInscripcion, [
+                    $inscripcion->talla_camiseta_i,
+                    $inscripcion->invitado && $inscripcion->invitado->desea_kit_inv
+                        ? $inscripcion->invitado->talla_kit_inv
+                        : null,
+                ]);
             }
 
             if ($inscripcion->qr) {

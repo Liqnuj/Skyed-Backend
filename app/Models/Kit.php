@@ -61,6 +61,18 @@ class Kit extends Model
         );
     }
 
+    /**
+     * Inventario del kit: una fila por talla con su cantidad disponible.
+     */
+    public function tallas(): HasMany
+    {
+        return $this->hasMany(
+            KitTalla::class,
+            'id_k',
+            'id_k'
+        )->orderBy('id_kt');
+    }
+
     public function entregas(): HasMany
     {
         return $this->hasMany(
