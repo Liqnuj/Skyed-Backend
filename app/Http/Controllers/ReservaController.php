@@ -259,6 +259,68 @@ class ReservaController extends Controller
         return response()->json(['message' => $oculta ? 'Reserva oculta' : 'Reserva visible']);
     }
 
+
+    /**
+ * POST /reservas/{id}/cancelar (solo el dueño de la reserva).
+ *
+ * Solo se puede cancelar una reserva pendiente o confirmada cuyo evento
+ * todavía no haya pasado. Body: motivo (opcional).
+ */
+public function cancelar(Request $request, $id)
+{
+    $validated = $request->validate([
+        'motivo' => 'nullable|string|max:255',
+    ]);
+
+    $resultado = DB::transaction(function () use ($request, $id, $validated) {
+        $reserva = Reserva::lockForUpdate()->find($id);
+
+        if (!$reserva) {
+            return ['http' => 404, 'message' => 'Reserva no encontrada'];
+        }
+
+        if ((int) $reserva->id_u !== (int) $request->user()->id_u) {
+            return ['http' => 403, 'message' => 'Solo puedes cancelar tus propias reservas.'];
+        }
+
+        if (!in_array($reserva->estado_rese, ['pendiente', 'confirmada'], true)) {
+            return ['http' => 422, 'message' => 'Esta reserva ya no se puede cancelar.'];
+        }
+
+        if ($reserva->fecha_evento_rese && $reserva->fecha_evento_rese->lt(today())) {
+            return ['http' => 422, 'message' => 'El evento de esta reserva ya pasó.'];
+        }
+
+        $reserva->update(['estado_rese' => 'cancelada']);
+
+        $reserva->seguimientos()->create([
+            'fecha_actualizacion' => now(),
+            'comentario' => 'Estado cambiado a: cancelada',
+        ]);
+
+        $motivo = trim((string) ($validated['motivo'] ?? ''));
+
+        $reserva->seguimientos()->create([
+            'fecha_actualizacion' => now(),
+            'comentario' => $motivo !== ''
+                ? 'Cancelada por el cliente. Motivo: ' . $motivo
+                : 'Cancelada por el cliente.',
+        ]);
+
+        return ['http' => 200, 'reserva' => $reserva];
+    });
+
+    if ($resultado['http'] !== 200) {
+        return response()->json(['message' => $resultado['message']], $resultado['http']);
+    }
+
+    return response()->json([
+        'message' => 'Tu reserva fue cancelada.',
+        'reserva' => $resultado['reserva']->fresh()->load(['usuario', 'evento', 'seguimientos']),
+    ]);
+}
+
+
     public function destroy(Request $request, $id)
     {
         if ($denegado = $this->exigirRol($request, 'adminSocial')) {
