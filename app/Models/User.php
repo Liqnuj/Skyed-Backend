@@ -173,6 +173,36 @@ class User extends Authenticatable
             ->exists();
     }
     
+
+        /**
+     * Módulos que administra este usuario ('social', 'deportivo'). El super
+     * administrador administra ambos. Lo usa el Centro de Ayuda para decidir
+     * qué guías de administración puede ver.
+     *
+     * @return string[]
+     */
+    public function modulosQueAdministra(): array
+    {
+        $roles = $this->roles()->pluck('nombre_rol')
+            ->map(fn ($r) => mb_strtolower((string) $r));
+
+        if ($roles->intersect(self::ROLES_SUPER)->isNotEmpty()) {
+            return ['social', 'deportivo'];
+        }
+
+        $modulos = [];
+
+        if ($roles->contains('adminsocial')) {
+            $modulos[] = 'social';
+        }
+        if ($roles->contains('admindeportivo')) {
+            $modulos[] = 'deportivo';
+        }
+
+        return $modulos;
+    }
+
+    
     // se agrega validacion para notificaciones
 public function notificaciones(): HasMany
 {
