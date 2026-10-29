@@ -26,6 +26,7 @@ class SkaiConocimiento
         '/deportivo/perfil?tab=ajustes', '/deportivo/mi-entrada', '/deportivo/notificaciones',
         '/social', '/social/eventos', '/social/lugares', '/social/nosotros', '/social/reservar', '/social/pqr',
         '/social/perfil', '/social/perfil?tab=reservas', '/social/perfil?tab=pqr', '/social/perfil?tab=ajustes',
+        '/social/ayuda', '/deportivo/ayuda',
     ];
 
     /** Secciones de cada panel admin (se abren con ?seccion=...). */
@@ -184,7 +185,7 @@ SKYED Deportivo (menú: Inicio, Eventos, Nosotros, Contacto)
 - Inscribirse a un evento:
   1. Iniciar sesión.
   2. Ir a **Eventos**, abrir el evento y pulsar **Inscribirme**.
-  3. Paso 1 "Tus datos": revisar documento, tipo de sangre (RH), teléfono y fecha de nacimiento; llenar el contacto de emergencia (nombre, teléfono y parentesco); elegir la **categoría**; responder **¿Desea adquirir su jersey?** (si dice que sí, elegir la talla del kit); opcional: número de dorsal preferido y condiciones médicas. También puede pulsar **Agregar invitado (participante adicional)** para inscribir a otra persona. Luego **Continuar al pago**.
+  3. Paso 1 "Tus datos": revisar documento, tipo de sangre (RH), teléfono y fecha de nacimiento; llenar el contacto de emergencia (nombre, teléfono y parentesco); elegir la **categoría**; en "Kit y dorsal" responder **¿Desea adquirir el kit?** (si dice que sí, elegir la **Talla del kit**; el precio del kit se suma al total); opcional: número de dorsal preferido y condiciones médicas. También puede pulsar **Agregar invitado (participante adicional)** para inscribir a otra persona. Luego **Continuar al pago**.
   4. Paso 2 "Pago": elegir **Transferencia**, **Nequi / Daviplata** o **Efectivo**. Con transferencia o Nequi se sube el **Comprobante de pago** (JPG, PNG o PDF, máximo 5 MB).
   5. Paso 3 "Confirmar": revisar, marcar la aceptación de términos y del estado de salud, y confirmar.
   6. Aparece "¡Inscripción confirmada!" con el botón **Ver mi entrada**: ahí está el código QR (también llega al correo). El pago queda pendiente hasta que el administrador lo valida.
@@ -203,6 +204,8 @@ SkyedSocial (menú: Inicio, Eventos, Lugares, Nosotros, PQRS, Contacto; botón *
   5. Seguimiento: perfil, pestaña **Reservas** (/social/perfil?tab=reservas).
 - Radicar una PQRS (/social/pqr): elegir el tipo (**Petición**: respuesta en 3 días hábiles; **Queja** y **Reclamo**: 5 días hábiles; **Sugerencia**: acuse en 2 días hábiles), escribir **Asunto** y **Descripción detallada**, y pulsar **Radicar solicitud**. Se recibe un número de radicado. El estado avanza Enviado, En revisión, En proceso y Resuelto, y la respuesta se ve en el perfil, pestaña **PQRS** (/social/perfil?tab=pqr).
 
+Centro de Ayuda: en el footer, **Centro de ayuda** (/social/ayuda o /deportivo/ayuda): guías por categoría, preguntas frecuentes y un buscador.
+
 Accesibilidad (botón redondo abajo a la derecha): tamaño del texto, modo oscuro, alto contraste, corrección para daltonismo, letra para dislexia y lector en voz alta.
 TXT;
     }
@@ -214,14 +217,16 @@ GUÍA DEL PANEL ADMIN DEPORTIVO (/deportivo/admin). Menú lateral: Inicio, Event
 - Inicio: tarjetas de resumen y gráficas (ingresos o inscripciones por mes, inscritos por evento, estado de los pagos).
 - Crear un evento:
   1. **Eventos** y botón **Nuevo evento**.
-  2. Llenar **Nombre**, **Categoría**, **Fecha**, **Hora de salida**, **Precio de inscripción (COP)**, **Lugar de salida**, **Descripción** y **Requisitos**; opcionales: **Distancia**, **Desnivel** y **Kit**.
+  2. Llenar **Nombre**, **Categoría**, **Fecha**, **Hora de salida**, **Precio de inscripción (COP)**, **Lugar de salida**, **Descripción** y **Requisitos**; opcionales: **Distancia**, **Desnivel** y **Kit** (solo aparecen los kits que aún no tienen evento).
   3. Subir la **Foto del evento** (obligatoria) y guardar.
   4. En la fila del evento, el ícono **Categorías**: agregar al menos una (nombre, género, edades, distancia). Sin categorías el evento no recibe inscripciones.
   5. Activarlo o desactivarlo con el selector de estado. Editar: ícono del lápiz; eliminar: la papelera (no se puede si ya tiene inscritos).
-- Crear un kit:
+- Crear un kit (cada kit pertenece a un solo evento):
   1. **Kits** y botón **Nuevo kit**.
-  2. Llenar **Nombre** y **Unidades disponibles**; opcionales: **Fecha de entrega**, **Lugar de entrega**, **Tallas** y **Contenido**. Guardar.
-  3. Asignarlo a un evento: editar el evento y elegirlo en el campo **Kit**.
+  2. Elegir el **Evento** al que pertenece con el buscador (obligatorio).
+  3. Llenar **Nombre**, **Precio del kit (COP)** (se suma al total del participante que lo pida), **Fecha de entrega**, **Lugar de entrega** y **Contenido**.
+  4. Subir la foto del kit (obligatoria, mejor cuadrada) y agregar las tallas con su cantidad (al menos una). Guardar.
+  5. La tabla de Kits muestra imagen, stock, precio y evento, y se puede filtrar por stock y lugar de entrega.
 - Validar pagos: **Inscripciones y pagos**, filtro **Pagos por validar**; el ícono del ojo (**Ver detalle**) muestra el comprobante; luego **Confirmar pago** (✓) o **Rechazar pago** (✕). Rechazar cancela la inscripción y devuelve el cupo. Al confirmar, el QR del participante queda activo.
 - Control de acceso (día del evento): **Control de acceso**, **Escanear con la cámara** o escribir el **Código del QR** para validar la entrada.
 - Resultados: **Resultados** y **Registrar resultado**: evento, participante, **Tiempo final (hh:mm:ss)**, posición general, estado y, si aplica, categoría y posición en la categoría.
