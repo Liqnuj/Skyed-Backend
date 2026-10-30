@@ -245,6 +245,26 @@ class InscripcionController extends Controller
                 }
             }
 
+            // Categoría de competencia: debe pertenecer a este evento. Si el
+            // evento tiene categorías, elegir una es obligatorio.
+            $categoriaId = isset($validated['id_categoria']) ? (int) $validated['id_categoria'] : null;
+            $categoriasEvento = DB::table('categoria_competencia')
+                ->where('id_e', $evento->id_e)
+                ->pluck('id_cc')
+                ->map(fn ($c) => (int) $c);
+
+            if ($categoriaId !== null && !$categoriasEvento->contains($categoriaId)) {
+                return response()->json([
+                    'message' => 'La categoría elegida no pertenece a este evento'
+                ], 422);
+            }
+
+            if ($categoriaId === null && $categoriasEvento->isNotEmpty()) {
+                return response()->json([
+                    'message' => 'Selecciona una categoría'
+                ], 422);
+            }
+
             // Comprobar cupos. Con invitado se ocupan 2 (titular + invitado,
             // los dos participan en la carrera).
             $cuposNecesarios = !empty($validated['invitado']) ? 2 : 1;
@@ -329,6 +349,10 @@ class InscripcionController extends Controller
             // Crear inscripción.
             $inscripcion = Inscripcion::create([
                 'cupo_i' => $cuposNecesarios,
+                'id_cc' => $categoriaId,
+                'desea_kit_i' => (bool) ($kit && $deseaKit),
+                'condiciones_medicas_i' => $validated['condiciones_medicas'] ?? null,
+                'telefono_contacto_i' => $validated['telefono_contacto'] ?? null,
                 'estado_i' => 'pendiente',
                 'fecha_i' => now(),
                 'precio_pagado_i' => $precio,
