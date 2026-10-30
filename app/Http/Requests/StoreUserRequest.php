@@ -34,7 +34,7 @@ class StoreUserRequest extends FormRequest
             'fecha_nacimiento_u' => 'required|date|after:1900-01-01|before_or_equal:' . ReglasUsuario::fechaMaximaNacimiento(),
 
             // Rol y contexto
-            'id_rol' => 'required|exists:roles,id_rol',
+            'id_rol' => 'required|exists:rol,id_rol',
             'contexto' => 'required|string|in:deportivo,social,general',
         ];
     }
