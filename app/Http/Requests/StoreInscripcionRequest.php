@@ -53,13 +53,13 @@ class StoreInscripcionRequest extends FormRequest
             // queda solo a nombre del usuario autenticado.
             'invitado' => 'nullable|array',
             'invitado.tipo_documento' => 'required_with:invitado|in:CC,TI,CE,PA',
-            'invitado.documento_inv' => 'required_with:invitado|integer|digits_between:5,12|unique:invitados,documento_inv',
+            'invitado.documento_inv' => 'required_with:invitado|integer|digits_between:5,12',
             'invitado.nombre_inv' => ['required_with:invitado', 'string', 'max:50', 'regex:' . ReglasUsuario::NOMBRE],
             'invitado.apellido_inv' => ['required_with:invitado', 'string', 'max:50', 'regex:' . ReglasUsuario::NOMBRE],
             'invitado.rh_inv' => ['required_with:invitado', Rule::in(ReglasUsuario::RH)],
-            'invitado.telefono_inv' => 'required_with:invitado|digits_between:7,15|unique:invitados,telefono_inv',
+            'invitado.telefono_inv' => 'required_with:invitado|digits_between:7,15',
             'invitado.fecha_nacimiento_inv' => 'required_with:invitado|date|after:1900-01-01|before_or_equal:today',
-            'invitado.correo_inv' => 'nullable|email|max:80|unique:invitados,correo_inv',
+            'invitado.correo_inv' => 'nullable|email|max:80',
             // Dorsal preferido del invitado: si ya está tomado, el controlador asigna otro.
             'invitado.numero_dorsal_inv' => 'nullable|integer|min:1|max:99999',
         ];
@@ -81,9 +81,6 @@ class StoreInscripcionRequest extends FormRequest
             'regex' => 'El campo :attribute tiene un formato no válido.',
             'max.string' => 'El campo :attribute no puede superar :max caracteres.',
 
-            'invitado.documento_inv.unique' => 'Ya hay un invitado registrado con ese documento.',
-            'invitado.telefono_inv.unique' => 'Ya hay un invitado registrado con ese teléfono.',
-            'invitado.correo_inv.unique' => 'Ya hay un invitado registrado con ese correo.',
         ];
     }
 

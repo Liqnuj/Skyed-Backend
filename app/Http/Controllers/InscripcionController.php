@@ -205,10 +205,55 @@ class InscripcionController extends Controller
                 ], 409);
             }
 
-            // Comprobar cupos.
-            if ($evento->cupos_disponibles_e <= 0) {
+            // Reglas del invitado. La misma persona puede ser invitada a eventos
+            // distintos (cada inscripción tiene su propia fila en "invitados"),
+            // pero no puede ir dos veces al mismo evento ni ser a la vez titular.
+            if (!empty($validated['invitado'])) {
+                $docInv = (int) $validated['invitado']['documento_inv'];
+
+                if ((string) $user->documento_u === (string) $docInv) {
+                    return response()->json([
+                        'message' => 'El invitado no puede ser la misma persona que el titular'
+                    ], 422);
+                }
+
+                $yaInvitado = Inscripcion::where('id_e', $evento->id_e)
+                    ->whereIn('estado_i', ['pendiente', 'confirmada'])
+                    ->whereHas('invitado', fn ($q) => $q->where('documento_inv', $docInv))
+                    ->exists();
+
+                if ($yaInvitado) {
+                    return response()->json([
+                        'message' => 'Ese invitado ya está inscrito en este evento'
+                    ], 422);
+                }
+
+                $idsConDocumento = DB::table('usuario')
+                    ->where('documento_u', (string) $docInv)
+                    ->pluck('id_u');
+
+                $yaTitular = $idsConDocumento->isNotEmpty()
+                    && Inscripcion::where('id_e', $evento->id_e)
+                        ->whereIn('estado_i', ['pendiente', 'confirmada'])
+                        ->whereIn('id_u', $idsConDocumento)
+                        ->exists();
+
+                if ($yaTitular) {
+                    return response()->json([
+                        'message' => 'Esa persona ya está inscrita en este evento como titular'
+                    ], 422);
+                }
+            }
+
+            // Comprobar cupos. Con invitado se ocupan 2 (titular + invitado,
+            // los dos participan en la carrera).
+            $cuposNecesarios = !empty($validated['invitado']) ? 2 : 1;
+
+            if ($evento->cupos_disponibles_e < $cuposNecesarios) {
                 return response()->json([
-                    'message' => 'No hay cupos disponibles'
+                    'message' => ($cuposNecesarios > 1 && $evento->cupos_disponibles_e > 0)
+                        ? 'No hay cupos suficientes para el titular y el invitado (queda ' . $evento->cupos_disponibles_e . ')'
+                        : 'No hay cupos disponibles'
                 ], 422);
             }
 
@@ -275,12 +320,22 @@ class InscripcionController extends Controller
                 }
             }
 
+            // Desglose del precio: queda guardado aunque después cambie el
+            // precio del evento o del kit.
+            $precioKitTitular = $deseaKit ? $precioKit : 0.0;
+            $precioInvitado = $invitadoId ? $precioEvento : 0.0;
+            $precioKitInvitado = ($invitadoId && $kit && $invDeseaKit) ? $precioKit : 0.0;
+
             // Crear inscripción.
             $inscripcion = Inscripcion::create([
-                'cupo_i' => 1,
+                'cupo_i' => $cuposNecesarios,
                 'estado_i' => 'pendiente',
                 'fecha_i' => now(),
                 'precio_pagado_i' => $precio,
+                'precio_inscripcion_i' => $precioEvento,
+                'precio_kit_i' => $precioKitTitular,
+                'precio_invitado_i' => $precioInvitado,
+                'precio_kit_invitado_i' => $precioKitInvitado,
 
                 'contacto_emergencia_nombre' =>
                     $validated['contacto_emergencia_nombre'],
@@ -299,8 +354,8 @@ class InscripcionController extends Controller
                 'id_inv' => $invitadoId,
             ]);
 
-            // Descontar un cupo.
-            $evento->decrement('cupos_disponibles_e');
+            // Descontar los cupos ocupados (1, o 2 si lleva invitado).
+            $evento->decrement('cupos_disponibles_e', $cuposNecesarios);
 
             // Crear pago.
             Pago::create([
@@ -492,7 +547,8 @@ class InscripcionController extends Controller
             }
 
             if ($evento) {
-                $evento->increment('cupos_disponibles_e');
+                // Se devuelven los cupos que esta inscripción ocupó (cupo_i).
+                $evento->increment('cupos_disponibles_e', max(1, (int) $inscripcion->cupo_i));
             }
 
             // Devolver al inventario las tallas del kit reservadas por esta inscripción.
