@@ -106,6 +106,14 @@ Route::prefix('ayuda')->middleware('throttle:120,1,ayuda')->group(function () {
     Route::get('/articulos', [AyudaController::class, 'articulos']);
     Route::get('/articulos/{slug}', [AyudaController::class, 'mostrar'])->where('slug', '[a-z0-9-]+');
     Route::get('/buscar', [AyudaController::class, 'buscar']);
+
+    Route::post('/articulos/{slug}/visita', [AyudaController::class, 'registrarVisita'])
+        ->where('slug', '[a-z0-9-]+')
+        ->middleware('throttle:60,1,ayuda-visita');
+    Route::post('/articulos/{slug}/valoracion', [AyudaController::class, 'valorar'])
+        ->where('slug', '[a-z0-9-]+')
+        ->middleware(['auth:sanctum', 'throttle:20,1,ayuda-valorar']);
+
 });
 
 

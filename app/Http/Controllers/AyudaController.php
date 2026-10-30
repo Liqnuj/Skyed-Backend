@@ -7,11 +7,13 @@ use App\Http\Resources\AyudaArticuloResource;
 use App\Http\Resources\AyudaCategoriaResource;
 use App\Models\AyudaArticulo;
 use App\Models\AyudaCategoria;
+use App\Models\AyudaValoracion;
 use App\Models\User;
 use App\Support\BuscadorAyuda;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Centro de Ayuda: lectura pública. Si llega un token se reconoce a la
@@ -22,6 +24,7 @@ class AyudaController extends Controller
 {
     private const MAX_FAQ = 8;
     private const MAX_DESTACADOS = 6;
+    private const MAX_POPULARES = 6;
     private const MAX_RELACIONADOS = 4;
     private const CATEGORIA = 'categoria:id_ayc,nombre_ayc,slug_ayc';
 
@@ -47,7 +50,18 @@ class AyudaController extends Controller
             'destacados' => AyudaArticuloResource::collection(
                 $visibles()->where('destacado_aya', true)->limit(self::MAX_DESTACADOS)->get()
             )->resolve(),
+            // Solo artículos con al menos una visita real, el más visto primero.
+            'populares' => AyudaArticuloResource::collection(
+                $visibles()->reorder()
+                    ->where('visitas_aya', '>', 0)
+                    ->orderByDesc('visitas_aya')
+                    ->orderBy('titulo_aya')
+                    ->limit(self::MAX_POPULARES)
+                    ->get()
+            )->resolve(),
         ]);
+
+
     }
 
     /** GET /ayuda/categorias */
@@ -138,12 +152,23 @@ class AyudaController extends Controller
             ], 404);
         }
 
+        $miValoracion = $usuario
+            ? AyudaValoracion::query()
+                ->where('id_aya', $articulo->id_aya)
+                ->where('id_u', $usuario->getKey())
+                ->first()
+            : null;
+
         return response()->json([
             'articulo' => (new AyudaArticuloDetalleResource($articulo))->resolve(),
             'relacionados' => AyudaArticuloResource::collection(
                 $this->relacionados($articulo, $usuario)
             )->resolve(),
+            'mi_valoracion' => $miValoracion
+                ? ['util' => $miValoracion->util_ayv, 'comentario' => $miValoracion->comentario_ayv]
+                : null,
         ]);
+
     }
 
     /** GET /ayuda/buscar?q= */
@@ -170,6 +195,75 @@ class AyudaController extends Controller
         ]);
     }
 
+        /**
+     * POST /ayuda/articulos/{slug}/valoracion (requiere sesión)
+     * Un voto por persona y artículo: si ya votó, se actualiza (no se duplica).
+     */
+    public function valorar(Request $request, string $slug): JsonResponse
+    {
+        $usuario = $request->user();
+
+        $datos = $request->validate([
+            'util' => 'required|boolean',
+            'comentario' => 'nullable|string|max:500',
+        ], [
+            'util.required' => 'Indica si el artículo te fue útil.',
+            'util.boolean' => 'La respuesta no es válida.',
+            'comentario.max' => 'El comentario puede tener hasta 500 caracteres.',
+        ]);
+
+        $articulo = AyudaArticulo::query()
+            ->visiblesPara($usuario)
+            ->where('slug_aya', $slug)
+            ->first();
+
+        if (!$articulo) {
+            return response()->json(['message' => 'Este artículo no existe o ya no está disponible.'], 404);
+        }
+
+        $util = (bool) $datos['util'];
+
+        // El comentario solo tiene sentido cuando NO fue útil; se limpia de HTML.
+        $comentario = $util
+            ? null
+            : (trim(strip_tags((string) ($datos['comentario'] ?? ''))) ?: null);
+
+        $valoracion = AyudaValoracion::updateOrCreate(
+            ['id_aya' => $articulo->id_aya, 'id_u' => $usuario->getKey()],
+            ['util_ayv' => $util, 'comentario_ayv' => $comentario]
+        );
+
+        return response()->json([
+            'message' => $util
+                ? '¡Gracias por tu opinión!'
+                : 'Gracias, revisaremos este artículo para mejorarlo.',
+            'valoracion' => [
+                'util' => $valoracion->util_ayv,
+                'comentario' => $valoracion->comentario_ayv,
+            ],
+        ]);
+    }
+
+    /** POST /ayuda/articulos/{slug}/visita: suma 1 al contador (sin datos personales). */
+    public function registrarVisita(Request $request, string $slug): JsonResponse
+    {
+        $id = AyudaArticulo::query()
+            ->visiblesPara($request->user('sanctum'))
+            ->where('slug_aya', $slug)
+            ->value('id_aya');
+
+        if (!$id) {
+            return response()->json(['message' => 'Este artículo no existe o ya no está disponible.'], 404);
+        }
+
+        // DB::table (y no el modelo) para NO tocar updated_at: esa fecha es la
+        // "Última actualización" que ve el usuario y no debe cambiar con cada visita.
+        DB::table('ayuda_articulo')->where('id_aya', $id)->increment('visitas_aya');
+
+        return response()->json(['ok' => true]);
+    }
+
+    
     // ------------------------------------------------------------------
 
     private function moduloPedido(Request $request): ?string
