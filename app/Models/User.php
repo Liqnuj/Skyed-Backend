@@ -104,6 +104,18 @@ class User extends Authenticatable
     }
 
     /**
+     * ¿Es administrador de algún tipo? (adminSocial, adminDeportivo o
+     * super administrador). Se usa para que un admin no pueda cambiarle
+     * los roles a otro admin.
+     */
+    public function esAdministrador(): bool
+    {
+        return $this->roles()->pluck('nombre_rol')
+            ->map(fn ($r) => mb_strtolower((string) $r))
+            ->contains(fn ($r) => str_starts_with($r, 'admin') || in_array($r, self::ROLES_SUPER, true));
+    }
+
+    /**
      * ¿Puede este usuario dar o quitar el rol indicado? Un admin de módulo
      * solo puede gestionar su propio rol de administrador: no el del otro
      * módulo ni el de super administrador (si no, un admin social podría

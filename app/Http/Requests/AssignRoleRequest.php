@@ -14,7 +14,7 @@ class AssignRoleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nombre_rol' => 'required|string|exists:roles,nombre_rol',
+            'nombre_rol' => 'required|string|exists:rol,nombre_rol',
             'contexto' => 'required|string|in:deportivo,social,general',
         ];
     }
