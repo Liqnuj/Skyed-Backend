@@ -59,3 +59,20 @@ Artisan::command('skyed:admin {correo} {--solo= : deportivo o social}', function
 
     return 0;
 })->purpose('Da rol de administrador (deportivo y/o social) a una cuenta existente');
+
+// Copia automática de todo. Se programa abajo; también se puede correr a mano.
+Artisan::command('skyed:copia-seguridad {--conservar=14 : Cuántas copias automáticas conservar}', function () {
+    $conjuntos = array_keys(\App\Support\CatalogoCopias::conjuntos());
+    $copia = \App\Support\GestorCopias::crear($conjuntos, null, 'automatica');
+    $borradas = \App\Support\GestorCopias::podarAutomaticas(max(1, (int) $this->option('conservar')));
+
+    $this->info("✓ Copia creada: {$copia->archivo_cs} ({$copia->registros_cs} registros).");
+    if ($borradas) {
+        $this->line("· Se borraron {$borradas} copias automáticas antiguas.");
+    }
+
+    return 0;
+})->purpose('Crea una copia de seguridad de todos los datos');
+
+// Necesita que el servidor corra "php artisan schedule:run" cada minuto.
+\Illuminate\Support\Facades\Schedule::command('skyed:copia-seguridad')->dailyAt('02:00')->timezone(\App\Support\GestorCopias::ZONA_HORARIA);
