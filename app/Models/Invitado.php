@@ -22,6 +22,7 @@ class Invitado extends Model
         'correo_inv',
         'desea_kit_inv',
         'talla_kit_inv',
+        'numero_dorsal_inv',
     ];
 
     protected $casts = [

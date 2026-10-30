@@ -20,6 +20,7 @@ class InscripcionResource extends JsonResource
             'fecha' => $this->fecha_i,
             'precio_pagado' => $this->precio_pagado_i,
             'talla_camiseta' => $this->talla_camiseta_i,
+            'numero_dorsal' => $this->numero_dorsal_i,   
 
             // Datos de contacto de emergencia: son sensibles, así que
             // solo se muestran completos al dueño de la inscripción o
