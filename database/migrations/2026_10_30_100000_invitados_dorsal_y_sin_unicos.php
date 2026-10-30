@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * - Dorsal propio del invitado.
@@ -14,15 +15,24 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement('ALTER TABLE invitados ADD COLUMN IF NOT EXISTS numero_dorsal_inv integer');
+        $this->agregarColumna('numero_dorsal_inv', 'integer');
 
         foreach (['documento_inv', 'telefono_inv', 'correo_inv'] as $col) {
             $nombre = "invitados_{$col}_unique";
-            DB::statement("ALTER TABLE invitados DROP CONSTRAINT IF EXISTS {$nombre}");
+            if (DB::getDriverName() !== 'sqlite') {
+                DB::statement("ALTER TABLE invitados DROP CONSTRAINT IF EXISTS {$nombre}");
+            }
             DB::statement("DROP INDEX IF EXISTS {$nombre}");
         }
 
         DB::statement('CREATE INDEX IF NOT EXISTS invitados_documento_inv_idx ON invitados (documento_inv)');
+    }
+
+    private function agregarColumna(string $columna, string $definicion): void
+    {
+        if (!Schema::hasColumn('invitados', $columna)) {
+            DB::statement("ALTER TABLE invitados ADD COLUMN {$columna} {$definicion}");
+        }
     }
 
     public function down(): void

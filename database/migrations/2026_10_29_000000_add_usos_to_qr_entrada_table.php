@@ -18,11 +18,9 @@ return new class extends Migration
 
         // Las inscripciones que ya tienen invitado admiten 2 usos.
         DB::statement('
-            UPDATE qr_entrada q
+            UPDATE qr_entrada
             SET usos_permitidos_qr = 2
-            FROM inscripcion i
-            WHERE i.id_i = q.id_i
-              AND i.id_inv IS NOT NULL
+            WHERE id_i IN (SELECT id_i FROM inscripcion WHERE id_inv IS NOT NULL)
         ');
 
         // Los QR que ya registraron una entrada cuentan como 1 uso realizado.
@@ -34,16 +32,21 @@ return new class extends Migration
         ');
 
         // Nunca puede haber más usos realizados que permitidos.
-        DB::statement('
-            ALTER TABLE qr_entrada
-            ADD CONSTRAINT qr_entrada_usos_validos
-            CHECK (usos_realizados_qr <= usos_permitidos_qr)
-        ');
+        // (SQLite, que usan las pruebas, no permite agregar restricciones a una tabla.)
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('
+                ALTER TABLE qr_entrada
+                ADD CONSTRAINT qr_entrada_usos_validos
+                CHECK (usos_realizados_qr <= usos_permitidos_qr)
+            ');
+        }
     }
 
     public function down(): void
     {
-        DB::statement('ALTER TABLE qr_entrada DROP CONSTRAINT IF EXISTS qr_entrada_usos_validos');
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE qr_entrada DROP CONSTRAINT IF EXISTS qr_entrada_usos_validos');
+        }
 
         Schema::table('qr_entrada', function (Blueprint $table) {
             $table->dropColumn(['usos_permitidos_qr', 'usos_realizados_qr']);
