@@ -18,7 +18,10 @@ class StoreInscripcionRequest extends FormRequest
     {
         $limpiar = fn ($v) => is_string($v) ? preg_replace('/[\s\-()]/', '', $v) : $v;
 
-        $datos = ['contacto_emergencia_telefono' => $limpiar($this->input('contacto_emergencia_telefono'))];
+        $datos = [
+            'contacto_emergencia_telefono' => $limpiar($this->input('contacto_emergencia_telefono')),
+            'telefono_contacto' => $limpiar($this->input('telefono_contacto')),
+        ];
 
         $invitado = $this->input('invitado');
         if (is_array($invitado) && isset($invitado['telefono_inv'])) {
@@ -37,6 +40,12 @@ class StoreInscripcionRequest extends FormRequest
             // y el precio sale del evento (no de lo que mande el navegador).
             'cupo_i' => 'nullable|integer|min:1|max:1',
             'precio_pagado_i' => 'nullable|numeric|min:0',
+
+            // Datos del participante para esta inscripción. La categoría se valida
+            // en el controlador contra las categorías del evento.
+            'id_categoria' => 'nullable|integer',
+            'condiciones_medicas' => 'nullable|string|max:1000',
+            'telefono_contacto' => 'nullable|digits_between:7,15',
 
             'contacto_emergencia_nombre' => 'required|string|max:100',
             'contacto_emergencia_telefono' => 'required|digits_between:7,15',
@@ -87,6 +96,9 @@ class StoreInscripcionRequest extends FormRequest
     public function attributes(): array
     {
         return [
+            'id_categoria' => 'categoría',
+            'condiciones_medicas' => 'condiciones médicas',
+            'telefono_contacto' => 'teléfono de contacto',
             'contacto_emergencia_nombre' => 'nombre del contacto de emergencia',
             'contacto_emergencia_telefono' => 'teléfono del contacto de emergencia',
             'contacto_emergencia_parentesco' => 'parentesco',
