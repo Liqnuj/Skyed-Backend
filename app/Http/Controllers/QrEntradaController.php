@@ -141,6 +141,18 @@ class QrEntradaController extends Controller
                 'estado_qr' => $agotado ? 'usado' : 'activo',
             ]);
 
+            // El historial pasa de "inscrito" a "asistio" con la primera
+            // entrada. Solo toca filas "inscrito", así que el segundo
+            // escaneo (invitado) no lo vuelve a modificar.
+            DB::table('historial_participacion')
+                ->where('id_i', $inscripcion->id_i)
+                ->where('estado_hp', 'inscrito')
+                ->update([
+                    'estado_hp' => 'asistio',
+                    'fecha_hp' => now(),
+                    'updated_at' => now(),
+                ]);
+
             // Datos para que el admin verifique a las personas contra
             // su documento en la puerta.
             $usuario = $inscripcion->usuario;

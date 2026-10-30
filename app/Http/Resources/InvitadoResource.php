@@ -19,6 +19,7 @@ class InvitadoResource extends JsonResource
             'telefono' => $this->telefono_inv,
             'fecha_nacimiento' => $this->fecha_nacimiento_inv,
             'correo' => $this->correo_inv,
+            'numero_dorsal' => $this->numero_dorsal_inv,
         ];
     }
 }

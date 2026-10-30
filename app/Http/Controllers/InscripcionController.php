@@ -138,6 +138,11 @@ class InscripcionController extends Controller
         $dorsal = $request->validate([
             'numero_dorsal_preferido' => 'nullable|integer|min:1|max:99999',
         ])['numero_dorsal_preferido'] ?? null;
+        $dorsal = $dorsal !== null ? (int) $dorsal : null;
+
+        // Dorsal preferido del invitado (opcional).
+        $invDorsal = data_get($validated, 'invitado.numero_dorsal_inv');
+        $invDorsal = $invDorsal !== null ? (int) $invDorsal : null;
 
         $user = $request->user();
 
@@ -167,7 +172,8 @@ class InscripcionController extends Controller
             $dorsal,
             $deseaKit,
             $invDeseaKit,
-            $invTalla
+            $invTalla,
+            $invDorsal
         ) {
             // Bloqueamos el evento durante la operación
             // para evitar problemas de cupos simultáneos.
@@ -228,9 +234,20 @@ class InscripcionController extends Controller
                 }
             }
 
+            // Dorsales: se respeta el número preferido si está libre; si ya está
+            // tomado (por un titular o un invitado de este evento) se asigna el
+            // primer número libre. Se calcula con el evento bloqueado, así dos
+            // inscripciones simultáneas no pueden quedarse con el mismo número.
+            $ocupados = $this->dorsalesOcupados($evento->id_e);
+            $dorsalTitular = $this->asignarDorsal($dorsal, $ocupados);
+            $dorsalInvitado = !empty($validated['invitado'])
+                ? $this->asignarDorsal($invDorsal, $ocupados)
+                : null;
+
             $invitadoId = null;
             if (!empty($validated['invitado'])) {
                 $datosInvitado = $validated['invitado'];
+                $datosInvitado['numero_dorsal_inv'] = $dorsalInvitado;
                 if ($kit && $invDeseaKit) {
                     $datosInvitado['desea_kit_inv'] = true;
                     $datosInvitado['talla_kit_inv'] = StockTallas::normalizar($invTalla);
@@ -275,7 +292,7 @@ class InscripcionController extends Controller
                     $validated['contacto_emergencia_parentesco'],
 
                 'talla_camiseta_i' => ($kit && $deseaKit) ? StockTallas::normalizar($talla) : null,
-                'numero_dorsal_i' => $dorsal,
+                'numero_dorsal_i' => $dorsalTitular,
 
                 'id_u' => $user->id_u,
                 'id_e' => $evento->id_e,
@@ -464,9 +481,15 @@ class InscripcionController extends Controller
                 ->lockForUpdate()
                 ->first();
 
+            // Al cancelar, el dorsal queda libre para otra persona.
             $inscripcion->update([
-                'estado_i' => 'cancelada'
+                'estado_i' => 'cancelada',
+                'numero_dorsal_i' => null,
             ]);
+
+            if ($inscripcion->invitado) {
+                $inscripcion->invitado->update(['numero_dorsal_inv' => null]);
+            }
 
             if ($evento) {
                 $evento->increment('cupos_disponibles_e');
@@ -515,5 +538,53 @@ class InscripcionController extends Controller
         return response()->json([
             'message' => 'Inscripción cancelada correctamente'
         ]);
+    }
+
+    /**
+     * Dorsales que ya no se pueden usar en un evento: los de los titulares
+     * (cualquier estado, porque numero_dorsal_i tiene índice único por evento)
+     * y los de los invitados de inscripciones activas.
+     */
+    private function dorsalesOcupados(int $eventoId): array
+    {
+        $titulares = Inscripcion::where('id_e', $eventoId)
+            ->whereNotNull('numero_dorsal_i')
+            ->pluck('numero_dorsal_i');
+
+        $invitados = Inscripcion::where('inscripcion.id_e', $eventoId)
+            ->whereIn('inscripcion.estado_i', ['pendiente', 'confirmada'])
+            ->join('invitados', 'invitados.id_inv', '=', 'inscripcion.id_inv')
+            ->whereNotNull('invitados.numero_dorsal_inv')
+            ->pluck('invitados.numero_dorsal_inv');
+
+        return $titulares->merge($invitados)
+            ->map(fn ($n) => (int) $n)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Devuelve el dorsal preferido si está libre; si no, el primer número
+     * libre. Sin preferido devuelve null. Marca el número como ocupado.
+     */
+    private function asignarDorsal(?int $preferido, array &$ocupados): ?int
+    {
+        if ($preferido === null) {
+            return null;
+        }
+
+        if (!in_array($preferido, $ocupados, true)) {
+            $ocupados[] = $preferido;
+            return $preferido;
+        }
+
+        $n = 1;
+        while (in_array($n, $ocupados, true)) {
+            $n++;
+        }
+        $ocupados[] = $n;
+
+        return $n;
     }
 }

@@ -60,6 +60,8 @@ class StoreInscripcionRequest extends FormRequest
             'invitado.telefono_inv' => 'required_with:invitado|digits_between:7,15|unique:invitados,telefono_inv',
             'invitado.fecha_nacimiento_inv' => 'required_with:invitado|date|after:1900-01-01|before_or_equal:today',
             'invitado.correo_inv' => 'nullable|email|max:80|unique:invitados,correo_inv',
+            // Dorsal preferido del invitado: si ya está tomado, el controlador asigna otro.
+            'invitado.numero_dorsal_inv' => 'nullable|integer|min:1|max:99999',
         ];
     }
 
@@ -101,6 +103,7 @@ class StoreInscripcionRequest extends FormRequest
             'invitado.telefono_inv' => 'teléfono del invitado',
             'invitado.fecha_nacimiento_inv' => 'fecha de nacimiento del invitado',
             'invitado.correo_inv' => 'correo del invitado',
+            'invitado.numero_dorsal_inv' => 'dorsal del invitado',
         ];
     }
 }
