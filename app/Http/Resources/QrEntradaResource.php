@@ -16,6 +16,8 @@ class QrEntradaResource extends JsonResource
             'fecha_generacion' => $this->fecha_generacion_qr,
             'fecha_uso' => $this->fecha_uso_qr,
             'estado' => $this->estado_qr,
+            'usos_permitidos' => $this->usos_permitidos_qr,
+            'usos_realizados' => $this->usos_realizados_qr,
         ];
     }
 }

@@ -306,8 +306,10 @@ class InscripcionController extends Controller
                 'id_i' => $inscripcion->id_i,
             ]);
 
-            // Crear QR.
-            QrEntrada::create([
+            // Crear QR. Con invitado el mismo QR sirve para dos entradas
+            // (titular + invitado); sin invitado, para una.
+            // Se asigna aparte del create() para no depender de $fillable.
+            $qr = new QrEntrada([
                 'codigo_qr' => (string) Str::uuid(),
                 'qr_imagen_qr' => null,
                 'fecha_generacion_qr' => now(),
@@ -315,6 +317,9 @@ class InscripcionController extends Controller
                 'estado_qr' => 'pendiente',
                 'id_i' => $inscripcion->id_i,
             ]);
+            $qr->usos_permitidos_qr = $invitadoId ? 2 : 1;
+            $qr->usos_realizados_qr = 0;
+            $qr->save();
 
             // Historial del participante: queda "inscrito" hasta que se
             // escanee su QR (asistio) o se cargue su resultado (finalizado).
@@ -438,6 +443,19 @@ class InscripcionController extends Controller
         if ($inscripcion->estado_i === 'cancelada') {
             return response()->json([
                 'message' => 'Esta inscripción ya estaba cancelada'
+            ], 422);
+        }
+
+        // Si el QR ya se escaneó (aunque sea una vez), la persona ya
+        // entró al evento: no se puede cancelar sin perder ese registro.
+        $qr = $inscripcion->qr;
+        if ($qr && (
+            (int) $qr->usos_realizados_qr > 0
+            || $qr->fecha_uso_qr !== null
+            || $qr->estado_qr === 'usado'
+        )) {
+            return response()->json([
+                'message' => 'No se puede cancelar: el QR de esta inscripción ya fue usado'
             ], 422);
         }
 

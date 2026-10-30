@@ -18,11 +18,15 @@ class QrEntrada extends Model
         'fecha_uso_qr',
         'estado_qr',
         'id_i',
+        'usos_permitidos_qr',
+        'usos_realizados_qr',
     ];
 
     protected $casts = [
         'fecha_generacion_qr' => 'datetime',
         'fecha_uso_qr' => 'datetime',
+        'usos_permitidos_qr' => 'integer',
+        'usos_realizados_qr' => 'integer',
     ];
 
     public function inscripcion(): BelongsTo

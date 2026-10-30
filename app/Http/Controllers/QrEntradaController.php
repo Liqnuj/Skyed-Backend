@@ -45,6 +45,11 @@ class QrEntradaController extends Controller
 
     /**
      * Validar un QR mediante su código.
+     *
+     * Cada QR permite tantas entradas como usos_permitidos_qr:
+     * 1 si la inscripción es solo del titular, 2 si lleva invitado.
+     * El QR sigue "activo" mientras le queden usos y pasa a "usado"
+     * cuando se agotan.
      */
     public function validar(Request $request)
     {
@@ -54,10 +59,12 @@ class QrEntradaController extends Controller
 
         $resultado = DB::transaction(function () use ($validated) {
 
-            // Bloquear el QR durante toda la validación.
+            // Bloquear el QR durante toda la validación para que dos
+            // escaneos simultáneos no gasten el mismo uso.
             $qr = QrEntrada::with([
                 'inscripcion.usuario',
                 'inscripcion.evento',
+                'inscripcion.invitado',
             ])
                 ->where('codigo_qr', $validated['codigo_qr'])
                 ->lockForUpdate()
@@ -72,8 +79,23 @@ class QrEntradaController extends Controller
             // El QR debe estar disponible.
             if ($qr->estado_qr !== 'activo') {
                 return response()->json([
-                    'message' => 'El QR no está disponible',
+                    'message' => $qr->estado_qr === 'usado'
+                        ? 'Este QR ya se usó completo'
+                        : 'El QR no está disponible',
                     'estado_qr' => $qr->estado_qr,
+                    'usos_permitidos' => $qr->usos_permitidos_qr,
+                    'usos_realizados' => $qr->usos_realizados_qr,
+                ], 422);
+            }
+
+            // Defensa extra: aunque el estado diga "activo", no puede
+            // haber más entradas que usos permitidos.
+            if ($qr->usos_realizados_qr >= $qr->usos_permitidos_qr) {
+                return response()->json([
+                    'message' => 'Este QR ya se usó completo',
+                    'estado_qr' => $qr->estado_qr,
+                    'usos_permitidos' => $qr->usos_permitidos_qr,
+                    'usos_realizados' => $qr->usos_realizados_qr,
                 ], 422);
             }
 
@@ -109,18 +131,54 @@ class QrEntradaController extends Controller
                 ], 422);
             }
 
-            // Marcar QR como usado dentro de la misma transacción.
+            // Registrar la entrada dentro de la misma transacción.
+            $usosRealizados = $qr->usos_realizados_qr + 1;
+            $agotado = $usosRealizados >= $qr->usos_permitidos_qr;
+
             $qr->update([
-                'estado_qr' => 'usado',
+                'usos_realizados_qr' => $usosRealizados,
                 'fecha_uso_qr' => now(),
+                'estado_qr' => $agotado ? 'usado' : 'activo',
             ]);
 
+            // Datos para que el admin verifique a las personas contra
+            // su documento en la puerta.
+            $usuario = $inscripcion->usuario;
+            $invitado = $inscripcion->invitado;
+
+            $personas = [];
+
+            if ($usuario) {
+                $personas[] = [
+                    'rol' => 'titular',
+                    'nombre' => trim($usuario->nombre_u . ' ' . $usuario->apellido_u),
+                    'documento' => $usuario->documento_u,
+                ];
+            }
+
+            if ($invitado) {
+                $personas[] = [
+                    'rol' => 'invitado',
+                    'nombre' => trim($invitado->nombre_inv . ' ' . $invitado->apellido_inv),
+                    'documento' => $invitado->documento_inv,
+                ];
+            }
+
             return response()->json([
-                'message' => 'QR validado correctamente',
+                'message' => $agotado
+                    ? 'QR validado correctamente. Ya ingresaron todas las personas.'
+                    : 'QR validado correctamente. Falta que ingrese una persona más.',
                 'qr' => $qr->fresh()->load([
                     'inscripcion.usuario',
                     'inscripcion.evento',
+                    'inscripcion.invitado',
                 ]),
+                'acceso' => [
+                    'ingreso_numero' => $usosRealizados,
+                    'usos_permitidos' => $qr->usos_permitidos_qr,
+                    'usos_restantes' => $qr->usos_permitidos_qr - $usosRealizados,
+                    'personas' => $personas,
+                ],
             ]);
         });
 
