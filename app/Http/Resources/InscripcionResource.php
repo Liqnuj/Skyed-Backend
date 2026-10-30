@@ -27,6 +27,11 @@ class InscripcionResource extends JsonResource
             ],
             'talla_camiseta' => $this->talla_camiseta_i,
             'id_categoria' => $this->id_cc,
+            'categoria' => $this->whenLoaded('categoria', fn () => $this->categoria ? [
+                'id' => $this->categoria->id_cc,
+                'nombre' => $this->categoria->nombre_cc,
+                'distancia' => $this->categoria->distancia_cc,
+            ] : null),
             'desea_kit' => (bool) $this->desea_kit_i,
             'numero_dorsal' => $this->numero_dorsal_i,
 

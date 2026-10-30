@@ -33,6 +33,7 @@ class InscripcionController extends Controller
 
         $inscripciones = Inscripcion::with([
             'evento.kit',
+            'categoria',
             'pago',
             'qr',
             'invitado',
@@ -99,6 +100,7 @@ class InscripcionController extends Controller
         $inscripcion = Inscripcion::with([
             'usuario',
             'evento',
+            'categoria',
             'pago',
             'qr',
             'invitado',
