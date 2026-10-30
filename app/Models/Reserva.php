@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Reserva extends Model
 {
@@ -15,6 +16,9 @@ class Reserva extends Model
     protected $fillable = [
         'nombre_rese',
         'fecha_evento_rese',
+        'fecha_hasta_rese',
+        'hora_aprox_rese',
+        'duracion_horas_rese',
         'invitados_rese',
         'presupuesto_rese',
         'ubicacion_rese',
@@ -29,6 +33,8 @@ class Reserva extends Model
 
     protected $casts = [
         'fecha_evento_rese' => 'date',
+        'fecha_hasta_rese' => 'date',
+        'duracion_horas_rese' => 'integer',
         'presupuesto_rese' => 'decimal:2',
         'total_rese' => 'decimal:2',
         'creado_en_rese' => 'datetime',
@@ -52,6 +58,15 @@ class Reserva extends Model
         );
     }
 
+    public function tipoEvento(): BelongsTo
+    {
+        return $this->belongsTo(
+            TipoEvento::class,
+            'id_tipo_eves',
+            'id_tipo_eves'
+        );
+    }
+
     public function seguimientos(): HasMany
     {
         return $this->hasMany(
@@ -59,5 +74,38 @@ class Reserva extends Model
             'id_rese',
             'id_rese'
         );
+    }
+
+    /** Ficha administrativa (solo la ve el Administrador Social). */
+    public function gestion(): HasOne
+    {
+        return $this->hasOne(
+            ReservaGestion::class,
+            'id_rese',
+            'id_rese'
+        );
+    }
+
+    /** Servicios de la reserva (los del cliente y los que agrega el admin). */
+    public function servicios(): HasMany
+    {
+        return $this->hasMany(
+            ReservaServicio::class,
+            'id_rese',
+            'id_rese'
+        );
+    }
+
+    /**
+     * Devuelve la ficha de gestión; si la reserva todavía no la tiene
+     * (p. ej. se creó por otro camino) la crea vacía.
+     */
+    public function asegurarGestion(): ReservaGestion
+    {
+        return $this->gestion
+            ?? $this->gestion()->create([
+                'etapa_gestion' => 'nueva',
+                'contactado' => false,
+            ]);
     }
 }
