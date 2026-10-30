@@ -2,6 +2,8 @@
 
 use App\Models\AyudaArticulo;
 use App\Models\AyudaCategoria;
+use App\Models\AyudaValoracion;
+use Illuminate\Support\Facades\DB;
 use function Pest\Laravel\getJson;
 
 function ayudaCategoria(array $extra = []): AyudaCategoria
@@ -166,4 +168,102 @@ it('los relacionados son de la misma categoría o comparten palabras clave', fun
 
     expect($slugs)->toContain('misma-categoria', 'misma-clave')
         ->and($slugs)->not->toContain('sin-relacion');
+});
+
+
+it('un visitante no puede valorar un artículo', function () {
+    ayudaArticulo(ayudaCategoria(), ['slug_aya' => 'valorable']);
+
+    $this->postJson('/api/ayuda/articulos/valorable/valoracion', ['util' => true])
+        ->assertStatus(401);
+});
+
+it('un usuario valora y puede cambiar su respuesta sin duplicarla', function () {
+    $art = ayudaArticulo(ayudaCategoria(), ['slug_aya' => 'valorable']);
+    $user = userWithRole('cliente', 'social');
+
+    $this->actingAs($user)
+        ->postJson('/api/ayuda/articulos/valorable/valoracion', ['util' => true])
+        ->assertOk()
+        ->assertJsonPath('valoracion.util', true);
+
+    $this->actingAs($user)
+        ->postJson('/api/ayuda/articulos/valorable/valoracion', [
+            'util' => false,
+            'comentario' => '  <b>Falta el paso del pago</b>  ',
+        ])
+        ->assertOk()
+        ->assertJsonPath('valoracion.util', false)
+        ->assertJsonPath('valoracion.comentario', 'Falta el paso del pago');
+
+    expect(AyudaValoracion::where('id_aya', $art->id_aya)->count())->toBe(1);
+
+    $this->actingAs($user)->getJson('/api/ayuda/articulos/valorable')
+        ->assertOk()
+        ->assertJsonPath('mi_valoracion.util', false);
+});
+
+it('un "sí fue útil" descarta el comentario', function () {
+    ayudaArticulo(ayudaCategoria(), ['slug_aya' => 'valorable']);
+
+    $this->actingAs(userWithRole('cliente', 'social'))
+        ->postJson('/api/ayuda/articulos/valorable/valoracion', ['util' => true, 'comentario' => 'x'])
+        ->assertOk()
+        ->assertJsonPath('valoracion.comentario', null);
+});
+
+it('valorar valida los datos', function () {
+    ayudaArticulo(ayudaCategoria(), ['slug_aya' => 'valorable']);
+    $user = userWithRole('cliente', 'social');
+
+    $this->actingAs($user)->postJson('/api/ayuda/articulos/valorable/valoracion', [])
+        ->assertStatus(422);
+
+    $this->actingAs($user)->postJson('/api/ayuda/articulos/valorable/valoracion', [
+        'util' => false,
+        'comentario' => str_repeat('a', 501),
+    ])->assertStatus(422);
+});
+
+it('no se puede valorar un borrador', function () {
+    ayudaArticulo(ayudaCategoria(), ['slug_aya' => 'oculto', 'estado_aya' => 'borrador']);
+
+    $this->actingAs(userWithRole('cliente', 'social'))
+        ->postJson('/api/ayuda/articulos/oculto/valoracion', ['util' => true])
+        ->assertStatus(404);
+
+    expect(AyudaValoracion::count())->toBe(0);
+});
+
+it('registrar una visita suma uno y no cambia la fecha de actualización', function () {
+    $art = ayudaArticulo(ayudaCategoria(), ['slug_aya' => 'visitado']);
+    DB::table('ayuda_articulo')->where('id_aya', $art->id_aya)->update(['updated_at' => '2020-01-01 00:00:00']);
+
+    $this->postJson('/api/ayuda/articulos/visitado/visita')->assertOk();
+    $this->postJson('/api/ayuda/articulos/visitado/visita')->assertOk();
+
+    $art->refresh();
+    expect($art->visitas_aya)->toBe(2)
+        ->and($art->updated_at->year)->toBe(2020);
+});
+
+it('no se cuentan visitas de artículos no publicados', function () {
+    $art = ayudaArticulo(ayudaCategoria(), ['slug_aya' => 'borrador-x', 'estado_aya' => 'borrador']);
+
+    $this->postJson('/api/ayuda/articulos/borrador-x/visita')->assertStatus(404);
+
+    expect($art->fresh()->visitas_aya)->toBe(0);
+});
+
+it('el inicio muestra los más consultados, el más visto primero', function () {
+    $cat = ayudaCategoria();
+    ayudaArticulo($cat, ['slug_aya' => 'a-cinco', 'visitas_aya' => 5]);
+    ayudaArticulo($cat, ['slug_aya' => 'b-cero', 'visitas_aya' => 0]);
+    ayudaArticulo($cat, ['slug_aya' => 'c-nueve', 'visitas_aya' => 9]);
+
+    getJson('/api/ayuda')
+        ->assertOk()
+        ->assertJsonCount(2, 'populares')
+        ->assertJsonPath('populares.0.slug', 'c-nueve')
+        ->assertJsonPath('populares.1.slug', 'a-cinco');
 });
