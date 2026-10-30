@@ -72,6 +72,15 @@ class Inscripcion extends Model
         );
     }
 
+    public function categoria(): BelongsTo
+    {
+        return $this->belongsTo(
+            CategoriaCompetencia::class,
+            'id_cc',
+            'id_cc'
+        );
+    }
+
     public function pago(): HasOne
     {
         return $this->hasOne(
