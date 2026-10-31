@@ -350,6 +350,85 @@ class AyudaAdminController extends Controller
         return response()->json(['message' => 'Orden actualizado.']);
     }
 
+        // ============================ Métricas ===============================
+
+    /** GET /ayuda/admin/metricas: números básicos de lo que esta persona gestiona. */
+    public function metricas(Request $request): JsonResponse
+    {
+        $articulos = AyudaArticulo::query()
+            ->whereIn('modulo_aya', $request->user()->modulosGestionablesAyuda())
+            ->with('categoria:id_ayc,nombre_ayc')
+            ->withCount($this->conteosValoracion())
+            ->get();
+
+        $fila = function ($a) {
+            $utiles = (int) $a->utiles_count;
+            $noUtiles = (int) $a->no_utiles_count;
+            $votos = $utiles + $noUtiles;
+
+            return [
+                'id' => $a->id_aya,
+                'slug' => $a->slug_aya,
+                'titulo' => $a->titulo_aya,
+                'categoria' => $a->categoria?->nombre_ayc,
+                'estado' => $a->estado_aya,
+                'visitas' => (int) $a->visitas_aya,
+                'utiles' => $utiles,
+                'no_utiles' => $noUtiles,
+                'porcentaje_no_util' => $votos > 0 ? (int) round($noUtiles / $votos * 100) : 0,
+            ];
+        };
+
+        $utiles = (int) $articulos->sum('utiles_count');
+        $noUtiles = (int) $articulos->sum('no_utiles_count');
+        $votos = $utiles + $noUtiles;
+
+        $masVistos = $articulos
+            ->where('estado_aya', AyudaArticulo::PUBLICADO)
+            ->where('visitas_aya', '>', 0)
+            ->sortByDesc('visitas_aya')
+            ->take(5)
+            ->map($fila)
+            ->values();
+
+        // Con al menos un "No me fue útil"; primero los que más lo reciben.
+        $porMejorar = $articulos
+            ->filter(fn ($a) => $a->no_utiles_count > 0)
+            ->sort(fn ($a, $b) => [$b->no_utiles_count, $b->visitas_aya] <=> [$a->no_utiles_count, $a->visitas_aya])
+            ->take(5)
+            ->map($fila)
+            ->values();
+
+        $categorias = $articulos
+            ->groupBy('id_ayc')
+            ->map(fn ($grupo) => [
+                'id' => (int) $grupo->first()->id_ayc,
+                'nombre' => $grupo->first()->categoria?->nombre_ayc ?? '—',
+                'articulos' => $grupo->count(),
+                'visitas' => (int) $grupo->sum('visitas_aya'),
+            ])
+            ->sortByDesc('visitas')
+            ->take(8)
+            ->values();
+
+        return response()->json([
+            'resumen' => [
+                'articulos' => $articulos->count(),
+                'publicados' => $articulos->where('estado_aya', AyudaArticulo::PUBLICADO)->count(),
+                'borradores' => $articulos->where('estado_aya', AyudaArticulo::BORRADOR)->count(),
+                'desactivados' => $articulos->where('estado_aya', AyudaArticulo::DESACTIVADO)->count(),
+                'visitas' => (int) $articulos->sum('visitas_aya'),
+                'utiles' => $utiles,
+                'no_utiles' => $noUtiles,
+                'satisfaccion' => $votos > 0 ? (int) round($utiles / $votos * 100) : null,
+            ],
+            'mas_vistos' => $masVistos,
+            'por_mejorar' => $porMejorar,
+            'categorias' => $categorias,
+        ]);
+    }
+    
+
     // ============================ Ayudantes ==============================
 
     /** 403 si esta persona no gestiona contenido de ese módulo. */
