@@ -215,6 +215,25 @@ class User extends Authenticatable
     }
 
     
+
+        /**
+     * Qué contenido del Centro de Ayuda puede gestionar. Cada admin gestiona su
+     * módulo; lo "general" solo quien administra ambos (super administrador).
+     *
+     * @return string[]
+     */
+    public function modulosGestionablesAyuda(): array
+    {
+        $modulos = $this->modulosQueAdministra();
+
+        if (count($modulos) === 2) {
+            $modulos[] = 'general';
+        }
+
+        return $modulos;
+    }
+
+    
     // se agrega validacion para notificaciones
 public function notificaciones(): HasMany
 {
