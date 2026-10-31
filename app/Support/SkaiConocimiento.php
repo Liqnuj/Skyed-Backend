@@ -31,8 +31,8 @@ class SkaiConocimiento
 
     /** Secciones de cada panel admin (se abren con ?seccion=...). */
     private const SECCIONES_ADMIN = [
-        'adminDeportivo' => ['/deportivo/admin', ['inicio', 'eventos', 'inscripciones', 'acceso', 'resultados', 'kits', 'usuarios', 'ajustes']],
-        'adminSocial' => ['/social/admin', ['inicio', 'eventos', 'reservas', 'pqr', 'lugares', 'servicios', 'usuarios', 'ajustes']],
+        'adminDeportivo' => ['/deportivo/admin', ['inicio', 'eventos', 'inscripciones', 'acceso', 'resultados', 'kits', 'usuarios', 'copias', 'ajustes']],
+        'adminSocial' => ['/social/admin', ['inicio', 'eventos', 'reservas', 'pqr', 'lugares', 'servicios', 'usuarios', 'copias', 'ajustes']],
     ];
 
     /**
@@ -213,7 +213,7 @@ TXT;
     private static function guiaAdminDeportivo(): string
     {
         return <<<'TXT'
-GUÍA DEL PANEL ADMIN DEPORTIVO (/deportivo/admin). Menú lateral: Inicio, Eventos, Inscripciones y pagos, Control de acceso, Resultados, Kits, Usuarios y Ajustes.
+GUÍA DEL PANEL ADMIN DEPORTIVO (/deportivo/admin). Menú lateral: Inicio, Eventos, Inscripciones y pagos, Control de acceso, Resultados, Kits, Usuarios, Copias de seguridad y Ajustes.
 - Inicio: tarjetas de resumen y gráficas (ingresos o inscripciones por mes, inscritos por evento, estado de los pagos).
 - Crear un evento:
   1. **Eventos** y botón **Nuevo evento**.
@@ -230,6 +230,12 @@ GUÍA DEL PANEL ADMIN DEPORTIVO (/deportivo/admin). Menú lateral: Inicio, Event
 - Validar pagos: **Inscripciones y pagos**, filtro **Pagos por validar**; el ícono del ojo (**Ver detalle**) muestra el comprobante; luego **Confirmar pago** (✓) o **Rechazar pago** (✕). Rechazar cancela la inscripción y devuelve el cupo. Al confirmar, el QR del participante queda activo.
 - Control de acceso (día del evento): **Control de acceso**, **Escanear con la cámara** o escribir el **Código del QR** para validar la entrada.
 - Resultados: **Resultados** y **Registrar resultado**: evento, participante, **Tiempo final (hh:mm:ss)**, posición general, estado y, si aplica, categoría y posición en la categoría.
+- Copias de seguridad: **Copias de seguridad** en el menú lateral.
+  1. Marcar lo que se quiere respaldar, o **Seleccionar todo**.
+  2. Pulsar **Crear y descargar copia**: se descarga un archivo .zip con los datos (también en CSV para Excel). No incluye contraseñas.
+  3. En **Copias guardadas** se puede volver a descargar, **Restaurar** o eliminar cada copia.
+  4. **Restaurar** recupera lo borrado o cambiado sin borrar lo nuevo; pide escribir RESTAURAR y antes hace una copia automática del estado actual.
+  Cada administrador respalda solo su módulo; el super administrador también los dos módulos, usuarios y roles.
 - Usuarios: lista de personas registradas. Ajustes: datos del administrador, avisos y contraseña.
 TXT;
     }
@@ -237,7 +243,7 @@ TXT;
     private static function guiaAdminSocial(): string
     {
         return <<<'TXT'
-GUÍA DEL PANEL ADMIN SOCIAL (/social/admin). Menú lateral: Inicio, Eventos, Reservas, Usuarios, PQRS, Lugares, Servicios y Ajustes.
+GUÍA DEL PANEL ADMIN SOCIAL (/social/admin). Menú lateral: Inicio, Eventos, Reservas, Usuarios, PQRS, Lugares, Servicios, Copias de seguridad y Ajustes.
 - Crear un lugar (ambiente): **Lugares** y **Nuevo ambiente**: **Nombre**, **Capacidad**, **Precio de referencia**, **Descripción** y **Foto principal** (obligatoria).
 - Crear un servicio: **Servicios** y **Nuevo servicio**: **Nombre** y **Descripción**.
 - Crear un evento social:
@@ -250,6 +256,12 @@ GUÍA DEL PANEL ADMIN SOCIAL (/social/admin). Menú lateral: Inicio, Eventos, Re
   1. **PQRS** y abrir la solicitud (al abrirla pasa a "En revisión" y se avisa al usuario).
   2. **Comenzar gestión** (pasa a "En proceso").
   3. Escribir la **Respuesta para el usuario** (y, si quiere, una nota interna que solo ve el equipo) y pulsar **Enviar respuesta**: queda "Resuelto".
+- Copias de seguridad: **Copias de seguridad** en el menú lateral.
+  1. Marcar lo que se quiere respaldar, o **Seleccionar todo**.
+  2. Pulsar **Crear y descargar copia**: se descarga un archivo .zip con los datos (también en CSV para Excel). No incluye contraseñas.
+  3. En **Copias guardadas** se puede volver a descargar, **Restaurar** o eliminar cada copia.
+  4. **Restaurar** recupera lo borrado o cambiado sin borrar lo nuevo; pide escribir RESTAURAR y antes hace una copia automática del estado actual.
+  Cada administrador respalda solo su módulo; el super administrador también los dos módulos, usuarios y roles.
 - Usuarios: lista de clientes. Ajustes: datos del administrador, avisos y contraseña.
 TXT;
     }

@@ -3,7 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Registro de una copia de seguridad. Los datos están en un archivo privado
+ * (archivo_cs); ver App\Support\GestorCopias.
+ */
 class CopiaSeguridad extends Model
 {
     protected $table = 'copia_seguridad';
@@ -11,13 +16,26 @@ class CopiaSeguridad extends Model
     protected $primaryKey = 'id_cs';
 
     protected $fillable = [
-        'nombre_tabla_cs',
         'fecha_cs',
-        'datos_json_cs',
+        'alcance_cs',
+        'conjuntos_cs',
+        'archivo_cs',
+        'tamano_cs',
+        'registros_cs',
+        'checksum_cs',
+        'origen_cs',
+        'id_u',
     ];
 
     protected $casts = [
         'fecha_cs' => 'datetime',
-        'datos_json_cs' => 'array',
+        'conjuntos_cs' => 'array',
+        'tamano_cs' => 'integer',
+        'registros_cs' => 'integer',
     ];
+
+    public function autor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'id_u', 'id_u');
+    }
 }

@@ -249,9 +249,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/invitados/{id}', [InvitadoController::class, 'destroy']);
 
         // Copias de Seguridad
+        // (cada admin solo maneja su módulo; el controlador lo verifica)
         Route::get('/copias-seguridad', [CopiaSeguridadController::class, 'index']);
         Route::get('/copias-seguridad/{id}', [CopiaSeguridadController::class, 'show']);
-        Route::post('/copias-seguridad', [CopiaSeguridadController::class, 'store']);
+        Route::get('/copias-seguridad/{id}/descargar', [CopiaSeguridadController::class, 'descargar'])->middleware('throttle:30,1,copias-descargar');
+        Route::post('/copias-seguridad', [CopiaSeguridadController::class, 'store'])->middleware('throttle:10,1,copias-crear');
+        Route::post('/copias-seguridad/{id}/restaurar', [CopiaSeguridadController::class, 'restaurar'])->middleware('throttle:5,1,copias-restaurar');
+        Route::delete('/copias-seguridad/{id}', [CopiaSeguridadController::class, 'destroy']);
     });
 
 

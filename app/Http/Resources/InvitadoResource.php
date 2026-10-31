@@ -20,6 +20,8 @@ class InvitadoResource extends JsonResource
             'fecha_nacimiento' => $this->fecha_nacimiento_inv,
             'correo' => $this->correo_inv,
             'numero_dorsal' => $this->numero_dorsal_inv,
+            'desea_kit' => (bool) $this->desea_kit_inv,
+            'talla_kit' => $this->talla_kit_inv,
         ];
     }
 }
