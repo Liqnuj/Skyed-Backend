@@ -13,6 +13,7 @@ use App\Http\Controllers\ServicioController;
 use App\Http\Controllers\EventoRealizadoController;
 use App\Http\Controllers\SocialImagenController;
 use App\Http\Controllers\ReservaController;
+use App\Http\Controllers\ReservaGestionController;
 use App\Http\Controllers\PqrController;
 use App\Http\Controllers\CopiaSeguridadController;
 use App\Http\Controllers\QrEntradaController;
@@ -191,6 +192,31 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/kits', [KitController::class, 'index']);
     Route::get('/kits/{id}', [KitController::class, 'show']);
 
+
+
+
+
+        // Gestión de reservas y eventos (Administrador Social).
+    // Va ANTES de /reservas/{id} para que "resumen" y "calendario" no se lean como un id.
+    Route::middleware('role.context:adminSocial')->group(function () {
+        Route::get('/reservas/resumen', [ReservaGestionController::class, 'resumen']);
+        Route::get('/reservas/calendario', [ReservaGestionController::class, 'calendario']);
+        Route::get('/reservas/responsables', [ReservaGestionController::class, 'responsables']);
+
+        Route::post('/reservas/{id}/abrir', [ReservaGestionController::class, 'abrir']);
+        Route::put('/reservas/{id}/gestion', [ReservaGestionController::class, 'actualizar']);
+        Route::post('/reservas/{id}/etapa', [ReservaGestionController::class, 'cambiarEtapa']);
+        Route::post('/reservas/{id}/estado', [ReservaGestionController::class, 'cambiarEstado']);
+        Route::post('/reservas/{id}/contacto', [ReservaGestionController::class, 'registrarContacto']);
+        Route::post('/reservas/{id}/nota', [ReservaGestionController::class, 'nota']);
+
+        Route::post('/reservas/{id}/servicios', [ReservaGestionController::class, 'agregarServicio']);
+        Route::put('/reservas/{id}/servicios/{servicioId}', [ReservaGestionController::class, 'actualizarServicio']);
+        Route::delete('/reservas/{id}/servicios/{servicioId}', [ReservaGestionController::class, 'quitarServicio']);
+    });
+
+
+    
     // Reservas y PQR (Autoservicio)
     Route::get('/reservas', [ReservaController::class, 'index']);
     Route::get('/reservas/{id}', [ReservaController::class, 'show']);
