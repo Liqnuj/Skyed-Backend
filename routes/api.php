@@ -261,6 +261,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // operación valida el módulo del contenido (User::modulosGestionablesAyuda).
         Route::prefix('ayuda/admin')->group(function () {
             Route::get('/opciones', [AyudaAdminController::class, 'opciones']);
+            Route::get('/metricas', [AyudaAdminController::class, 'metricas']);
 
             Route::get('/categorias', [AyudaAdminController::class, 'categorias']);
             Route::post('/categorias', [AyudaAdminController::class, 'guardarCategoria']);

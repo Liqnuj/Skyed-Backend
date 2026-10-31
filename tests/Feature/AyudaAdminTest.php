@@ -314,3 +314,54 @@ it('el detalle muestra los comentarios sin datos personales', function () {
         ->assertJsonPath('comentarios.0.comentario', 'Faltó el paso del pago')
         ->assertJsonMissingPath('comentarios.0.id_u');
 });
+
+
+
+
+
+
+
+
+it('las métricas resumen visitas, valoraciones y artículos por mejorar', function () {
+    $cat = adminAyudaCat('social');
+    $visto = adminAyudaArt($cat, 'social', ['titulo_aya' => 'Muy visto', 'visitas_aya' => 10]);
+    $confuso = adminAyudaArt($cat, 'social', ['titulo_aya' => 'Confuso', 'visitas_aya' => 3]);
+    adminAyudaArt($cat, 'social', ['estado_aya' => 'borrador']);
+
+    $lector1 = User::factory()->create();
+    $lector2 = User::factory()->create();
+    AyudaValoracion::create(['id_aya' => $confuso->id_aya, 'id_u' => $lector1->getKey(), 'util_ayv' => false]);
+    AyudaValoracion::create(['id_aya' => $confuso->id_aya, 'id_u' => $lector2->getKey(), 'util_ayv' => true]);
+    AyudaValoracion::create(['id_aya' => $visto->id_aya, 'id_u' => $lector1->getKey(), 'util_ayv' => true]);
+
+    $res = $this->actingAs(userWithRole('adminSocial', 'social'))
+        ->getJson(RUTA_AYUDA_ADMIN . '/metricas')
+        ->assertOk()
+        ->assertJsonPath('resumen.articulos', 3)
+        ->assertJsonPath('resumen.publicados', 2)
+        ->assertJsonPath('resumen.borradores', 1)
+        ->assertJsonPath('resumen.visitas', 13)
+        ->assertJsonPath('resumen.utiles', 2)
+        ->assertJsonPath('resumen.no_utiles', 1)
+        ->assertJsonPath('resumen.satisfaccion', 67)
+        ->assertJsonPath('mas_vistos.0.titulo', 'Muy visto')
+        ->assertJsonPath('por_mejorar.0.titulo', 'Confuso')
+        ->assertJsonPath('por_mejorar.0.porcentaje_no_util', 50);
+
+    expect($res->json('categorias.0.visitas'))->toBe(13);
+});
+
+it('las métricas no incluyen contenido de otros módulos', function () {
+    adminAyudaArt(adminAyudaCat('deportivo'), 'deportivo', ['visitas_aya' => 99]);
+    adminAyudaArt(adminAyudaCat('social'), 'social', ['visitas_aya' => 1]);
+
+    $this->actingAs(userWithRole('adminSocial', 'social'))
+        ->getJson(RUTA_AYUDA_ADMIN . '/metricas')
+        ->assertOk()
+        ->assertJsonPath('resumen.visitas', 1)
+        ->assertJsonPath('resumen.satisfaccion', null);
+
+    $this->actingAs(userWithRole('cliente', 'social'))
+        ->getJson(RUTA_AYUDA_ADMIN . '/metricas')
+        ->assertStatus(403);
+});
