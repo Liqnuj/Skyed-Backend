@@ -25,6 +25,7 @@ use App\Http\Controllers\TestimonioController;
 use App\Http\Controllers\AyudaController;
 use App\Http\Controllers\AyudaAdminController;
 use App\Http\Controllers\UserRoleController;
+use App\Http\Controllers\ReporteController;
 
 use App\Models\TipoEvento;
 
@@ -367,7 +368,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // 4. ZONA EXCLUSIVA: Administrador Social
     // ========================================================
     Route::middleware('role.context:adminSocial')->group(function () {
-        
+
+        // Reportes PDF/Excel de las tablas del panel Social (solo adminSocial).
+        // /reportes/social/{ambientes|servicios|eventos|reservas|pqrs|usuarios}/{pdf|xlsx}
+        Route::get('/reportes/{modulo}/{reporte}/{formato}', [ReporteController::class, 'exportar'])
+            ->where('modulo', 'social')
+            ->whereIn('formato', ['pdf', 'xlsx'])
+            ->middleware('throttle:20,1,reportes');
+
         // Ambientes y Servicios
         Route::post('/ambientes', [AmbienteController::class, 'store']);
         Route::put('/ambientes/{id}', [AmbienteController::class, 'update']);
