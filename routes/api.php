@@ -23,6 +23,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SkaiController;
 use App\Http\Controllers\TestimonioController;
 use App\Http\Controllers\AyudaController;
+use App\Http\Controllers\AyudaAdminController;
 use App\Http\Controllers\UserRoleController;
 
 use App\Models\TipoEvento;
@@ -216,7 +217,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
 
-    
+
     // Reservas y PQR (Autoservicio)
     Route::get('/reservas', [ReservaController::class, 'index']);
     Route::get('/reservas/{id}', [ReservaController::class, 'show']);
@@ -255,6 +256,25 @@ Route::middleware('auth:sanctum')->group(function () {
         // el propio test del equipo (tests/Feature/RoleRouteTest.php)
         // espera 403 para un usuario sin rol de admin.
         Route::get('/roles', [RoleController::class, 'index']);
+        
+        // Centro de Ayuda: administración del contenido. Además de ser admin, cada
+        // operación valida el módulo del contenido (User::modulosGestionablesAyuda).
+        Route::prefix('ayuda/admin')->group(function () {
+            Route::get('/opciones', [AyudaAdminController::class, 'opciones']);
+
+            Route::get('/categorias', [AyudaAdminController::class, 'categorias']);
+            Route::post('/categorias', [AyudaAdminController::class, 'guardarCategoria']);
+            Route::post('/categorias/orden', [AyudaAdminController::class, 'ordenarCategorias']);
+            Route::match(['put', 'patch'], '/categorias/{id}', [AyudaAdminController::class, 'actualizarCategoria']);
+            Route::delete('/categorias/{id}', [AyudaAdminController::class, 'eliminarCategoria']);
+
+            Route::get('/articulos', [AyudaAdminController::class, 'articulos']);
+            Route::post('/articulos', [AyudaAdminController::class, 'guardarArticulo']);
+            Route::post('/articulos/orden', [AyudaAdminController::class, 'ordenarArticulos']);
+            Route::get('/articulos/{id}', [AyudaAdminController::class, 'verArticulo']);
+            Route::match(['put', 'patch'], '/articulos/{id}', [AyudaAdminController::class, 'actualizarArticulo']);
+            Route::delete('/articulos/{id}', [AyudaAdminController::class, 'eliminarArticulo']);
+        });
 
         // Gestión de Usuarios
         Route::get('/users', [UserController::class, 'index']);
