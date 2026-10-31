@@ -20,6 +20,7 @@ use App\Http\Controllers\PremioController;
 use App\Http\Controllers\InvitadoController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SkaiController;
+use App\Http\Controllers\TestimonioController;
 use App\Http\Controllers\AyudaController;
 use App\Http\Controllers\UserRoleController;
 
@@ -97,6 +98,9 @@ Route::get('/eventos-sociales/{id}', [EventoRealizadoController::class, 'show'])
 Route::post('/asistente', [SkaiController::class, 'responder'])->middleware('throttle:20,1,skai');
 
 
+// Testimonios de SkyedSocial (lectura pública).
+Route::get('/testimonios', [TestimonioController::class, 'index'])->middleware('throttle:120,1,testimonios');
+
 // Centro de Ayuda (público). Si llega token se reconoce a la persona para
 // filtrar por rol; sin token solo se ve el contenido 'publico' ya publicado.
 Route::prefix('ayuda')->middleware('throttle:120,1,ayuda')->group(function () {
@@ -133,6 +137,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/perfil', [AuthController::class, 'updatePerfil']);
     Route::post('/perfil/foto', [AuthController::class, 'updateFoto']);
     Route::post('/verificar-contrasena', [AuthController::class, 'verificarContrasena']);
+    Route::put('/cambiar-contrasena', [AuthController::class, 'cambiarContrasena']);
     Route::delete('/perfil', [AuthController::class, 'desactivarCuenta']);
 
     // Gestión de Roles de Usuario
@@ -194,6 +199,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/reservas/{id}/ocultar', [ReservaController::class, 'ocultar']);
     Route::post('/pqr/{id}/ocultar', [PqrController::class, 'ocultar']);
     Route::post('/reservas/{id}/cancelar', [ReservaController::class, 'cancelar']);
+
+    // Testimonios: solo con una reserva completada, una reseña por reserva.
+    Route::get('/reservas/{id}/testimonio', [TestimonioController::class, 'mio']);
+    Route::post('/reservas/{id}/testimonio', [TestimonioController::class, 'store'])->middleware('throttle:10,1,testimonio');
+    Route::put('/testimonios/{id}', [TestimonioController::class, 'update'])->middleware('throttle:20,1,testimonio-editar');
+    Route::delete('/testimonios/{id}', [TestimonioController::class, 'destroy'])->middleware('throttle:20,1,testimonio-borrar');
     Route::get('/pqr', [PqrController::class, 'index']);
     Route::get('/pqr/{id}', [PqrController::class, 'show']);
     Route::post('/pqr', [PqrController::class, 'store']);
