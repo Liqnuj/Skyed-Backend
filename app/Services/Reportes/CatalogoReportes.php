@@ -2,6 +2,11 @@
 
 namespace App\Services\Reportes;
 
+use App\Services\Reportes\Definiciones\Deportivo\EventosReporte as EventosDeportivosReporte;
+use App\Services\Reportes\Definiciones\Deportivo\InscripcionesPagosReporte;
+use App\Services\Reportes\Definiciones\Deportivo\KitsReporte;
+use App\Services\Reportes\Definiciones\Deportivo\ResultadosReporte;
+use App\Services\Reportes\Definiciones\Deportivo\UsuariosReporte as UsuariosDeportivoReporte;
 use App\Services\Reportes\Definiciones\Social\AmbientesReporte;
 use App\Services\Reportes\Definiciones\Social\EventosReporte as EventosSocialesReporte;
 use App\Services\Reportes\Definiciones\Social\PqrsReporte;
@@ -24,6 +29,13 @@ final class CatalogoReportes
             'reservas' => ReservasReporte::class,
             'pqrs' => PqrsReporte::class,
             'usuarios' => UsuariosSocialReporte::class,
+        ],
+        'deportivo' => [
+            'eventos' => EventosDeportivosReporte::class,
+            'inscripciones-pagos' => InscripcionesPagosReporte::class,
+            'resultados' => ResultadosReporte::class,
+            'kits' => KitsReporte::class,
+            'usuarios' => UsuariosDeportivoReporte::class,
         ],
     ];
 

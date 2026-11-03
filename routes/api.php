@@ -311,7 +311,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // 3. ZONA EXCLUSIVA: Administrador Deportivo
     // ========================================================
     Route::middleware('role.context:adminDeportivo')->group(function () {
-        
+
+        // Reportes PDF/Excel de las tablas del panel Deportivo (solo adminDeportivo).
+        // /reportes/deportivo/{eventos|inscripciones-pagos|resultados|kits|usuarios}/{pdf|xlsx}
+        Route::get('/reportes/deportivo/{reporte}/{formato}', [ReporteController::class, 'exportar'])
+            ->defaults('modulo', 'deportivo')
+            ->whereIn('formato', ['pdf', 'xlsx'])
+            ->middleware('throttle:20,1,reportes');
+
         // Subida de la imagen de un evento deportivo (panel /deportivo/admin)
         Route::post('/deportivo/imagenes', [SocialImagenController::class, 'storeDeportivo']);
 
@@ -371,8 +378,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Reportes PDF/Excel de las tablas del panel Social (solo adminSocial).
         // /reportes/social/{ambientes|servicios|eventos|reservas|pqrs|usuarios}/{pdf|xlsx}
-        Route::get('/reportes/{modulo}/{reporte}/{formato}', [ReporteController::class, 'exportar'])
-            ->where('modulo', 'social')
+        Route::get('/reportes/social/{reporte}/{formato}', [ReporteController::class, 'exportar'])
+            ->defaults('modulo', 'social')
             ->whereIn('formato', ['pdf', 'xlsx'])
             ->middleware('throttle:20,1,reportes');
 
