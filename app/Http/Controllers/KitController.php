@@ -55,7 +55,9 @@ class KitController extends Controller
             'contenido_k' => 'required|string|max:255',
             'numero_dorsal_k' => 'nullable|integer',
             'imagen_k' => 'required|string|max:255',
-            'id_e' => 'required|integer',
+            // Sin evento cuando se crea desde el formulario de un evento: el
+            // evento queda con este kit (id_k) al guardarse.
+            'id_e' => 'nullable|integer',
             // Inventario: una fila por talla. El stock total del kit es la suma.
             'tallas' => 'required|array|min:1',
             'tallas.*.talla' => 'required|string|max:10|distinct',

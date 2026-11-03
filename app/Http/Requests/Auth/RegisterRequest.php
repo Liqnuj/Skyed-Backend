@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Rules\CaptchaValido;
 use App\Support\ReglasUsuario;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -37,11 +38,20 @@ class RegisterRequest extends FormRequest
             'contrasena_u' => ReglasUsuario::contrasena(),
             'fecha_nacimiento_u' => 'required|date|after:1900-01-01|before_or_equal:' . ReglasUsuario::fechaMaximaNacimiento(),
             'contexto' => 'sometimes|string|in:deportivo,social',
+            // Verificación "No soy un robot": la imagen (captcha_id) y lo que
+            // escribió la persona (captcha). Ver App\Support\GeneradorCaptcha.
+            'captcha_id' => config('services.captcha.enabled') ? ['required', 'string', 'max:64'] : ['nullable'],
+            'captcha' => config('services.captcha.enabled')
+                ? ['required', 'string', 'max:20', new CaptchaValido()]
+                : ['nullable'],
         ];
     }
 
     public function messages(): array
     {
-        return ReglasUsuario::mensajes();
+        return ReglasUsuario::mensajes() + [
+            'captcha.required' => 'Escribe los caracteres de la imagen para confirmar que no eres un robot.',
+            'captcha_id.required' => 'Carga la imagen de verificación e inténtalo de nuevo.',
+        ];
     }
 }

@@ -35,6 +35,13 @@ class SkaiController extends Controller
             'ruta' => 'sometimes|nullable|string|max:200',
         ]);
 
+        // Preguntas que claramente no son de SKYED (la hora, una suma...):
+        // se responden sin consultar a la IA.
+        $fueraDeTema = SkaiConocimiento::fueraDeTema($validated['message'], $validated['context'] ?? 'general');
+        if ($fueraDeTema !== null) {
+            return response()->json(['reply' => $fueraDeTema]);
+        }
+
         // Peor caso: el modelo principal agota su timeout y luego responde
         // el de respaldo (ver pedirAGemini). Le damos margen a PHP para que
         // eso no termine en un error fatal por tiempo máximo de ejecución.
