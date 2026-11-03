@@ -44,18 +44,39 @@ class InscripcionController extends Controller
 
         // Estado de la entrega del kit por evento (dónde y cuándo recogerlo
         // sale del kit del evento; aquí solo se agrega si ya se entregó).
+        // Una inscripción puede tener hasta dos kits: el del titular
+        // (id_inv nulo) y el del invitado (id_inv con valor).
         $entregas = DB::table('entrega_kit')
             ->where('id_u', $user->id_u)
+            ->whereNotNull('id_i')
             ->get()
-            ->keyBy('id_e');
+            ->groupBy('id_i');
 
-        $items = $inscripciones->map(function ($insc) use ($request, $entregas) {
+        $formatoEntrega = fn ($e) => $e ? [
+            'estado' => $e->estado_ek,
+            'fecha_entrega_real' => $e->fecha_entrega_real_ek,
+        ] : null;
+
+        $items = $inscripciones->map(function ($insc) use ($request, $entregas, $formatoEntrega) {
             $data = (new InscripcionResource($insc))->resolve($request);
-            $entrega = $entregas->get($insc->id_e);
-            $data['entrega_kit'] = $entrega ? [
-                'estado' => $entrega->estado_ek,
-                'fecha_entrega_real' => $entrega->fecha_entrega_real_ek,
-            ] : null;
+            $filas = $entregas->get($insc->id_i, collect());
+            $pendiente = ['estado' => 'pendiente', 'fecha_entrega_real' => null];
+            $hayKit = (bool) optional($insc->evento)->id_k;
+
+            // Si pidió kit pero aún no hay fila en entrega_kit (inscripciones
+            // anteriores a la fila del invitado), se muestra como pendiente.
+            $kitTitular = $formatoEntrega($filas->first(fn ($f) => $f->id_inv === null));
+            if (!$kitTitular && $hayKit && $insc->desea_kit_i) {
+                $kitTitular = $pendiente;
+            }
+
+            $kitInvitado = $formatoEntrega($filas->first(fn ($f) => $f->id_inv !== null));
+            if (!$kitInvitado && $hayKit && optional($insc->invitado)->desea_kit_inv) {
+                $kitInvitado = $pendiente;
+            }
+
+            $data['entrega_kit'] = $kitTitular;
+            $data['entrega_kit_invitado'] = $kitInvitado;
             return $data;
         })->values();
 
@@ -432,20 +453,26 @@ class InscripcionController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // Si el evento tiene kit, queda una entrega pendiente para que
-            // el participante vea dónde y cuándo recogerlo.
-            if ($evento->id_k && $deseaKit) {
-                $yaTieneEntrega = DB::table('entrega_kit')
-                    ->where('id_u', $user->id_u)
-                    ->where('id_e', $evento->id_e)
-                    ->exists();
+            // Si el evento tiene kit, queda una entrega pendiente por cada
+            // persona que lo pidió: una para el titular y otra para el
+            // invitado, así el admin las marca por separado.
+            if ($kit) {
+                $destinatarios = [];
+                if ($deseaKit) {
+                    $destinatarios[] = null;
+                }
+                if ($invitadoId && $invDeseaKit) {
+                    $destinatarios[] = $invitadoId;
+                }
 
-                if (!$yaTieneEntrega) {
+                foreach ($destinatarios as $idInvEntrega) {
                     DB::table('entrega_kit')->insert([
                         'estado_ek' => 'pendiente',
-                        'id_k' => $evento->id_k,
+                        'id_k' => $kit->id_k,
                         'id_u' => $user->id_u,
                         'id_e' => $evento->id_e,
+                        'id_i' => $inscripcion->id_i,
+                        'id_inv' => $idInvEntrega,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
@@ -611,8 +638,7 @@ class InscripcionController extends Controller
                 ->delete();
 
             DB::table('entrega_kit')
-                ->where('id_u', $inscripcion->id_u)
-                ->where('id_e', $inscripcion->id_e)
+                ->where('id_i', $inscripcion->id_i)
                 ->where('estado_ek', 'pendiente')
                 ->delete();
         });

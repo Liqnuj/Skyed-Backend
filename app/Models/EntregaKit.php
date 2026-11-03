@@ -19,6 +19,8 @@ class EntregaKit extends Model
         'id_k',
         'id_u',
         'id_e',
+        'id_i',
+        'id_inv',
     ];
 
     protected $casts = [
@@ -40,6 +42,25 @@ class EntregaKit extends Model
             User::class,
             'id_u',
             'id_u'
+        );
+    }
+
+    public function inscripcion(): BelongsTo
+    {
+        return $this->belongsTo(
+            Inscripcion::class,
+            'id_i',
+            'id_i'
+        );
+    }
+
+    // Si es nulo, el kit es del titular; si tiene valor, es del invitado.
+    public function invitado(): BelongsTo
+    {
+        return $this->belongsTo(
+            Invitado::class,
+            'id_inv',
+            'id_inv'
         );
     }
 
