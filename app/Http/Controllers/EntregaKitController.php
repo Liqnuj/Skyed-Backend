@@ -17,7 +17,7 @@ class EntregaKitController extends Controller
      * completa de entregas (nombre, documento vía la relación
      * `usuario`) de todos los participantes del evento.
      */
-    public function index(Request $request, $eventoId)
+       public function index(Request $request, $eventoId)
     {
         $evento = EventoDeportivo::find($eventoId);
 
@@ -30,12 +30,53 @@ class EntregaKitController extends Controller
         $query = EntregaKit::with([
             'kit',
             'usuario',
-            'evento'
+            'evento',
+            'inscripcion',
+            'invitado'
         ])->where('id_e', $eventoId);
 
         if (!$request->user()->hasRole('adminDeportivo')) {
             $query->where('id_u', $request->user()->id_u);
         }
+
+        // Solo inscripciones confirmadas (las canceladas no entregan kit).
+        $query->where(function ($w) {
+            $w->whereNull('id_i')->orWhereHas('inscripcion', function ($i) {
+                $i->where('estado_i', 'confirmada');
+            });
+        });
+
+        // Búsqueda por documento o nombre del titular, o documento o nombre del
+        // invitado. Se busca la inscripción y se devuelven TODAS sus filas, así
+        // el admin siempre ve juntos el kit del titular y el del invitado.
+        $q = trim((string) $request->query('q', ''));
+        if ($q !== '') {
+            $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%';
+
+            $query->whereIn('id_i', Inscripcion::select('id_i')
+                ->where('id_e', $eventoId)
+                ->where(function ($w) use ($like) {
+                    $w->whereIn('id_u', function ($s) use ($like) {
+                        $s->select('id_u')->from('usuario')->where(function ($x) use ($like) {
+                            $x->whereRaw('CAST(documento_u AS TEXT) ILIKE ?', [$like])
+                              ->orWhereRaw("(nombre_u || ' ' || apellido_u) ILIKE ?", [$like]);
+                        });
+                    })->orWhereIn('id_inv', function ($s) use ($like) {
+                        $s->select('id_inv')->from('invitados')->where(function ($x) use ($like) {
+                            $x->whereRaw('CAST(documento_inv AS TEXT) ILIKE ?', [$like])
+                              ->orWhereRaw("(nombre_inv || ' ' || apellido_inv) ILIKE ?", [$like]);
+                        });
+                    });
+                }));
+        }
+
+        $estado = $request->query('estado');
+        if (in_array($estado, ['pendiente', 'entregado', 'devolucion'], true)) {
+            $query->where('estado_ek', $estado);
+        }
+
+        // Titular primero y su invitado justo debajo.
+        $query->orderBy('id_i')->orderByRaw('id_inv ASC NULLS FIRST');
 
         $entregas = $query->paginate($this->perPage($request));
 
@@ -55,7 +96,9 @@ class EntregaKitController extends Controller
         $entrega = EntregaKit::with([
             'kit',
             'usuario',
-            'evento'
+            'evento',
+            'inscripcion',
+            'invitado'
         ])->find($id);
 
         if (!$entrega) {
@@ -79,67 +122,81 @@ class EntregaKitController extends Controller
     }
 
     /**
-     * Registrar la entrega de un kit.
+     * Registrar la entrega de un kit de una inscripción. Sin id_inv es el
+     * kit del titular; con id_inv es el del invitado. Si ya existe la fila
+     * pendiente (se crea al inscribirse) se actualiza en vez de duplicarla.
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'id_k' => 'required|exists:kit,id_k',
-            'id_u' => 'required|exists:usuario,id_u',
-            'id_e' => 'required|exists:eventoDeportivo,id_e',
-            'persona_entrega_ek' => 'required|string|max:80',
+            'id_i' => 'required|exists:inscripcion,id_i',
+            'id_inv' => 'nullable|exists:invitados,id_inv',
+            'persona_entrega_ek' => 'nullable|string|max:80',
             'observaciones_ek' => 'nullable|string|max:255',
         ]);
 
-        /*
-         * Verificar que el usuario tenga una inscripción
-         * confirmada en el evento.
-         */
-        $inscripcion = Inscripcion::where('id_u', $validated['id_u'])
-            ->where('id_e', $validated['id_e'])
-            ->where('estado_i', 'confirmada')
-            ->first();
+        $inscripcion = Inscripcion::with(['evento', 'invitado'])->find($validated['id_i']);
+        $idInv = $validated['id_inv'] ?? null;
 
-        if (!$inscripcion) {
+        if ($inscripcion->estado_i !== 'confirmada') {
             return response()->json([
-                'message' => 'El usuario no tiene una inscripción confirmada en este evento'
+                'message' => 'La inscripción no está confirmada'
             ], 422);
         }
 
-        /*
-         * Verificar que no se haya entregado ya
-         * un kit para esta inscripción.
-         */
-        $yaEntregado = EntregaKit::where('id_u', $validated['id_u'])
-            ->where('id_e', $validated['id_e'])
-            ->where('estado_ek', 'entregado')
-            ->exists();
-
-        if ($yaEntregado) {
+        if ($idInv !== null && (int) $inscripcion->id_inv !== (int) $idInv) {
             return response()->json([
-                'message' => 'El kit ya fue entregado a este usuario'
+                'message' => 'Ese invitado no pertenece a esta inscripción'
+            ], 422);
+        }
+
+        $pidioKit = $idInv === null
+            ? (bool) $inscripcion->desea_kit_i
+            : (bool) optional($inscripcion->invitado)->desea_kit_inv;
+
+        if (!$pidioKit || !$inscripcion->evento || !$inscripcion->evento->id_k) {
+            return response()->json([
+                'message' => 'Esta persona no pidió kit en la inscripción'
+            ], 422);
+        }
+
+        $entrega = EntregaKit::where('id_i', $inscripcion->id_i)
+            ->where('id_inv', $idInv)
+            ->first();
+
+        if ($entrega && $entrega->estado_ek === 'entregado') {
+            return response()->json([
+                'message' => 'El kit ya fue entregado'
             ], 409);
         }
 
-        /*
-         * Crear la entrega.
-         */
-        $entrega = EntregaKit::create([
+        $datos = [
             'fecha_entrega_real_ek' => now(),
-            'persona_entrega_ek' => $validated['persona_entrega_ek'],
+            'persona_entrega_ek' => $this->quienEntrega($request, $validated),
             'estado_ek' => 'entregado',
             'observaciones_ek' => $validated['observaciones_ek'] ?? null,
-            'id_k' => $validated['id_k'],
-            'id_u' => $validated['id_u'],
-            'id_e' => $validated['id_e'],
-        ]);
+        ];
+
+        if ($entrega) {
+            $entrega->update($datos);
+        } else {
+            $entrega = EntregaKit::create($datos + [
+                'id_k' => $inscripcion->evento->id_k,
+                'id_u' => $inscripcion->id_u,
+                'id_e' => $inscripcion->id_e,
+                'id_i' => $inscripcion->id_i,
+                'id_inv' => $idInv,
+            ]);
+        }
 
         return response()->json([
             'message' => 'Kit entregado correctamente',
-            'entrega' => $entrega->load([
+            'entrega' => $entrega->fresh()->load([
                 'kit',
                 'usuario',
-                'evento'
+                'evento',
+                'inscripcion',
+                'invitado'
             ])
         ], 201);
     }
@@ -163,6 +220,22 @@ class EntregaKitController extends Controller
             'observaciones_ek' => 'sometimes|nullable|string|max:255',
         ]);
 
+        if (($validated['estado_ek'] ?? null) === 'entregado') {
+            if ($entrega->id_i) {
+                $estadoInsc = Inscripcion::where('id_i', $entrega->id_i)->value('estado_i');
+                if ($estadoInsc !== 'confirmada') {
+                    return response()->json([
+                        'message' => 'La inscripción no está confirmada'
+                    ], 422);
+                }
+            }
+
+            $validated['fecha_entrega_real_ek'] = now();
+            $validated['persona_entrega_ek'] = $this->quienEntrega($request, $validated);
+        } elseif (($validated['estado_ek'] ?? null) === 'pendiente') {
+            $validated['fecha_entrega_real_ek'] = null;
+        }
+
         $entrega->update($validated);
 
         return response()->json([
@@ -170,8 +243,24 @@ class EntregaKitController extends Controller
             'entrega' => $entrega->fresh()->load([
                 'kit',
                 'usuario',
-                'evento'
+                'evento',
+                'inscripcion',
+                'invitado'
             ])
         ]);
+    }
+
+    /**
+     * Quién entrega: lo que mande el front o, si no llega, el nombre del
+     * staff con la sesión iniciada.
+     */
+    private function quienEntrega(Request $request, array $validated): string
+    {
+        if (!empty($validated['persona_entrega_ek'])) {
+            return $validated['persona_entrega_ek'];
+        }
+
+        $u = $request->user();
+        return mb_substr(trim(($u->nombre_u ?? '') . ' ' . ($u->apellido_u ?? '')), 0, 80);
     }
 }

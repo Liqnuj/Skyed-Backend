@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\EntregaKit;
 use App\Models\QrEntrada;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -176,6 +177,44 @@ class QrEntradaController extends Controller
                 ];
             }
 
+            // Kits de esta inscripción para entregarlos en la misma mesa:
+            // uno para el titular y otro para el invitado, solo si lo pidieron
+            // y el evento tiene kit. El estado sale de entrega_kit.
+            $kits = [];
+
+            if ($evento->id_k) {
+                $entregas = EntregaKit::where('id_i', $inscripcion->id_i)->get();
+
+                $estadoKit = function ($entrega) {
+                    return [
+                        'estado' => $entrega ? $entrega->estado_ek : 'pendiente',
+                        'fecha_entrega' => $entrega ? $entrega->fecha_entrega_real_ek : null,
+                    ];
+                };
+
+                if ($usuario && $inscripcion->desea_kit_i) {
+                    $entrega = $entregas->first(fn ($e) => $e->id_inv === null);
+                    $kits[] = [
+                        'rol' => 'titular',
+                        'id_i' => $inscripcion->id_i,
+                        'id_inv' => null,
+                        'nombre' => trim($usuario->nombre_u . ' ' . $usuario->apellido_u),
+                    ] + $estadoKit($entrega);
+                }
+
+                if ($invitado && $invitado->desea_kit_inv) {
+                    $entrega = $entregas->first(
+                        fn ($e) => $e->id_inv !== null && (int) $e->id_inv === (int) $invitado->id_inv
+                    );
+                    $kits[] = [
+                        'rol' => 'invitado',
+                        'id_i' => $inscripcion->id_i,
+                        'id_inv' => $invitado->id_inv,
+                        'nombre' => trim($invitado->nombre_inv . ' ' . $invitado->apellido_inv),
+                    ] + $estadoKit($entrega);
+                }
+            }
+
             return response()->json([
                 'message' => $agotado
                     ? 'QR validado correctamente. Ya ingresaron todas las personas.'
@@ -190,6 +229,7 @@ class QrEntradaController extends Controller
                     'usos_permitidos' => $qr->usos_permitidos_qr,
                     'usos_restantes' => $qr->usos_permitidos_qr - $usosRealizados,
                     'personas' => $personas,
+                    'kits' => $kits,
                 ],
             ]);
         });
