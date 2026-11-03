@@ -62,7 +62,7 @@ class AuthController extends Controller
         $validated = $request->validated();
 
         $contexto = $validated['contexto'] ?? 'deportivo';
-        unset($validated['contexto']);
+        unset($validated['contexto'], $validated['captcha'], $validated['captcha_id']);
 
         $validated['contrasena_u'] = Hash::make($validated['contrasena_u']);
         $validated['estado_u'] = 'activo';
