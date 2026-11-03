@@ -37,6 +37,12 @@ return [
 
     // Asistente virtual SKAI (Google Gemini). La key NUNCA debe ir en el
     // código fuente: se lee solo de la variable de entorno GEMINI_API_KEY.
+    // Verificación "No soy un robot" del registro (App\Support\GeneradorCaptcha).
+    // Las pruebas automáticas la apagan en phpunit.xml, salvo CaptchaTest.
+    'captcha' => [
+        'enabled' => (bool) env('CAPTCHA_ENABLED', true),
+    ],
+
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
         'model' => env('GEMINI_MODEL', 'gemini-3.6-flash'),
