@@ -71,6 +71,11 @@ class CatalogoCopias
                     'descripcion' => 'Peticiones, quejas, reclamos y sugerencias, con su historial.',
                     'tablas' => ['pqr', 'pqr_seguimientos'],
                 ],
+                'testimonios' => [
+                    'nombre' => 'Reseñas',
+                    'descripcion' => 'Reseñas y calificaciones que dejan los clientes de sus reservas.',
+                    'tablas' => ['testimonio'],
+                ],
             ],
         ],
         'sistema' => [
