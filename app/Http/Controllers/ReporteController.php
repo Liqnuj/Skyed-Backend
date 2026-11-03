@@ -18,8 +18,11 @@ use Illuminate\Support\Facades\Log;
  */
 class ReporteController extends Controller
 {
-    public function exportar(Request $request, string $modulo, string $reporte, string $formato)
+    public function exportar(Request $request, string $reporte, string $formato)
     {
+        // El módulo (social|deportivo) lo fija cada ruta con ->defaults('modulo', ...).
+        $modulo = (string) $request->route('modulo');
+        
         $definicion = CatalogoReportes::buscar($modulo, $reporte);
 
         if ($definicion === null) {
