@@ -79,7 +79,6 @@ Route::get('/pagos/{id}/comprobante/archivo', [PagoController::class, 'archivoCo
 
 
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:3,1,login');
-Route::get('/captcha', fn () => response()->json(\App\Support\GeneradorCaptcha::crear()))->middleware('throttle:30,1,captcha');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1,register');
 // FIX: sin throttle se podía probar el código de 6 dígitos por fuerza
 // bruta y enviar correos de recuperación sin límite (spam al usuario).
@@ -351,6 +350,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/patrocinadores/{id}/eventos', [PatrocinadorController::class, 'asignarEvento']);
 
         // Entregas Kit, Historial y Estaciones
+        Route::get('/entregas-kit', [EntregaKitController::class, 'listado']);
         Route::post('/entregas-kit', [EntregaKitController::class, 'store']);
         Route::put('/entregas-kit/{id}', [EntregaKitController::class, 'update']);
         Route::post('/historial-participacion', [HistorialParticipacionController::class, 'store']);

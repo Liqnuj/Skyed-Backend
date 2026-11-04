@@ -86,6 +86,119 @@ class EntregaKitController extends Controller
         ]);
     }
     /**
+     * Listado general de entregas de kit (todos los eventos) para el panel
+     * del admin deportivo: a quién se le entregó (o debe entregarse) cada kit
+     * y de qué evento. Filtros opcionales: q (documento o nombre del titular
+     * o del invitado), id_e (evento), estado y rol (titular | invitado).
+     * Solo cuenta inscripciones confirmadas.
+     */
+    public function listado(Request $request)
+    {
+        $query = EntregaKit::with([
+            'kit',
+            'usuario',
+            'evento',
+            'inscripcion',
+            'invitado',
+        ])->whereHas('inscripcion', function ($i) {
+            $i->where('estado_i', 'confirmada');
+        });
+
+        if ($request->filled('id_e')) {
+            $query->where('id_e', (int) $request->query('id_e'));
+        }
+
+        $rol = $request->query('rol');
+        if ($rol === 'titular') {
+            $query->whereNull('id_inv');
+        } elseif ($rol === 'invitado') {
+            $query->whereNotNull('id_inv');
+        }
+
+        // Búsqueda por documento o nombre del titular, o del invitado. Se busca
+        // la inscripción y se devuelven todas sus filas (titular e invitado).
+        $q = trim((string) $request->query('q', ''));
+        if ($q !== '') {
+            $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%';
+
+            $query->whereIn('id_i', Inscripcion::select('id_i')
+                ->where(function ($w) use ($like) {
+                    $w->whereIn('id_u', function ($s) use ($like) {
+                        $s->select('id_u')->from('usuario')->where(function ($x) use ($like) {
+                            $x->whereRaw('CAST(documento_u AS TEXT) ILIKE ?', [$like])
+                              ->orWhereRaw("(nombre_u || ' ' || apellido_u) ILIKE ?", [$like]);
+                        });
+                    })->orWhereIn('id_inv', function ($s) use ($like) {
+                        $s->select('id_inv')->from('invitados')->where(function ($x) use ($like) {
+                            $x->whereRaw('CAST(documento_inv AS TEXT) ILIKE ?', [$like])
+                              ->orWhereRaw("(nombre_inv || ' ' || apellido_inv) ILIKE ?", [$like]);
+                        });
+                    });
+                }));
+        }
+
+        // Conteo por estado sobre lo filtrado hasta aquí (sin el filtro de estado),
+        // para los totales de arriba de la pantalla.
+        $conteo = (clone $query)
+            ->selectRaw('estado_ek, COUNT(*) AS total')
+            ->groupBy('estado_ek')
+            ->pluck('total', 'estado_ek');
+
+        $estado = $request->query('estado');
+        if (in_array($estado, ['pendiente', 'entregado', 'devolucion'], true)) {
+            $query->where('estado_ek', $estado);
+        }
+
+        // Inscripciones más recientes primero; titular y su invitado juntos.
+        $query->orderByDesc('id_i')->orderByRaw('id_inv ASC NULLS FIRST');
+
+        $entregas = $query->paginate($this->perPage($request));
+
+        $entregas->getCollection()->transform(function ($e) {
+            $esInvitado = $e->id_inv !== null;
+            $usuario = $e->usuario;
+            $invitado = $e->invitado;
+
+            $titular = $usuario
+                ? trim($usuario->nombre_u . ' ' . $usuario->apellido_u)
+                : null;
+
+            return [
+                'id_ek' => $e->id_ek,
+                'id_i' => $e->id_i,
+                'id_inv' => $e->id_inv,
+                'rol' => $esInvitado ? 'invitado' : 'titular',
+                'nombre' => $esInvitado
+                    ? ($invitado ? trim($invitado->nombre_inv . ' ' . $invitado->apellido_inv) : null)
+                    : $titular,
+                'documento' => $esInvitado
+                    ? optional($invitado)->documento_inv
+                    : optional($usuario)->documento_u,
+                'titular' => $titular,
+                'evento' => $e->evento
+                    ? ['id' => $e->evento->id_e, 'nombre' => $e->evento->nombre_e]
+                    : null,
+                'kit' => optional($e->kit)->nombre_k,
+                'talla' => $esInvitado
+                    ? optional($invitado)->talla_kit_inv
+                    : optional($e->inscripcion)->talla_camiseta_i,
+                'estado' => $e->estado_ek,
+                'fecha_entrega' => $e->fecha_entrega_real_ek,
+                'entregado_por' => $e->persona_entrega_ek,
+            ];
+        });
+
+        return response()->json([
+            'entregas' => $entregas,
+            'resumen' => [
+                'pendiente' => (int) $conteo->get('pendiente', 0),
+                'entregado' => (int) $conteo->get('entregado', 0),
+                'devolucion' => (int) $conteo->get('devolucion', 0),
+            ],
+        ]);
+    }
+
+    /**
      * Mostrar una entrega específica. Solo el dueño o un
      * adminDeportivo pueden verla.
      *
