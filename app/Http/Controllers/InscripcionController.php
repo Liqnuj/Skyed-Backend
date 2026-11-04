@@ -57,7 +57,48 @@ class InscripcionController extends Controller
             'fecha_entrega_real' => $e->fecha_entrega_real_ek,
         ] : null;
 
-        $items = $inscripciones->map(function ($insc) use ($request, $entregas, $formatoEntrega) {
+        // Resultados oficiales de estas inscripciones (solo lectura): tiempo,
+        // posición general, posición en su categoría y premios.
+        $resultados = DB::table('resultado')
+            ->whereIn('id_i', $inscripciones->pluck('id_i'))
+            ->get()
+            ->keyBy('id_i');
+        $idsResultado = $resultados->pluck('id_r');
+        $porCategoria = DB::table('categoria_resultado')
+            ->whereIn('id_r', $idsResultado)
+            ->get()
+            ->groupBy('id_r');
+        $premios = DB::table('premio')
+            ->whereIn('id_r', $idsResultado)
+            ->orderBy('posicion_premio')
+            ->get()
+            ->groupBy('id_r');
+
+        $formatoResultado = function ($insc) use ($resultados, $porCategoria, $premios) {
+            $r = $resultados->get($insc->id_i);
+            if (!$r) {
+                return null;
+            }
+
+            $filasCat = $porCategoria->get($r->id_r, collect());
+            $cat = $filasCat->first(fn ($c) => (int) $c->id_cc === (int) $insc->id_cc) ?? $filasCat->first();
+
+            return [
+                'tiempo_final' => $r->tiempo_final_r,
+                'posicion_general' => $r->posicion_general_r,
+                'estado' => $r->estado_r,
+                'posicion_categoria' => $cat ? $cat->posicion_categoria : null,
+                'estado_categoria' => $cat ? $cat->estado_competidor : null,
+                'premios' => $premios->get($r->id_r, collect())->map(fn ($p) => [
+                    'nombre' => $p->nombre_premio,
+                    'descripcion' => $p->descripcion_premio,
+                    'posicion' => $p->posicion_premio,
+                    'valor' => $p->valor_premio,
+                ])->values(),
+            ];
+        };
+
+        $items = $inscripciones->map(function ($insc) use ($request, $entregas, $formatoEntrega, $formatoResultado) {
             $data = (new InscripcionResource($insc))->resolve($request);
             $filas = $entregas->get($insc->id_i, collect());
             $pendiente = ['estado' => 'pendiente', 'fecha_entrega_real' => null];
@@ -77,6 +118,7 @@ class InscripcionController extends Controller
 
             $data['entrega_kit'] = $kitTitular;
             $data['entrega_kit_invitado'] = $kitInvitado;
+            $data['resultado'] = $formatoResultado($insc);
             return $data;
         })->values();
 
