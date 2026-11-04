@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\PermisosAsistente;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -39,6 +40,15 @@ class CheckRoleContext
         }
 
         if (!$permitido) {
+            $asistente = PermisosAsistente::paraUsuario($user);
+            if ($asistente) {
+                $moduloRol = $asistente->modulo === 'social' ? 'adminSocial' : 'adminDeportivo';
+                if (in_array($moduloRol, $rolesPermitidos, true)
+                    && PermisosAsistente::puedeEnRuta($request, $asistente, $asistente->modulo)) {
+                    return $next($request);
+                }
+            }
+
             return response()->json([
                 'message' => 'No tienes permisos para realizar esta acción'
             ], 403);

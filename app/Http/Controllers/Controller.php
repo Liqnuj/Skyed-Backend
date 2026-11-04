@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Support\PermisosAsistente;
 
 abstract class Controller
 {
@@ -34,6 +35,20 @@ abstract class Controller
 
         foreach (explode('|', $roles) as $rol) {
             if ($user && $user->hasRole($rol)) {
+                return null;
+            }
+        }
+
+        if ($user) {
+            $asistente = PermisosAsistente::paraUsuario($user);
+            $rolesPermitidos = explode('|', $roles);
+            $moduloRequerido = in_array('adminSocial', $rolesPermitidos, true) && !in_array('adminDeportivo', $rolesPermitidos, true)
+                ? 'social'
+                : (in_array('adminDeportivo', $rolesPermitidos, true) && !in_array('adminSocial', $rolesPermitidos, true)
+                    ? 'deportivo'
+                    : null);
+
+            if ($asistente && PermisosAsistente::puedeEnRuta($request, $asistente, $moduloRequerido)) {
                 return null;
             }
         }

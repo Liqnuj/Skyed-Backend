@@ -12,6 +12,7 @@ use App\Services\ReservaFlujo;
 use App\Services\ReservaTrazabilidad;
 use App\Support\ReservaDetalle;
 use App\Support\ReservaFechas;
+use App\Support\PermisosAsistente;
 
 class ReservaController extends Controller
 {
@@ -39,7 +40,7 @@ class ReservaController extends Controller
     {
         $ocultas = $request->boolean('ocultas');
 
-        if (!$request->user()->hasRole('adminSocial')) {
+        if (!$this->esAdminSocial($request)) {
             $query = Reserva::with([
                 'usuario',
                 'evento',
@@ -154,7 +155,7 @@ class ReservaController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $esAdmin = $request->user()->hasRole('adminSocial');
+        $esAdmin = $this->esAdminSocial($request);
 
         $reserva = Reserva::with(
             $esAdmin
@@ -419,8 +420,8 @@ class ReservaController extends Controller
         $oculta = $request->boolean('oculta', true);
 
         if ($vista === 'admin') {
-            if (!$request->user()->hasRole('adminSocial')) {
-                return response()->json(['message' => 'No tienes permisos.'], 403);
+            if ($denegado = $this->exigirRol($request, 'adminSocial')) {
+                return $denegado;
             }
             $columna = 'oculta_admin';
         } else {
@@ -585,5 +586,11 @@ public function cancelar(Request $request, $id)
             'message' => 'Seguimiento registrado correctamente',
             'seguimiento' => $seguimiento
         ], 201);
+    }
+
+    private function esAdminSocial(Request $request): bool
+    {
+        return $request->user()->hasRole('adminSocial')
+            || PermisosAsistente::puedeVer($request->user(), 'social', 'reservas');
     }
 }
