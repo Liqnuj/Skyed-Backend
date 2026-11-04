@@ -18,7 +18,11 @@ class UserController extends Controller
     {
         $users = User::with('roles')
             ->visiblesPara($request->user())
+            ->orderBy('id_u') // En orden de ID: sin esto PostgreSQL los devuelve en cualquier orden.
             ->paginate($this->perPage($request));
+
+        // La foto de perfil, para mostrarla en la tabla de usuarios del panel.
+        $users->getCollection()->each->append('foto_url');
 
         return response()->json($users);
     }
@@ -37,7 +41,7 @@ class UserController extends Controller
         }
 
         return response()->json([
-            'user' => $user
+            'user' => $user->append('foto_url')
         ]);
     }
 

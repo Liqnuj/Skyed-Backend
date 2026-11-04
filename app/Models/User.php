@@ -43,6 +43,12 @@ class User extends Authenticatable
         'codigo',
     ];
 
+    /** Dirección pública de la foto de perfil (null si no tiene). Se agrega con ->append('foto_url'). */
+    public function getFotoUrlAttribute(): ?string
+    {
+        return $this->foto_u ? asset('storage/' . $this->foto_u) : null;
+    }
+
     public function getAuthPassword()
     {
         return $this->contrasena_u;
