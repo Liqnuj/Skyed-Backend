@@ -19,6 +19,12 @@ class EntregaKitController extends Controller
      */
        public function index(Request $request, $eventoId)
     {
+        $request->validate([
+            'q' => 'sometimes|nullable|string|max:100',
+            'estado' => 'sometimes|in:pendiente,entregado,devolucion',
+            'per_page' => 'sometimes|integer|min:1|max:500',
+        ]);
+
         $evento = EventoDeportivo::find($eventoId);
 
         if (!$evento) {
@@ -51,20 +57,20 @@ class EntregaKitController extends Controller
         // el admin siempre ve juntos el kit del titular y el del invitado.
         $q = trim((string) $request->query('q', ''));
         if ($q !== '') {
-            $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%';
+            $like = '%' . strtr($q, ['!' => '!!', '%' => '!%', '_' => '!_']) . '%';
 
             $query->whereIn('id_i', Inscripcion::select('id_i')
                 ->where('id_e', $eventoId)
                 ->where(function ($w) use ($like) {
                     $w->whereIn('id_u', function ($s) use ($like) {
                         $s->select('id_u')->from('usuario')->where(function ($x) use ($like) {
-                            $x->whereRaw('CAST(documento_u AS TEXT) ILIKE ?', [$like])
-                              ->orWhereRaw("(nombre_u || ' ' || apellido_u) ILIKE ?", [$like]);
+                            $x->whereRaw("CAST(documento_u AS TEXT) ILIKE ? ESCAPE '!'", [$like])
+                              ->orWhereRaw("(nombre_u || ' ' || apellido_u) ILIKE ? ESCAPE '!'", [$like]);
                         });
                     })->orWhereIn('id_inv', function ($s) use ($like) {
                         $s->select('id_inv')->from('invitados')->where(function ($x) use ($like) {
-                            $x->whereRaw('CAST(documento_inv AS TEXT) ILIKE ?', [$like])
-                              ->orWhereRaw("(nombre_inv || ' ' || apellido_inv) ILIKE ?", [$like]);
+                            $x->whereRaw("CAST(documento_inv AS TEXT) ILIKE ? ESCAPE '!'", [$like])
+                              ->orWhereRaw("(nombre_inv || ' ' || apellido_inv) ILIKE ? ESCAPE '!'", [$like]);
                         });
                     });
                 }));

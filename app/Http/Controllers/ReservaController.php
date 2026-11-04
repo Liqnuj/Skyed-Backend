@@ -38,6 +38,11 @@ class ReservaController extends Controller
      */
     public function index(Request $request)
     {
+        $request->validate([
+            'ocultas' => 'sometimes|boolean',
+            'per_page' => 'sometimes|integer|min:1|max:500',
+        ]);
+
         $ocultas = $request->boolean('ocultas');
 
         if (!$this->esAdminSocial($request)) {
@@ -97,7 +102,12 @@ class ReservaController extends Controller
         }
 
         if ($request->filled('lugar')) {
-            $query->whereRaw('LOWER(reserva.ubicacion_rese) LIKE ?', ['%' . mb_strtolower(trim($request->input('lugar'))) . '%']);
+            $lugar = strtr(mb_strtolower(trim($request->input('lugar'))), [
+                '!' => '!!',
+                '%' => '!%',
+                '_' => '!_',
+            ]);
+            $query->whereRaw("LOWER(reserva.ubicacion_rese) LIKE ? ESCAPE '!'", ['%' . $lugar . '%']);
         }
 
         if ($request->filled('desde') || $request->filled('hasta')) {
@@ -110,15 +120,15 @@ class ReservaController extends Controller
 
         if ($request->filled('q')) {
             $texto = mb_strtolower(trim($request->input('q')));
-            $like = '%' . $texto . '%';
+            $like = '%' . strtr($texto, ['!' => '!!', '%' => '!%', '_' => '!_']) . '%';
 
             $query->where(function ($w) use ($like, $texto) {
-                $w->whereRaw("LOWER(COALESCE(reserva.nombre_rese, '')) LIKE ?", [$like])
-                    ->orWhereRaw('LOWER(reserva.ubicacion_rese) LIKE ?', [$like])
+                $w->whereRaw("LOWER(COALESCE(reserva.nombre_rese, '')) LIKE ? ESCAPE '!'", [$like])
+                    ->orWhereRaw("LOWER(reserva.ubicacion_rese) LIKE ? ESCAPE '!'", [$like])
                     ->orWhereHas('usuario', function ($u) use ($like) {
-                        $u->whereRaw("LOWER(nombre_u || ' ' || apellido_u) LIKE ?", [$like])
-                            ->orWhereRaw('LOWER(correo_u) LIKE ?', [$like])
-                            ->orWhereRaw('CAST(telefono_u AS TEXT) LIKE ?', [$like]);
+                        $u->whereRaw("LOWER(nombre_u || ' ' || apellido_u) LIKE ? ESCAPE '!'", [$like])
+                            ->orWhereRaw("LOWER(correo_u) LIKE ? ESCAPE '!'", [$like])
+                            ->orWhereRaw("CAST(telefono_u AS TEXT) LIKE ? ESCAPE '!'", [$like]);
                     });
 
                 if (preg_match('/^#?(\d+)$/', $texto, $m)) {
