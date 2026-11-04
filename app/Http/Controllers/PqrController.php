@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Pqr;
 use App\Models\PqrSeguimiento;
 use App\Services\NotificacionService;
+use App\Support\PermisosAsistente;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -186,10 +187,8 @@ class PqrController extends Controller
      */
     public function abrir(Request $request, $id): JsonResponse
     {
-        if (!$this->esAdmin($request)) {
-            return response()->json([
-                'message' => 'No tienes permisos para gestionar PQR.'
-            ], 403);
+        if ($denegado = $this->exigirRol($request, 'adminSocial')) {
+            return $denegado;
         }
 
         $cambio = false;
@@ -237,10 +236,8 @@ class PqrController extends Controller
      */
     public function iniciarGestion(Request $request, $id): JsonResponse
     {
-        if (!$this->esAdmin($request)) {
-            return response()->json([
-                'message' => 'No tienes permisos para gestionar PQR.'
-            ], 403);
+        if ($denegado = $this->exigirRol($request, 'adminSocial')) {
+            return $denegado;
         }
 
         $validated = $request->validate([
@@ -300,10 +297,8 @@ class PqrController extends Controller
      */
     public function resolver(Request $request, $id): JsonResponse
     {
-        if (!$this->esAdmin($request)) {
-            return response()->json([
-                'message' => 'No tienes permisos para gestionar PQR.'
-            ], 403);
+        if ($denegado = $this->exigirRol($request, 'adminSocial')) {
+            return $denegado;
         }
 
         $validated = $request->validate([
@@ -487,8 +482,8 @@ class PqrController extends Controller
         $oculta = $request->boolean('oculta', true);
 
         if ($vista === 'admin') {
-            if (!$this->esAdmin($request)) {
-                return response()->json(['message' => 'No tienes permisos.'], 403);
+            if ($denegado = $this->exigirRol($request, 'adminSocial')) {
+                return $denegado;
             }
             $columna = 'oculta_admin';
         } else {
@@ -509,11 +504,8 @@ class PqrController extends Controller
 
     private function registrarActuacion(Request $request, $id, int $status): JsonResponse
     {
-
-                if (!$this->esAdmin($request)) {
-            return response()->json([
-                'message' => 'No tienes permisos para gestionar PQR.'
-            ], 403);
+        if ($denegado = $this->exigirRol($request, 'adminSocial')) {
+            return $denegado;
         }
 
 
@@ -667,7 +659,8 @@ class PqrController extends Controller
 
     private function esAdmin(Request $request): bool
     {
-        return $request->user()->hasRole('adminSocial');
+        return $request->user()->hasRole('adminSocial')
+            || PermisosAsistente::puedeVer($request->user(), 'social', 'pqr');
     }
 
     private function textoOpcional(?string $texto): ?string

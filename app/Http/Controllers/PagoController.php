@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use App\Services\NotificacionService;
+use App\Support\PermisosAsistente;
 
 class PagoController extends Controller
 {
@@ -28,7 +29,7 @@ class PagoController extends Controller
             'inscripcion.qr',
         ]);
 
-        if (!$request->user()->hasRole('adminDeportivo')) {
+        if (!$this->esAdminDeportivo($request)) {
             $query->whereHas('inscripcion', function ($q) use ($request) {
                 $q->where('id_u', $request->user()->id_u);
             });
@@ -64,7 +65,7 @@ class PagoController extends Controller
         }
 
         $esDueno = $pago->inscripcion && $pago->inscripcion->id_u === $request->user()->id_u;
-        $esAdmin = $request->user()->hasRole('adminDeportivo');
+        $esAdmin = $this->esAdminDeportivo($request);
 
         if (!$esDueno && !$esAdmin) {
             return response()->json([
@@ -175,7 +176,7 @@ class PagoController extends Controller
         }
 
         $esDueno = $pago->inscripcion && $pago->inscripcion->id_u === $request->user()->id_u;
-        $esAdmin = $request->user()->hasRole('adminDeportivo');
+        $esAdmin = $this->esAdminDeportivo($request);
 
         if (!$esDueno && !$esAdmin) {
             return response()->json([
@@ -338,6 +339,7 @@ class PagoController extends Controller
                         'estado_qr' => 'activo',
                     ]);
                 }
+
             }
 
             /*
@@ -412,5 +414,11 @@ class PagoController extends Controller
                 'inscripcion.qr',
             ]),
         ]);
+    }
+
+    private function esAdminDeportivo(Request $request): bool
+    {
+        return $request->user()->hasRole('adminDeportivo')
+            || PermisosAsistente::puedeVer($request->user(), 'deportivo', 'inscripciones');
     }
 }

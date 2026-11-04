@@ -26,6 +26,7 @@ use App\Http\Controllers\AyudaController;
 use App\Http\Controllers\AyudaAdminController;
 use App\Http\Controllers\UserRoleController;
 use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\AsistenteController;
 
 use App\Models\TipoEvento;
 
@@ -143,6 +144,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/verificar-contrasena', [AuthController::class, 'verificarContrasena']);
     Route::put('/cambiar-contrasena', [AuthController::class, 'changePassword']);
     Route::delete('/perfil', [AuthController::class, 'desactivarCuenta']);
+    Route::get('/mis-permisos', [AsistenteController::class, 'misPermisos']);
 
     // Gestión de Roles de Usuario
     Route::get('/users/{id}/roles', [UserRoleController::class, 'index'])
@@ -252,6 +254,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // 2. ZONA GLOBAL (Cualquier Administrador)
     // ========================================================
     Route::middleware('role.context:adminDeportivo|adminSocial')->group(function () {
+
+        // Gestión de asistentes. El controlador verifica que el administrador
+        // tenga el rol del módulo solicitado y limita cada registro a su dueño.
+        Route::get('/asistentes', [AsistenteController::class, 'index']);
+        Route::post('/asistentes', [AsistenteController::class, 'store']);
+        Route::put('/asistentes/{id}', [AsistenteController::class, 'update'])->whereNumber('id');
+        Route::patch('/asistentes/{id}/estado', [AsistenteController::class, 'cambiarEstado'])->whereNumber('id');
+        Route::delete('/asistentes/{id}', [AsistenteController::class, 'destroy'])->whereNumber('id');
 
         // Roles disponibles (para el panel de administración de usuarios).
         // FIX: vivía en la zona general sin ninguna restricción, aunque
