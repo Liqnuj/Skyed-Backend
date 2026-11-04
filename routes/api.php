@@ -207,32 +207,32 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reservas/calendario', [ReservaGestionController::class, 'calendario']);
         Route::get('/reservas/responsables', [ReservaGestionController::class, 'responsables']);
 
-        Route::post('/reservas/{id}/abrir', [ReservaGestionController::class, 'abrir']);
-        Route::put('/reservas/{id}/gestion', [ReservaGestionController::class, 'actualizar']);
-        Route::post('/reservas/{id}/etapa', [ReservaGestionController::class, 'cambiarEtapa']);
-        Route::post('/reservas/{id}/estado', [ReservaGestionController::class, 'cambiarEstado']);
-        Route::post('/reservas/{id}/contacto', [ReservaGestionController::class, 'registrarContacto']);
-        Route::post('/reservas/{id}/nota', [ReservaGestionController::class, 'nota']);
+        Route::post('/reservas/{id}/abrir', [ReservaGestionController::class, 'abrir'])->whereNumber('id');
+        Route::put('/reservas/{id}/gestion', [ReservaGestionController::class, 'actualizar'])->whereNumber('id');
+        Route::post('/reservas/{id}/etapa', [ReservaGestionController::class, 'cambiarEtapa'])->whereNumber('id');
+        Route::post('/reservas/{id}/estado', [ReservaGestionController::class, 'cambiarEstado'])->whereNumber('id');
+        Route::post('/reservas/{id}/contacto', [ReservaGestionController::class, 'registrarContacto'])->whereNumber('id');
+        Route::post('/reservas/{id}/nota', [ReservaGestionController::class, 'nota'])->whereNumber('id');
 
-        Route::post('/reservas/{id}/servicios', [ReservaGestionController::class, 'agregarServicio']);
-        Route::put('/reservas/{id}/servicios/{servicioId}', [ReservaGestionController::class, 'actualizarServicio']);
-        Route::delete('/reservas/{id}/servicios/{servicioId}', [ReservaGestionController::class, 'quitarServicio']);
+        Route::post('/reservas/{id}/servicios', [ReservaGestionController::class, 'agregarServicio'])->whereNumber('id');
+        Route::put('/reservas/{id}/servicios/{servicioId}', [ReservaGestionController::class, 'actualizarServicio'])->whereNumber('id')->whereNumber('servicioId');
+        Route::delete('/reservas/{id}/servicios/{servicioId}', [ReservaGestionController::class, 'quitarServicio'])->whereNumber('id')->whereNumber('servicioId');
     });
 
 
 
     // Reservas y PQR (Autoservicio)
     Route::get('/reservas', [ReservaController::class, 'index']);
-    Route::get('/reservas/{id}', [ReservaController::class, 'show']);
+    Route::get('/reservas/{id}', [ReservaController::class, 'show'])->whereNumber('id');
     Route::post('/reservas', [ReservaController::class, 'store']);
-    Route::patch('/reservas/{id}/nombre', [ReservaController::class, 'renombrar']);
-    Route::post('/reservas/{id}/ocultar', [ReservaController::class, 'ocultar']);
+    Route::patch('/reservas/{id}/nombre', [ReservaController::class, 'renombrar'])->whereNumber('id');
+    Route::post('/reservas/{id}/ocultar', [ReservaController::class, 'ocultar'])->whereNumber('id');
     Route::post('/pqr/{id}/ocultar', [PqrController::class, 'ocultar']);
-    Route::post('/reservas/{id}/cancelar', [ReservaController::class, 'cancelar']);
+    Route::post('/reservas/{id}/cancelar', [ReservaController::class, 'cancelar'])->whereNumber('id');
 
     // Testimonios: solo con una reserva completada, una reseña por reserva.
-    Route::get('/reservas/{id}/testimonio', [TestimonioController::class, 'mio']);
-    Route::post('/reservas/{id}/testimonio', [TestimonioController::class, 'store'])->middleware('throttle:10,1,testimonio');
+    Route::get('/reservas/{id}/testimonio', [TestimonioController::class, 'mio'])->whereNumber('id');
+    Route::post('/reservas/{id}/testimonio', [TestimonioController::class, 'store'])->whereNumber('id')->middleware('throttle:10,1,testimonio');
     Route::put('/testimonios/{id}', [TestimonioController::class, 'update'])->middleware('throttle:20,1,testimonio-editar');
     Route::delete('/testimonios/{id}', [TestimonioController::class, 'destroy'])->middleware('throttle:20,1,testimonio-borrar');
     Route::get('/pqr', [PqrController::class, 'index']);
@@ -413,9 +413,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/eventos-sociales/{id}', [EventoRealizadoController::class, 'destroy']);
 
         // Reservas (Gestión) y PQR (Respuesta)
-        Route::put('/reservas/{id}', [ReservaController::class, 'update']);
-        Route::delete('/reservas/{id}', [ReservaController::class, 'destroy']);
-        Route::post('/reservas/{id}/seguimiento', [ReservaController::class, 'seguimiento']);
+        Route::put('/reservas/{id}', [ReservaController::class, 'update'])->whereNumber('id');
+        Route::delete('/reservas/{id}', [ReservaController::class, 'destroy'])->whereNumber('id');
+        Route::post('/reservas/{id}/seguimiento', [ReservaController::class, 'seguimiento'])->whereNumber('id');
 
         // PQR: solo adminSocial gestiona. abrir / iniciar-gestion / resolver
         // están arriba, junto a las demás rutas de PQR (con su propio límite).

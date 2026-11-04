@@ -502,6 +502,24 @@ it('responde con mensajes claros cuando la reserva no existe', function () {
     comoUsuario($admin)->postJson('/api/reservas/99999/nota', ['nota' => 'x'])->assertNotFound();
 });
 
+it('rechaza paginación inválida e impide que el SQL de búsqueda se interprete como código', function () {
+    $admin = userWithRole('adminSocial');
+    reservaDeCliente(userWithRole('cliente'));
+
+    comoUsuario($admin)->getJson('/api/reservas?per_page=501')->assertUnprocessable();
+    comoUsuario($admin)->getJson('/api/reservas?per_page=1%20OR%201%3D1')->assertUnprocessable();
+    comoUsuario($admin)->getJson('/api/reservas/1%27%20OR%201%3D1--')->assertNotFound();
+
+    $resultado = comoUsuario($admin)->getJson('/api/reservas?' . http_build_query([
+        'q' => "' OR 1=1 --",
+    ]))->assertOk();
+
+    expect($resultado->json('data'))->toBeEmpty();
+
+    comoUsuario($admin)->getJson('/api/reservas?q=%25')->assertOk()->assertJsonCount(0, 'data');
+    comoUsuario($admin)->getJson('/api/reservas?lugar=%25')->assertOk()->assertJsonCount(0, 'data');
+});
+
 /* ================================================================
    CASO 10 · Dos reservas con fechas cercanas
 ================================================================ */

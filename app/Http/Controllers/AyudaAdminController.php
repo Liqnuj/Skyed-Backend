@@ -69,6 +69,7 @@ class AyudaAdminController extends Controller
         ]);
 
         $termino = mb_strtolower(trim((string) $request->input('q', '')));
+        $busqueda = '%' . strtr($termino, ['!' => '!!', '%' => '!%', '_' => '!_']) . '%';
 
         $articulos = AyudaArticulo::query()
             ->whereIn('modulo_aya', $request->user()->modulosGestionablesAyuda())
@@ -78,8 +79,8 @@ class AyudaAdminController extends Controller
             ->when($request->filled('modulo'), fn ($q) => $q->where('modulo_aya', $request->input('modulo')))
             ->when($request->filled('categoria_id'), fn ($q) => $q->where('id_ayc', (int) $request->input('categoria_id')))
             ->when($termino !== '', fn ($q) => $q->where(
-                fn ($w) => $w->whereRaw('LOWER(titulo_aya) LIKE ?', ["%{$termino}%"])
-                    ->orWhereRaw('LOWER(slug_aya) LIKE ?', ["%{$termino}%"])
+                fn ($w) => $w->whereRaw("LOWER(titulo_aya) LIKE ? ESCAPE '!'", [$busqueda])
+                    ->orWhereRaw("LOWER(slug_aya) LIKE ? ESCAPE '!'", [$busqueda])
             ))
             ->orderBy('orden_aya')
             ->orderBy('titulo_aya')

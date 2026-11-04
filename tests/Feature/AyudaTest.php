@@ -113,6 +113,30 @@ it('el filtro de módulo incluye también lo general', function () {
         ->assertJsonCount(2, 'articulos');
 });
 
+it('la búsqueda administrativa trata SQL y comodines como texto literal', function () {
+    $cat = ayudaCategoria(['modulo_ayc' => 'social']);
+    ayudaArticulo($cat, [
+        'slug_aya' => 'porcentaje',
+        'titulo_aya' => 'Oferta 100%',
+        'modulo_aya' => 'social',
+    ]);
+    ayudaArticulo($cat, [
+        'slug_aya' => 'normal',
+        'titulo_aya' => 'Oferta normal',
+        'modulo_aya' => 'social',
+    ]);
+
+    $this->actingAs(userWithRole('adminSocial', 'social'), 'sanctum')
+        ->getJson('/api/ayuda/admin/articulos?q=%25')
+        ->assertOk()
+        ->assertJsonCount(1, 'articulos')
+        ->assertJsonPath('articulos.0.slug', 'porcentaje');
+
+    $this->getJson('/api/ayuda/admin/articulos?' . http_build_query(['q' => "' OR 1=1 --"]))
+        ->assertOk()
+        ->assertJsonCount(0, 'articulos');
+});
+
 it('la búsqueda encuentra por título o palabras clave, sin importar tildes', function () {
     $cat = ayudaCategoria();
     ayudaArticulo($cat, [
