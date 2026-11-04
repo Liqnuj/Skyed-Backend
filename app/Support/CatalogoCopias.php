@@ -89,8 +89,8 @@ class CatalogoCopias
                 ],
                 'roles' => [
                     'nombre' => 'Roles y permisos',
-                    'descripcion' => 'Roles y qué rol tiene cada usuario.',
-                    'tablas' => ['rol', 'usuario_contexto_rol'],
+                    'descripcion' => 'Roles, qué rol tiene cada usuario y los asistentes de cada administrador.',
+                    'tablas' => ['rol', 'usuario_contexto_rol', 'asistente'],
                 ],
                 'notificaciones' => [
                     'nombre' => 'Notificaciones',

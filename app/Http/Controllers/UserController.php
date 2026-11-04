@@ -106,7 +106,24 @@ class UserController extends Controller
             ], 404);
         }
 
+        $actor = $request->user();
+        $esPropio = $user->id_u === $actor->id_u;
+
+        // Un admin de módulo no edita a otros administradores: cambiándoles el
+        // correo o la contraseña podría quedarse con su cuenta.
+        if (!$esPropio && $user->esAdministrador() && !$actor->esSuperAdmin()) {
+            return response()->json([
+                'message' => 'Solo el super administrador puede editar a otros administradores.'
+            ], 403);
+        }
+
         $validated = $request->validated();
+
+        if ($esPropio && ($validated['estado_u'] ?? 'activo') === 'inactivo') {
+            return response()->json([
+                'message' => 'No puedes desactivar tu propia cuenta de administrador desde aquí'
+            ], 422);
+        }
 
         // Si viene contraseña nueva, la encriptamos.
         // Si no viene, no la tocamos.
@@ -114,7 +131,14 @@ class UserController extends Controller
             $validated['contrasena_u'] = Hash::make($validated['contrasena_u']);
         }
 
+        $seDesactiva = ($validated['estado_u'] ?? null) === 'inactivo' && $user->estado_u !== 'inactivo';
+
         $user->update($validated);
+
+        // Igual que al desactivar desde DELETE: se cierran sus sesiones abiertas.
+        if ($seDesactiva) {
+            $user->tokens()->delete();
+        }
 
         return response()->json([
             'message' => 'Usuario actualizado correctamente',

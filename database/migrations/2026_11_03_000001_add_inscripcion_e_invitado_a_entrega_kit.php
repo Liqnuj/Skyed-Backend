@@ -25,17 +25,18 @@ return new class extends Migration
         // Las entregas que ya existían se ligan a la inscripción activa
         // más reciente del mismo usuario y evento. Las que no tengan una
         // (inscripción cancelada) quedan con id_i nulo.
+        // Sin alias en la tabla que se actualiza: SQLite (las pruebas) no lo admite.
         DB::statement("
-            UPDATE entrega_kit ek
+            UPDATE entrega_kit
             SET id_i = (
                 SELECT i.id_i FROM inscripcion i
-                WHERE i.id_u = ek.id_u
-                  AND i.id_e = ek.id_e
+                WHERE i.id_u = entrega_kit.id_u
+                  AND i.id_e = entrega_kit.id_e
                   AND i.estado_i <> 'cancelada'
                 ORDER BY i.id_i DESC
                 LIMIT 1
             )
-            WHERE ek.id_i IS NULL
+            WHERE id_i IS NULL
         ");
 
         // Un solo kit por persona en cada inscripción: el del titular
