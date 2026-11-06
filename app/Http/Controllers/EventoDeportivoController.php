@@ -120,7 +120,23 @@ class EventoDeportivoController extends Controller
             return $respuesta;
         }
 
-        $evento->update($validated);
+        $estadoAnterior = $evento->estado_e;
+
+$evento->update(['estado_e' => $validated['estado_e']]);
+
+// Avisar solo si el estado realmente cambió a inhabilitado
+if ($estadoAnterior !== 'inhabilitado' && $validated['estado_e'] === 'inhabilitado') {
+    \App\Models\Inscripcion::where('id_e', $evento->id_e)
+        ->whereIn('estado_i', ['pendiente', 'confirmada'])
+        ->pluck('id_u')
+        ->unique()
+        ->each(fn ($uid) => \App\Services\NotificacionService::crearSeguro(
+            (int) $uid,
+            'Evento inhabilitado',
+            'El evento «' . $evento->nombre_e . '» fue inhabilitado. Revisa tus inscripciones para más detalles.',
+            'evento'
+        ));
+}
 
         return response()->json([
             'message' => 'Evento actualizado correctamente',
