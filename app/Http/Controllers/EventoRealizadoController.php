@@ -9,13 +9,16 @@ use App\Http\Requests\UpdateEventoRealizadoRequest;
 
 class EventoRealizadoController extends Controller
 {
+    /**
+     * Ruta pública: no incluye las reservas de cada evento ni los datos de quien
+     * lo creó (antes salían y cualquiera veía datos de clientes). Los totales de
+     * reservas por evento están en EstadisticasEventoController, solo para admins.
+     */
     public function index(Request $request)
     {
         $eventos = EventoRealizado::with([
             'tipoEvento',
             'ambiente.servicios',
-            'creador',
-            'reservas',
         ])->paginate($this->perPage($request));
 
         return response()->json($eventos);
@@ -26,8 +29,6 @@ class EventoRealizadoController extends Controller
         $evento = EventoRealizado::with([
             'tipoEvento',
             'ambiente.servicios',
-            'creador',
-            'reservas',
         ])->find($id);
 
         if (!$evento) {
