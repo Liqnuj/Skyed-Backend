@@ -326,7 +326,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role.context:adminDeportivo')->group(function () {
 
         // Reportes PDF/Excel de las tablas del panel Deportivo (solo adminDeportivo).
-        // /reportes/deportivo/{eventos|inscripciones-pagos|resultados|kits|usuarios}/{pdf|xlsx}
+        // /reportes/deportivo/{eventos|inscripciones-pagos|resultados|kits|entregas-kits|patrocinadores|rutas|estaciones|usuarios}/{pdf|xlsx}
         Route::get('/reportes/deportivo/{reporte}/{formato}', [ReporteController::class, 'exportar'])
             ->defaults('modulo', 'deportivo')
             ->whereIn('formato', ['pdf', 'xlsx'])
@@ -354,6 +354,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/patrocinadores/{id}', [PatrocinadorController::class, 'update']);
         Route::delete('/patrocinadores/{id}', [PatrocinadorController::class, 'destroy']);
         Route::post('/patrocinadores/{id}/eventos', [PatrocinadorController::class, 'asignarEvento']);
+        Route::delete('/patrocinadores/{id}/eventos/{eventoId}', [PatrocinadorController::class, 'quitarEvento']);
 
         // Entregas Kit, Historial y Estaciones
         Route::get('/entregas-kit', [EntregaKitController::class, 'listado']);

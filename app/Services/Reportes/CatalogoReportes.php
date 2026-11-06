@@ -3,9 +3,13 @@
 namespace App\Services\Reportes;
 
 use App\Services\Reportes\Definiciones\Deportivo\EventosReporte as EventosDeportivosReporte;
+use App\Services\Reportes\Definiciones\Deportivo\EntregasKitsReporte;
+use App\Services\Reportes\Definiciones\Deportivo\EstacionesReporte;
 use App\Services\Reportes\Definiciones\Deportivo\InscripcionesPagosReporte;
 use App\Services\Reportes\Definiciones\Deportivo\KitsReporte;
+use App\Services\Reportes\Definiciones\Deportivo\PatrocinadoresReporte;
 use App\Services\Reportes\Definiciones\Deportivo\ResultadosReporte;
+use App\Services\Reportes\Definiciones\Deportivo\RutasReporte;
 use App\Services\Reportes\Definiciones\Deportivo\UsuariosReporte as UsuariosDeportivoReporte;
 use App\Services\Reportes\Definiciones\Social\AmbientesReporte;
 use App\Services\Reportes\Definiciones\Social\EventosReporte as EventosSocialesReporte;
@@ -35,6 +39,10 @@ final class CatalogoReportes
             'inscripciones-pagos' => InscripcionesPagosReporte::class,
             'resultados' => ResultadosReporte::class,
             'kits' => KitsReporte::class,
+            'entregas-kits' => EntregasKitsReporte::class,
+            'patrocinadores' => PatrocinadoresReporte::class,
+            'rutas' => RutasReporte::class,
+            'estaciones' => EstacionesReporte::class,
             'usuarios' => UsuariosDeportivoReporte::class,
         ],
     ];

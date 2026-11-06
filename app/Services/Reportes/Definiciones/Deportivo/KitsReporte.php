@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Model;
 /** Tabla "Kits del participante" (Deportivo › Kits). */
 class KitsReporte extends Reporte
 {
+    private const STOCK_BAJO = 10;
+
     public function clave(): string { return 'kits'; }
     public function titulo(): string { return 'Reporte de kits del participante'; }
     public function modulo(): string { return 'Skyed Deportivo'; }
@@ -31,6 +33,21 @@ class KitsReporte extends Reporte
         ];
     }
 
+    protected function filtros(): array
+    {
+        return [
+            'stock' => [
+                'etiqueta' => 'Stock',
+                'regla' => ['nullable', 'in:con,bajo,agotado'],
+                'valores' => ['con' => 'Con stock', 'bajo' => 'Stock bajo', 'agotado' => 'Agotado'],
+            ],
+            'lugar' => [
+                'etiqueta' => 'Lugar de entrega',
+                'regla' => ['nullable', 'string', 'max:100'],
+            ],
+        ];
+    }
+
     protected function consulta(array $filtros): Builder
     {
         $q = Kit::query()->withCount('eventos')->orderBy('id_k');
@@ -43,6 +60,18 @@ class KitsReporte extends Reporte
                 $this->col($b, 'contenido_k'),
             ]),
         ]);
+
+        if (($filtros['stock'] ?? null) === 'con') {
+            $q->where('stock_k', '>', 0);
+        } elseif (($filtros['stock'] ?? null) === 'bajo') {
+            $q->whereBetween('stock_k', [1, self::STOCK_BAJO]);
+        } elseif (($filtros['stock'] ?? null) === 'agotado') {
+            $q->where('stock_k', '<=', 0);
+        }
+
+        if (!empty($filtros['lugar'])) {
+            $q->where('lugar_entrega_k', $filtros['lugar']);
+        }
 
         return $q;
     }

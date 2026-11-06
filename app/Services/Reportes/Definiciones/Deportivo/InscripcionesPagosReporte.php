@@ -55,6 +55,10 @@ class InscripcionesPagosReporte extends Reporte
                 'regla' => ['nullable', 'integer', 'min:1'],
                 'texto' => fn ($v) => EventoDeportivo::query()->whereKey($v)->value('nombre_e') ?? ('#' . $v),
             ],
+            'metodo' => [
+                'etiqueta' => 'Método de pago',
+                'regla' => ['nullable', 'string', 'max:100'],
+            ],
         ] + $this->filtrosFecha('Fecha de inscripción');
     }
 
@@ -87,6 +91,10 @@ class InscripcionesPagosReporte extends Reporte
 
         if (!empty($filtros['evento'])) {
             $q->whereHas('inscripcion', fn (Builder $i) => $i->where('id_e', (int) $filtros['evento']));
+        }
+
+        if (!empty($filtros['metodo'])) {
+            $q->where('metodo_pago_p', $filtros['metodo']);
         }
 
         if (!empty($filtros['fecha_desde']) || !empty($filtros['fecha_hasta'])) {

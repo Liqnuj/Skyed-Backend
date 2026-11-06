@@ -113,14 +113,39 @@ class PatrocinadorController extends Controller
             'detalle' => 'nullable|string|max:255',
         ]);
 
-        $patrocinador->eventos()->syncWithoutDetaching([
-            $validated['evento_id_e'] => [
-                'detalle' => $validated['detalle'] ?? null
-            ]
+        $eventoId = (int) $validated['evento_id_e'];
+        $relacion = $patrocinador->eventos();
+        $relacion->syncWithoutDetaching([
+            $eventoId => ['detalle' => $validated['detalle'] ?? null],
         ]);
 
         return response()->json([
             'message' => 'Patrocinador asignado al evento correctamente',
+            'patrocinador' => $patrocinador->load('eventos')
+        ]);
+    }
+
+    /**
+     * Desvincular un patrocinador de uno de sus eventos sin eliminar ninguno.
+     */
+    public function quitarEvento($id, $eventoId)
+    {
+        $patrocinador = Patrocinador::find($id);
+
+        if (!$patrocinador) {
+            return response()->json([
+                'message' => 'Patrocinador no encontrado'
+            ], 404);
+        }
+
+        if ($patrocinador->eventos()->detach($eventoId) === 0) {
+            return response()->json([
+                'message' => 'El patrocinador no está asignado a ese evento'
+            ], 404);
+        }
+
+        return response()->json([
+            'message' => 'Patrocinador desvinculado del evento correctamente',
             'patrocinador' => $patrocinador->load('eventos')
         ]);
     }
