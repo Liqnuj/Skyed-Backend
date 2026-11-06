@@ -53,6 +53,16 @@ class EventosReporte extends Reporte
                 'regla' => ['nullable', 'in:' . implode(',', array_keys(self::CATEGORIAS))],
                 'valores' => self::CATEGORIAS,
             ],
+            'fecha' => [
+                'etiqueta' => 'Fecha',
+                'regla' => ['nullable', 'in:proximos,pasados'],
+                'valores' => ['proximos' => 'Próximos', 'pasados' => 'Ya realizados'],
+            ],
+            'cupos' => [
+                'etiqueta' => 'Cupos',
+                'regla' => ['nullable', 'in:con,agotado'],
+                'valores' => ['con' => 'Con cupos', 'agotado' => 'Sin cupos'],
+            ],
         ] + $this->filtrosFecha('Fecha del evento');
     }
 
@@ -79,6 +89,18 @@ class EventosReporte extends Reporte
 
         if (!empty($filtros['categoria'])) {
             $q->where('categoria_e', $filtros['categoria']);
+        }
+
+        if (($filtros['fecha'] ?? null) === 'proximos') {
+            $q->whereDate('fecha_e', '>=', now()->toDateString());
+        } elseif (($filtros['fecha'] ?? null) === 'pasados') {
+            $q->whereDate('fecha_e', '<', now()->toDateString());
+        }
+
+        if (($filtros['cupos'] ?? null) === 'con') {
+            $q->where('cupos_disponibles_e', '>', 0);
+        } elseif (($filtros['cupos'] ?? null) === 'agotado') {
+            $q->where('cupos_disponibles_e', '<=', 0);
         }
 
         $this->entreFechas($q, 'fecha_e', $filtros);
