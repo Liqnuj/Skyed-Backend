@@ -11,6 +11,7 @@ use App\Http\Controllers\TipoEventoController;
 use App\Http\Controllers\AmbienteController;
 use App\Http\Controllers\ServicioController;
 use App\Http\Controllers\EventoRealizadoController;
+use App\Http\Controllers\EstadisticasEventoController;
 use App\Http\Controllers\SocialImagenController;
 use App\Http\Controllers\ReservaController;
 use App\Http\Controllers\ReservaGestionController;
@@ -79,6 +80,8 @@ Route::get('/pagos/{id}/comprobante/archivo', [PagoController::class, 'archivoCo
 
 
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:3,1,login');
+// Imagen de la verificación «No soy un robot» del registro. Sin esta ruta nadie puede crear cuenta.
+Route::get('/captcha', fn () => response()->json(\App\Support\GeneradorCaptcha::crear()))->middleware('throttle:30,1,captcha');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1,register');
 // FIX: sin throttle se podía probar el código de 6 dígitos por fuerza
 // bruta y enviar correos de recuperación sin límite (spam al usuario).
@@ -332,6 +335,9 @@ Route::middleware('auth:sanctum')->group(function () {
         // Subida de la imagen de un evento deportivo (panel /deportivo/admin)
         Route::post('/deportivo/imagenes', [SocialImagenController::class, 'storeDeportivo']);
 
+        // Inscritos y dinero recaudado por evento (tabla de eventos del panel)
+        Route::get('/estadisticas/eventos-deportivos', [EstadisticasEventoController::class, 'deportivos']);
+
         // Eventos
         Route::post('/eventos', [EventoDeportivoController::class, 'store']);
         Route::put('/eventos/{id}', [EventoDeportivoController::class, 'update']);
@@ -405,6 +411,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Subida de imágenes (ambientes/eventos) usada por los formularios del panel
         Route::post('/social/imagenes', [SocialImagenController::class, 'store']);
+
+        // Reservas e ingresos por evento (tabla de eventos del panel)
+        Route::get('/estadisticas/eventos-sociales', [EstadisticasEventoController::class, 'sociales']);
 
         // Eventos Sociales
         Route::post('/eventos-sociales', [EventoRealizadoController::class, 'store']);
