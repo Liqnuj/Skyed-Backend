@@ -36,8 +36,13 @@ class UpdateUserRequest extends FormRequest
             'telefono_u' => 'sometimes|digits_between:7,15|unique:usuario,telefono_u,' . $id . ',id_u',
             'correo_u' => ['sometimes', 'email', 'max:80', ReglasUsuario::correoUnico((int) $id)],
             'contrasena_u' => ['sometimes', 'string', 'min:8', 'max:72', 'regex:/[a-z]/', 'regex:/[A-Z]/', 'regex:/[0-9]/'],
-            'fecha_nacimiento_u' => 'sometimes|date|after:1900-01-01|before_or_equal:' . ReglasUsuario::fechaMaximaNacimiento(),
+            'fecha_nacimiento_u' => [
+                'nullable', 'date',
+                'before_or_equal:' . now()->subYears(10)->toDateString(),
+                'after_or_equal:' . now()->subYears(100)->toDateString(),
+            ],
             'estado_u' => 'sometimes|in:activo,inactivo',
+            
         ];
     }
 }
