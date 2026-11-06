@@ -308,6 +308,14 @@ class EntregaKitController extends Controller
             ]);
         }
 
+        $nombreEvento = EventoDeportivo::find($validated['id_e'])?->nombre_e ?? 'tu evento';
+\App\Services\NotificacionService::crearSeguro(
+    (int) $validated['id_u'],
+    'Kit entregado',
+    'Registramos la entrega de tu kit para «' . $nombreEvento . '». ¡Prepárate para la carrera!',
+    'kit'
+);
+
         return response()->json([
             'message' => 'Kit entregado correctamente',
             'entrega' => $entrega->fresh()->load([

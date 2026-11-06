@@ -15,6 +15,16 @@ class NotificacionService
      * @param string $tipo Categoría libre: 'pqr', 'pago', 'inscripcion',
      *                     'reserva', 'evento', 'general'...
      */
+
+    public static function crearSeguro(int $userId, string $titulo, string $mensaje, string $tipo = 'general'): void
+{
+    try {
+        self::crear($userId, $titulo, $mensaje, $tipo);
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::warning('No se pudo crear la notificación: ' . $e->getMessage());
+    }
+}
+
     public static function crear(
         int $userId,
         string $titulo,
@@ -28,5 +38,6 @@ class NotificacionService
             'tipo' => $tipo,
             'leida' => false,
         ]);
+        
     }
 }

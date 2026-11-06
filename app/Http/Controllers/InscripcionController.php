@@ -544,12 +544,21 @@ class InscripcionController extends Controller
         } catch (\Throwable $e) {
             Log::warning('No se pudo enviar el correo con el QR de la inscripción ' . $resultado->id_i . ': ' . $e->getMessage());
         }
+        
+        \App\Services\NotificacionService::crearSeguro(
+    (int) $resultado->id_u,
+    'Recibimos tu inscripción',
+    'Te inscribiste a «' . ($resultado->evento->nombre_e ?? 'el evento') . '». Se confirma cuando validemos tu pago.',
+    'inscripcion'
+);
 
         return response()->json([
             'message' => 'Inscripción creada correctamente',
             'inscripcion' => new InscripcionResource($resultado),
         ], 201);
     }
+
+
 
 
 
