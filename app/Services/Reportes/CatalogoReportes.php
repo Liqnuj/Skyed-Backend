@@ -2,6 +2,7 @@
 
 namespace App\Services\Reportes;
 
+use App\Services\Reportes\Definiciones\Administracion\UsuariosRolesReporte;
 use App\Services\Reportes\Definiciones\Deportivo\EventosReporte as EventosDeportivosReporte;
 use App\Services\Reportes\Definiciones\Deportivo\EntregasKitsReporte;
 use App\Services\Reportes\Definiciones\Deportivo\EstacionesReporte;
@@ -44,6 +45,9 @@ final class CatalogoReportes
             'rutas' => RutasReporte::class,
             'estaciones' => EstacionesReporte::class,
             'usuarios' => UsuariosDeportivoReporte::class,
+        ],
+        'administracion' => [
+            'usuarios-roles' => UsuariosRolesReporte::class,
         ],
     ];
 
