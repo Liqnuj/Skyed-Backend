@@ -14,6 +14,7 @@ class UsuariosReporte extends UsuariosBase
     public function titulo(): string { return 'Reporte de usuarios registrados'; }
     public function modulo(): string { return 'Skyed Social'; }
     public function tema(): string { return 'social'; }
+    protected function moduloDeUsuarios(): ?string { return 'social'; }
 
     public function columnas(): array
     {

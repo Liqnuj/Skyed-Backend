@@ -70,9 +70,14 @@ class AuthController extends Controller
 
         $user = User::create($validated);
 
+        // Primero el rol del módulo desde el que se registró...
         $nombreRol = $contexto === 'social' ? 'cliente' : 'participante';
         $rol = Role::firstOrCreate(['nombre_rol' => $nombreRol]);
         $user->roles()->attach($rol->id_rol, ['contexto' => $contexto]);
+
+        // ...y también el del otro módulo: con una sola cuenta puede inscribirse
+        // en Deportivo y reservar en Social, y así cada panel lo ve con su rol.
+        $user->asegurarRolesBase();
 
         $user->load('roles');
 
