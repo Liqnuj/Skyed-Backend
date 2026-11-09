@@ -65,7 +65,7 @@ class ExportadorPdf
             'tonos' => $tonos,
             'anchoPagina' => $orientacion === 'landscape' ? 1056 : 816, // px CSS de una hoja carta
             'ahora' => Formato::ahora(),
-            'logo' => $this->logo(),
+            'logo' => $this->logo($reporte->tema()),
             'sumaPesos' => max(1, array_sum(array_map(fn (Columna $c) => $c->peso, $columnas))),
         ])->render();
 
@@ -150,14 +150,43 @@ class ExportadorPdf
         ];
     }
 
-    /** Logo de SKYED embebido (public/img/logoP.png). Si no existe, el PDF sale solo con texto. */
-    private function logo(): ?string
+    /**
+     * Logo de cada módulo, embebido en el PDF. Se busca en public/img/ así:
+     *   social    → logo-social.png   (o .jpg / .jpeg)
+     *   deportivo → logo-deportivo.png
+     *   general   → logoP.png
+     * Si el logo del módulo no existe, se usa logoP.png; si tampoco, el PDF sale solo con texto.
+     *
+     * @return array{src: string, w: int, h: int}|null  w/h = tamaño ya ajustado a la insignia (40 × 26 px)
+     */
+    private function logo(string $tema): ?array
     {
-        $ruta = public_path('img/logoP.png');
+        $candidatos = [];
+        if (in_array($tema, ['social', 'deportivo'], true)) {
+            foreach (['png', 'jpg', 'jpeg'] as $ext) {
+                $candidatos[] = public_path("img/logo-{$tema}.{$ext}");
+            }
+        }
+        $candidatos[] = public_path('img/logoP.png');
 
-        return is_file($ruta)
-            ? 'data:image/png;base64,' . base64_encode(file_get_contents($ruta))
-            : null;
+        foreach ($candidatos as $ruta) {
+            if (! is_file($ruta)) {
+                continue;
+            }
+            $medidas = @getimagesize($ruta);
+            if (! $medidas || ! in_array($medidas[2], [IMAGETYPE_PNG, IMAGETYPE_JPEG], true)) {
+                continue;
+            }
+            $escala = min(40 / $medidas[0], 26 / $medidas[1]);
+
+            return [
+                'src' => 'data:' . $medidas['mime'] . ';base64,' . base64_encode(file_get_contents($ruta)),
+                'w' => max(1, (int) round($medidas[0] * $escala)),
+                'h' => max(1, (int) round($medidas[1] * $escala)),
+            ];
+        }
+
+        return null;
     }
 
     private function carpeta(string $relativa): string

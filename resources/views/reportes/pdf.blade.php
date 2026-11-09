@@ -22,7 +22,7 @@
     #banda td { vertical-align: middle; padding: 0; height: 62px; }
     #filete { position: fixed; top: -34px; left: -34px; width: {{ $anchoPagina }}px; height: 4px; background: {{ $t['linea'] }}; }
     .insignia { width: 50px; height: 36px; background: #ffffff; border-radius: 9px; text-align: center; }
-    .insignia img { width: 40px; margin-top: 5px; }
+    .insignia img { margin: 0; }
     .marca { font-size: 17px; font-weight: bold; letter-spacing: 4px; color: #ffffff; }
     .modulo-banda { font-size: 7.5px; font-weight: bold; letter-spacing: 2.5px; text-transform: uppercase; color: {{ $t['marca'] }}; margin-top: 2px; }
     .rep-banda { font-size: 8px; color: #ffffff; text-align: right; letter-spacing: .4px; }
@@ -77,7 +77,7 @@
             <tr>
                 <td style="width: 34px;"></td>
                 @if ($logo)
-                    <td style="width: 62px;"><div class="insignia"><img src="{{ $logo }}" alt="SKYED"></div></td>
+                    <td style="width: 62px;"><div class="insignia"><img src="{{ $logo['src'] }}" width="{{ $logo['w'] }}" height="{{ $logo['h'] }}" style="margin-top: {{ (int) floor((36 - $logo['h']) / 2) }}px;" alt="SKYED"></div></td>
                 @endif
                 <td>
                     <div class="marca">SKYED</div>
