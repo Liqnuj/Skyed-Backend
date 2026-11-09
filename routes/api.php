@@ -270,6 +270,13 @@ Route::middleware('auth:sanctum')->group(function () {
         // el propio test del equipo (tests/Feature/RoleRouteTest.php)
         // espera 403 para un usuario sin rol de admin.
         Route::get('/roles', [RoleController::class, 'index']);
+
+
+                // Reporte PDF/Excel de la tabla "Usuarios y roles" (cualquiera de los dos administradores).
+        Route::get('/reportes/administracion/{reporte}/{formato}', [ReporteController::class, 'exportar'])
+            ->defaults('modulo', 'administracion')
+            ->whereIn('formato', ['pdf', 'xlsx'])
+            ->middleware('throttle:20,1,reportes');
         
         // Centro de Ayuda: administración del contenido. Además de ser admin, cada
         // operación valida el módulo del contenido (User::modulosGestionablesAyuda).
