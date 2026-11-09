@@ -14,6 +14,7 @@ class UsuariosReporte extends UsuariosBase
     public function titulo(): string { return 'Reporte de usuarios registrados'; }
     public function modulo(): string { return 'Skyed Deportivo'; }
     public function tema(): string { return 'deportivo'; }
+    protected function moduloDeUsuarios(): ?string { return 'deportivo'; }
 
     public function columnas(): array
     {
@@ -40,11 +41,29 @@ class UsuariosReporte extends UsuariosBase
             'id' => $u->id_u,
             'nombre' => $this->persona($u),
             'correo' => $u->correo_u,
-            'roles' => $u->roles->pluck('nombre_rol')->unique()->implode(', ') ?: '—',
+            'roles' => $this->rolesDeportivos($u),
             'estado' => Formato::humano($u->estado_u ?? 'activo'),
             'telefono' => $u->telefono_u,
             'ciudad' => $u->ciudad_u,
             'registro' => $u->created_at,
         ];
+    }
+
+    /**
+     * Solo los roles de este módulo (el "cliente" es del Social). Un usuario
+     * normal es participante en Deportivo aunque en la base solo sea cliente.
+     */
+    private function rolesDeportivos(Model $u): string
+    {
+        $roles = $u->roles
+            ->filter(fn ($r) => in_array(strtolower((string) $r->pivot->contexto), ['deportivo', 'general'], true))
+            ->pluck('nombre_rol');
+
+        $esNormal = $u->roles->contains(fn ($r) => in_array($r->nombre_rol, ['participante', 'cliente'], true));
+        if ($esNormal && ! $roles->contains('participante')) {
+            $roles->prepend('participante');
+        }
+
+        return $roles->unique()->implode(', ') ?: '—';
     }
 }

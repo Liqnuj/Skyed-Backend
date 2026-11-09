@@ -18,6 +18,11 @@ abstract class UsuariosBase extends Reporte
     {
         $q = User::query()->with('roles')->orderBy('id_u');
 
+        // Las tablas de Social y Deportivo solo listan a los usuarios de su módulo.
+        if ($modulo = $this->moduloDeUsuarios()) {
+            $q->delModulo($modulo);
+        }
+
         // Buscador del panel: nombre + apellido + correo.
         $this->buscar($q, $filtros['q'] ?? null, fn (Builder $b) => [
             $this->unir($b, [
@@ -40,6 +45,12 @@ abstract class UsuariosBase extends Reporte
         }
 
         return $q;
+    }
+
+    /** 'social' o 'deportivo' para limitar a ese módulo; null lista a todos. */
+    protected function moduloDeUsuarios(): ?string
+    {
+        return null;
     }
 
     protected function filtroEstado(): array

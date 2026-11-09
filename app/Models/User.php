@@ -68,6 +68,30 @@ class User extends Authenticatable
             'id_rol'
         )->withPivot('contexto');
     }
+
+    /**
+     * Roles de usuario normal y el módulo de cada uno. El registro es uno solo
+     * para toda la plataforma, así que todo usuario normal es participante en
+     * Deportivo y cliente en Social.
+     */
+    public const ROLES_BASE = ['participante' => 'deportivo', 'cliente' => 'social'];
+
+    /** Le da los dos roles base (participante y cliente) que le falten. */
+    public function asegurarRolesBase(): void
+    {
+        foreach (self::ROLES_BASE as $nombre => $contexto) {
+            $rol = Role::firstOrCreate(['nombre_rol' => $nombre]);
+            $yaLoTiene = $this->roles()
+                ->where('rol.id_rol', $rol->id_rol)
+                ->wherePivot('contexto', $contexto)
+                ->exists();
+
+            if (! $yaLoTiene) {
+                $this->roles()->attach($rol->id_rol, ['contexto' => $contexto]);
+            }
+        }
+    }
+
     public function inscripciones(): HasMany
 {
     return $this->hasMany(
@@ -181,6 +205,30 @@ class User extends Authenticatable
                     }
                 });
         });
+    }
+
+    /**
+     * Usuarios que se listan en el panel de un módulo ('social' o 'deportivo'):
+     *  - nunca el administrador del otro módulo (ni quien administra los dos);
+     *  - los usuarios normales (participante, cliente o sin rol) en los dos,
+     *    porque el registro es uno solo y pueden inscribirse y reservar;
+     *  - el personal (admin o asistente) solo en el panel de su módulo.
+     * Es la misma regla que usa la tabla de usuarios del frontend.
+     */
+    public function scopeDelModulo(Builder $query, string $modulo): Builder
+    {
+        $adminDelOtro = $modulo === 'social' ? 'adminDeportivo' : 'adminSocial';
+
+        return $query
+            ->whereDoesntHave('roles', fn ($r) => $r->where('nombre_rol', $adminDelOtro))
+            ->where(function (Builder $q) use ($modulo) {
+                $q->whereDoesntHave('roles')
+                    ->orWhereHas('roles', fn ($r) => $r->whereIn('nombre_rol', ['participante', 'cliente']))
+                    ->orWhereHas('roles', fn ($r) => $r->whereIn(
+                        DB::raw('LOWER(usuario_contexto_rol.contexto)'),
+                        [$modulo, 'general']
+                    ));
+            });
     }
 
     public function hasRoleInContext(string $role, string $contexto): bool
