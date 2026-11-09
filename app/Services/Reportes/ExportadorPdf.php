@@ -40,6 +40,17 @@ class ExportadorPdf
         }
 
         $orientacion = count($columnas) > 6 ? 'landscape' : 'portrait';
+        $tema = $this->tema($reporte->tema());
+
+        // Columnas de estado: se pintan como "píldoras" de color (verde, rojo, ámbar…).
+        $tonos = [];
+        foreach ($filas as $i => $fila) {
+            foreach ($columnas as $j => $c) {
+                if (Tonos::esColumnaDeEstado($c)) {
+                    $tonos[$i][$j] = Tonos::de((string) $fila[$j]);
+                }
+            }
+        }
 
         $html = View::make('reportes.pdf', [
             'reporte' => $reporte,
@@ -50,7 +61,10 @@ class ExportadorPdf
             'resumen' => $reporte->resumen($filtros),
             'generado' => Formato::ahora()->format('d/m/Y H:i'),
             'generadoPor' => $generadoPor,
-            'colores' => $this->colores($reporte->tema()),
+            'tema' => $tema,
+            'tonos' => $tonos,
+            'anchoPagina' => $orientacion === 'landscape' ? 1056 : 816, // px CSS de una hoja carta
+            'ahora' => Formato::ahora(),
             'logo' => $this->logo(),
             'sumaPesos' => max(1, array_sum(array_map(fn (Columna $c) => $c->peso, $columnas))),
         ])->render();
@@ -74,9 +88,9 @@ class ExportadorPdf
         $fuente = $pdf->getFontMetrics()->getFont('DejaVu Sans');
         $ancho = $canvas->get_width();
         $alto = $canvas->get_height();
-        $gris = [0.45, 0.45, 0.5];
-        $canvas->page_text(28, $alto - 26, 'SKYED · ' . $reporte->modulo() . ' · ' . $reporte->titulo(), $fuente, 7.5, $gris);
-        $canvas->page_text($ancho - 100, $alto - 26, 'Página {PAGE_NUM} de {PAGE_COUNT}', $fuente, 7.5, $gris);
+        $tinta = $this->rgb($tema['primario']);
+        $canvas->page_text(26, $alto - 17, 'SKYED · ' . $reporte->modulo() . ' · ' . $reporte->titulo(), $fuente, 7, $tinta);
+        $canvas->page_text($ancho - 98, $alto - 17, 'Página {PAGE_NUM} de {PAGE_COUNT}', $fuente, 7, $tinta);
 
         return $pdf->output();
     }
@@ -99,13 +113,41 @@ class ExportadorPdf
         };
     }
 
-    private function colores(string $tema): array
+    /**
+     * Identidad visual de cada panel: Social (ciruela y dorado, titulares con serifa),
+     * Deportivo (azul marino y turquesa, titulares en mayúsculas) y Administración (índigo).
+     */
+    private function tema(string $tema): array
     {
         return match ($tema) {
-            'social' => ['primario' => '#2d1454', 'acento' => '#9c02ae', 'suave' => '#f5e6ef', 'linea' => '#c9a84c'],
-            'deportivo' => ['primario' => '#091d36', 'acento' => '#2c9caf', 'suave' => '#e6f4f6', 'linea' => '#2c9caf'],
-            default => ['primario' => '#1e2a78', 'acento' => '#6d28d9', 'suave' => '#ede9fe', 'linea' => '#6d28d9'],
+            'social' => [
+                'clave' => 'social', 'primario' => '#2d1454', 'acento' => '#9c02ae', 'dorado' => '#c9a84c',
+                'linea' => '#c9a84c', 'suave' => '#f5e6ef', 'zebra' => '#fbf5f9', 'trazo' => '#ece1ea',
+                'marca' => '#e8c97a', 'fuente_titulo' => 'DejaVu Serif', 'mayusculas' => false,
+            ],
+            'deportivo' => [
+                'clave' => 'deportivo', 'primario' => '#091d36', 'acento' => '#1d8ea3', 'dorado' => '#2c9caf',
+                'linea' => '#2c9caf', 'suave' => '#e3f2f5', 'zebra' => '#f3fafb', 'trazo' => '#dbe8ec',
+                'marca' => '#6fd3e3', 'fuente_titulo' => 'DejaVu Sans', 'mayusculas' => true,
+            ],
+            default => [
+                'clave' => 'general', 'primario' => '#1e2a78', 'acento' => '#6d28d9', 'dorado' => '#8b5cf6',
+                'linea' => '#8b5cf6', 'suave' => '#ede9fe', 'zebra' => '#f7f5ff', 'trazo' => '#e4e0f3',
+                'marca' => '#c4b5fd', 'fuente_titulo' => 'DejaVu Sans', 'mayusculas' => false,
+            ],
         };
+    }
+
+    /** "#2d1454" → [r, g, b] entre 0 y 1 (formato que usa el canvas de Dompdf). */
+    private function rgb(string $hex): array
+    {
+        $hex = ltrim($hex, '#');
+
+        return [
+            hexdec(substr($hex, 0, 2)) / 255,
+            hexdec(substr($hex, 2, 2)) / 255,
+            hexdec(substr($hex, 4, 2)) / 255,
+        ];
     }
 
     /** Logo de SKYED embebido (public/img/logoP.png). Si no existe, el PDF sale solo con texto. */
