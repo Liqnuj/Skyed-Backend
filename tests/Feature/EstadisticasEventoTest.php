@@ -56,6 +56,7 @@ it('suma inscritos y dinero recaudado por evento deportivo', function () {
     inscripcionConPago($gran, 'confirmada', 'confirmado', 95000, conInvitado: true);
     inscripcionConPago($gran, 'pendiente', 'pendiente', 50000);
     inscripcionConPago($gran, 'cancelada', 'rechazado', 50000); // no cuenta
+    inscripcionConPago($gran, 'cancelada', 'confirmado', 25000); // dinero confirmado, pero inscripción cancelada
     inscripcionConPago($otro, 'pendiente', 'pendiente', 40000);
 
     $datos = $this->actingAs(userWithRole('adminDeportivo', 'deportivo'), 'sanctum')
@@ -64,9 +65,9 @@ it('suma inscritos y dinero recaudado por evento deportivo', function () {
         ->json('data');
 
     expect($datos[$gran])->toMatchArray([
-        'inscritos' => 3, 'confirmadas' => 2, 'pendientes' => 1, 'invitados' => 1,
-        'recaudado' => 145000, 'por_validar' => 50000, 'cupos_ocupados' => 4,
-    ])->and($datos[$otro])->toMatchArray(['inscritos' => 1, 'recaudado' => 0, 'por_validar' => 40000]);
+        'inscritos' => 3, 'confirmadas' => 2, 'pendientes' => 1, 'canceladas' => 2, 'invitados' => 1,
+        'recaudado' => 170000, 'recaudado_canceladas' => 25000, 'por_validar' => 50000, 'cupos_ocupados' => 4,
+    ])->and($datos[$otro])->toMatchArray(['inscritos' => 1, 'canceladas' => 0, 'recaudado' => 0, 'recaudado_canceladas' => 0, 'por_validar' => 40000]);
 });
 
 it('separa el dinero, cuenta la asistencia con QR y los kits entregados', function () {

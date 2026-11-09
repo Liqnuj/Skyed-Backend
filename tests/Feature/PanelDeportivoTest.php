@@ -77,10 +77,25 @@ it('no elimina un evento que ya tiene inscritos', function () {
 
     $this->actingAs(userWithRole('adminDeportivo'))
         ->deleteJson("/api/eventos/{$evento->id_e}")
-        ->assertStatus(409);
+        ->assertStatus(409)
+        ->assertJsonPath('message', 'Este evento conserva 1 inscripción en su historial (1 activa). Inhabilítalo en lugar de eliminarlo para conservar el historial.');
 
     expect(EventoDeportivo::find($evento->id_e))->not->toBeNull();
     expect(Inscripcion::where('id_e', $evento->id_e)->count())->toBe(1);
+});
+
+it('aclara que las inscripciones canceladas permanecen en el historial del evento', function () {
+    $evento = eventoDelPanel();
+    $inscripcion = inscribirEnEvento($evento);
+
+    $this->actingAs($inscripcion->usuario)
+        ->deleteJson("/api/inscripciones/{$inscripcion->id_i}")
+        ->assertOk();
+
+    $this->actingAs(userWithRole('adminDeportivo'))
+        ->deleteJson("/api/eventos/{$evento->id_e}")
+        ->assertStatus(409)
+        ->assertJsonPath('message', 'Este evento conserva 1 inscripción en su historial (0 activas). Inhabilítalo en lugar de eliminarlo para conservar el historial.');
 });
 
 it('devuelve el cupo al rechazar un pago pendiente', function () {
