@@ -122,21 +122,11 @@ class EventoDeportivoController extends Controller
 
         $estadoAnterior = $evento->estado_e;
 
-$evento->update(['estado_e' => $validated['estado_e']]);
+        // Se guardan todos los datos del formulario (nombre, fecha, precio...),
+        // no solo el estado: el formulario de editar ni siquiera lo envía.
+        $evento->update($validated);
 
-// Avisar solo si el estado realmente cambió a inhabilitado
-if ($estadoAnterior !== 'inhabilitado' && $validated['estado_e'] === 'inhabilitado') {
-    \App\Models\Inscripcion::where('id_e', $evento->id_e)
-        ->whereIn('estado_i', ['pendiente', 'confirmada'])
-        ->pluck('id_u')
-        ->unique()
-        ->each(fn ($uid) => \App\Services\NotificacionService::crearSeguro(
-            (int) $uid,
-            'Evento inhabilitado',
-            'El evento «' . $evento->nombre_e . '» fue inhabilitado. Revisa tus inscripciones para más detalles.',
-            'evento'
-        ));
-}
+        $this->avisarSiSeInhabilito($evento, $estadoAnterior);
 
         return response()->json([
             'message' => 'Evento actualizado correctamente',
@@ -166,14 +156,40 @@ if ($estadoAnterior !== 'inhabilitado' && $validated['estado_e'] === 'inhabilita
             'estado_e' => 'required|in:activo,inactivo,inhabilitado',
         ]);
 
+        $estadoAnterior = $evento->estado_e;
+
         $evento->update([
             'estado_e' => $validated['estado_e']
         ]);
+
+        $this->avisarSiSeInhabilito($evento, $estadoAnterior);
 
         return response()->json([
             'message' => 'Estado del evento actualizado',
             'evento' => new EventoDeportivoResource($evento)
         ]);
+    }
+
+    /**
+     * Si el evento acaba de quedar inhabilitado, avisa a quienes siguen
+     * inscritos (pendientes o confirmados) con una notificación.
+     */
+    private function avisarSiSeInhabilito(EventoDeportivo $evento, ?string $estadoAnterior): void
+    {
+        if ($estadoAnterior === 'inhabilitado' || $evento->estado_e !== 'inhabilitado') {
+            return;
+        }
+
+        \App\Models\Inscripcion::where('id_e', $evento->id_e)
+            ->whereIn('estado_i', ['pendiente', 'confirmada'])
+            ->pluck('id_u')
+            ->unique()
+            ->each(fn ($uid) => \App\Services\NotificacionService::crearSeguro(
+                (int) $uid,
+                'Evento inhabilitado',
+                'El evento «' . $evento->nombre_e . '» fue inhabilitado. Revisa tus inscripciones para más detalles.',
+                'evento'
+            ));
     }
 
     /**

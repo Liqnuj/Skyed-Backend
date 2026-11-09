@@ -108,6 +108,35 @@ it('permite cambiar el estado de un evento', function () {
         ->assertJsonPath('evento.estado', 'inactivo');
 });
 
+it('al editar un evento guarda todos sus datos, no solo el estado', function () {
+    $admin = userWithRole('adminDeportivo');
+    $evento = crearEvento(['nombre_e' => 'Nombre viejo', 'precio_e' => 50000]);
+
+    $this->actingAs($admin)
+        ->putJson("/api/eventos/{$evento->id_e}", datosEvento(['nombre_e' => 'Nombre nuevo', 'precio_e' => 70000]))
+        ->assertOk();
+
+    expect($evento->fresh()->nombre_e)->toBe('Nombre nuevo')
+        ->and((float) $evento->fresh()->precio_e)->toBe(70000.0);
+});
+
+it('al inhabilitar un evento avisa a los inscritos', function () {
+    $admin = userWithRole('adminDeportivo');
+    $evento = crearEvento(['estado_e' => 'activo']);
+    $inscrito = userWithRole('participante');
+    \Illuminate\Support\Facades\DB::table('inscripcion')->insert([
+        'cupo_i' => 1, 'estado_i' => 'confirmada', 'fecha_i' => now(), 'precio_pagado_i' => 50000,
+        'contacto_emergencia_nombre' => 'Ana', 'contacto_emergencia_telefono' => '3001234567', 'contacto_emergencia_parentesco' => 'Madre',
+        'id_u' => $inscrito->id_u, 'id_e' => $evento->id_e, 'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $this->actingAs($admin)
+        ->patchJson("/api/eventos/{$evento->id_e}/estado", ['estado_e' => 'inhabilitado'])
+        ->assertOk();
+
+    expect(\App\Models\Notificacion::where('user_id', $inscrito->id_u)->where('titulo', 'Evento inhabilitado')->count())->toBe(1);
+});
+
 it('permite a un adminDeportivo eliminar un evento', function () {
     $admin = userWithRole('adminDeportivo');
     $evento = crearEvento();
