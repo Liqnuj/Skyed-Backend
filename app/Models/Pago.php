@@ -19,12 +19,19 @@ class Pago extends Model
         'fecha_p',
         'estado_p',
         'id_i',
+        'hash_comprobante_p',
+        'referencia_transaccion_p',
+        'verificacion_comprobante_p',
     ];
 
     protected $casts = [
         'monto_p' => 'decimal:2',
         'fecha_p' => 'datetime',
+        'verificacion_comprobante_p' => 'array',
     ];
+
+    /** La huella del archivo no le sirve a nadie en pantalla. */
+    protected $hidden = ['hash_comprobante_p'];
 
     public function inscripcion(): BelongsTo
     {

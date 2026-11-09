@@ -110,6 +110,10 @@ class PagoController extends Controller
 
         $request->validate([
             'comprobante' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+            // Lo que revisó el navegador (ver utils/comprobantePago.ts del frontend).
+            'hash_original' => ['nullable', 'string', 'regex:/^[a-f0-9]{64}$/'],
+            'referencia_transaccion' => 'nullable|string|max:40',
+            'verificacion' => 'nullable|json|max:2000',
         ], [
             'comprobante.required' => 'No llegó ninguna imagen del comprobante.',
             'comprobante.uploaded' => 'El servidor no pudo recibir la imagen. Intenta con otra foto.',
@@ -119,6 +123,15 @@ class PagoController extends Controller
         ]);
 
         $archivo = $request->file('comprobante');
+
+        // Huella de la imagen original (la que manda el navegador) o, si no
+        // vino, la del archivo recibido.
+        $hash = $request->input('hash_original') ?: hash_file('sha256', $archivo->getRealPath());
+        $referencia = $this->normalizarReferencia($request->input('referencia_transaccion'));
+
+        if ($this->comprobanteYaUsado($hash, $referencia, $pago->id_pago)) {
+            return response()->json(['message' => self::MENSAJE_REPETIDO], 409);
+        }
         // extension() se deduce del contenido real, no del nombre que manda el navegador.
         $ruta = 'comprobantes/' . $pago->id_pago . '_' . uniqid() . '.' . $archivo->extension();
 
@@ -131,12 +144,97 @@ class PagoController extends Controller
             Storage::disk('local')->delete($anterior);
         }
 
-        $pago->update(['comprobante_p' => $ruta]);
+        $verificacion = $request->filled('verificacion')
+            ? $this->limpiarVerificacion(json_decode($request->input('verificacion'), true))
+            : null;
+
+        $pago->update([
+            'comprobante_p' => $ruta,
+            'hash_comprobante_p' => $hash,
+            'referencia_transaccion_p' => $referencia,
+            'verificacion_comprobante_p' => $verificacion,
+        ]);
 
         return response()->json([
             'message' => 'Comprobante subido correctamente',
             'tiene_comprobante' => true,
         ], 201);
+    }
+
+    private const MENSAJE_REPETIDO = 'Este comprobante ya fue usado en otra inscripción. Sube el comprobante del pago de esta inscripción; si crees que es un error, escríbenos.';
+
+    /**
+     * Antes de crear la inscripción, el navegador pregunta si el comprobante
+     * ya se usó (por su huella o por el número de la transacción).
+     *
+     * POST /pagos/comprobante/verificar { hash?, referencia_transaccion? }
+     *   200 { usado: false } | 409 { message }
+     */
+    public function verificarComprobante(Request $request)
+    {
+        $datos = $request->validate([
+            'hash' => ['nullable', 'string', 'regex:/^[a-f0-9]{64}$/'],
+            'referencia_transaccion' => 'nullable|string|max:40',
+        ]);
+
+        $usado = $this->comprobanteYaUsado(
+            $datos['hash'] ?? null,
+            $this->normalizarReferencia($datos['referencia_transaccion'] ?? null)
+        );
+
+        return $usado
+            ? response()->json(['message' => self::MENSAJE_REPETIDO, 'usado' => true], 409)
+            : response()->json(['usado' => false]);
+    }
+
+    /** ¿Otro pago ya tiene esta imagen o este número de transacción? */
+    private function comprobanteYaUsado(?string $hash, ?string $referencia, ?int $menosPago = null): bool
+    {
+        if (!$hash && !$referencia) {
+            return false;
+        }
+
+        return Pago::query()
+            ->when($menosPago, fn ($q) => $q->where('id_pago', '!=', $menosPago))
+            ->where(function ($q) use ($hash, $referencia) {
+                if ($hash) {
+                    $q->orWhere('hash_comprobante_p', $hash);
+                }
+                if ($referencia) {
+                    $q->orWhere('referencia_transaccion_p', $referencia);
+                }
+            })
+            ->exists();
+    }
+
+    /** "m3164 7609" -> "M31647609". Muy corta o sin números no sirve para comparar. */
+    private function normalizarReferencia(?string $referencia): ?string
+    {
+        $limpia = strtoupper(preg_replace('/[^A-Za-z0-9-]/', '', (string) $referencia));
+
+        return strlen($limpia) >= 6 && preg_match('/\d/', $limpia) ? substr($limpia, 0, 40) : null;
+    }
+
+    /** Solo se guardan los campos conocidos, con su tipo (no se confía en lo que manda el navegador). */
+    private function limpiarVerificacion(mixed $datos): ?array
+    {
+        if (!is_array($datos)) {
+            return null;
+        }
+
+        $bool = fn ($v) => is_bool($v) ? $v : null;
+        $num = fn ($v) => is_numeric($v) ? (float) $v : null;
+
+        return [
+            'qr' => $bool($datos['qr'] ?? null),
+            'qr_legible' => $bool($datos['qr_legible'] ?? null),
+            'destino' => $bool($datos['destino'] ?? null),
+            'monto' => $bool($datos['monto'] ?? null),
+            'monto_leido' => $num($datos['monto_leido'] ?? null),
+            'monto_esperado' => $num($datos['monto_esperado'] ?? null),
+            'incluye_referencia' => $bool($datos['incluye_referencia'] ?? null),
+            'revisado_en' => now()->toIso8601String(),
+        ];
     }
 
     /**
