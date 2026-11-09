@@ -191,7 +191,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/servicios/{id}', [ServicioController::class, 'show']);
     Route::get('/pagos', [PagoController::class, 'index']);
     Route::get('/pagos/{id}', [PagoController::class, 'show']);
-    Route::post('/pagos/{id}/comprobante', [PagoController::class, 'subirComprobante']);   
+    // Antes de inscribirse: ¿este comprobante ya se usó en otra inscripción?
+    Route::post('/pagos/comprobante/verificar', [PagoController::class, 'verificarComprobante'])->middleware('throttle:30,1');
+    Route::post('/pagos/{id}/comprobante', [PagoController::class, 'subirComprobante']);
     Route::get('/pagos/{id}/comprobante', [PagoController::class, 'verComprobante']);    
     Route::get('/qr/{id}', [QrEntradaController::class, 'show']);
     Route::get('/premios', [PremioController::class, 'index']);
