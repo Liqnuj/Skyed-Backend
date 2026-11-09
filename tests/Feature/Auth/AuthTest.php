@@ -53,20 +53,21 @@ it('el token del registro sirve para consultar /me', function () {
         ->assertJsonPath('user.correo_u', 'nuevo@example.com');
 });
 
-it('asigna el rol participante por defecto (contexto deportivo)', function () {
+it('al registrarse queda como participante en Deportivo y cliente en Social', function () {
     $response = postJson('/api/register', datosRegistro());
 
-    $roles = $response->json('user.roles');
+    $roles = collect($response->json('user.roles'))
+        ->map(fn ($r) => $r['nombre_rol'] . '/' . $r['contexto'])
+        ->sort()->values()->all();
 
-    expect($roles)->toHaveCount(1)
-        ->and($roles[0]['nombre_rol'])->toBe('participante')
-        ->and($roles[0]['contexto'])->toBe('deportivo');
+    expect($roles)->toBe(['cliente/social', 'participante/deportivo']);
 });
 
-it('asigna el rol cliente cuando el contexto es social', function () {
+it('si se registra desde Social también queda con los dos roles base', function () {
     $response = postJson('/api/register', datosRegistro(['contexto' => 'social']));
 
-    expect($response->json('user.roles.0.nombre_rol'))->toBe('cliente');
+    expect(collect($response->json('user.roles'))->pluck('nombre_rol')->sort()->values()->all())
+        ->toBe(['cliente', 'participante']);
 });
 
 it('guarda el correo en minúsculas y sin espacios', function () {

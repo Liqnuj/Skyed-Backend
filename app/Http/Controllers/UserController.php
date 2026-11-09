@@ -88,6 +88,12 @@ class UserController extends Controller
             ]
         );
 
+        // Si es un usuario normal (participante o cliente), queda con los dos
+        // roles base, igual que quien se registra solo.
+        if ($rol && array_key_exists($rol->nombre_rol, User::ROLES_BASE)) {
+            $user->asegurarRolesBase();
+        }
+
         // Recargar relaciones
         $user->load('roles');
 
