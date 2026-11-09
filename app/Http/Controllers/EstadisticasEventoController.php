@@ -27,6 +27,7 @@ class EstadisticasEventoController extends Controller
                 SUM(CASE WHEN estado_i <> 'cancelada' THEN 1 ELSE 0 END) AS inscritos,
                 SUM(CASE WHEN estado_i = 'confirmada' THEN 1 ELSE 0 END) AS confirmadas,
                 SUM(CASE WHEN estado_i = 'pendiente' THEN 1 ELSE 0 END) AS pendientes,
+                SUM(CASE WHEN estado_i = 'cancelada' THEN 1 ELSE 0 END) AS canceladas,
                 SUM(CASE WHEN estado_i <> 'cancelada' AND inscripcion.id_inv IS NOT NULL THEN 1 ELSE 0 END) AS invitados,
                 SUM(CASE WHEN estado_i <> 'cancelada' THEN COALESCE(cupo_i, 1) ELSE 0 END) AS cupos_ocupados,
                 SUM(CASE WHEN estado_i = 'confirmada' THEN COALESCE(cupo_i, 1) ELSE 0 END) AS personas_confirmadas,
@@ -43,6 +44,7 @@ class EstadisticasEventoController extends Controller
             ->join('inscripcion', 'inscripcion.id_i', '=', 'pago.id_i')
             ->selectRaw("inscripcion.id_e AS id_e,
                 SUM(CASE WHEN pago.estado_p = 'confirmado' THEN pago.monto_p ELSE 0 END) AS recaudado,
+                SUM(CASE WHEN pago.estado_p = 'confirmado' AND inscripcion.estado_i = 'cancelada' THEN pago.monto_p ELSE 0 END) AS recaudado_canceladas,
                 SUM(CASE WHEN pago.estado_p = 'pendiente' THEN pago.monto_p ELSE 0 END) AS por_validar,
                 SUM(CASE WHEN pago.estado_p = 'confirmado' THEN COALESCE(precio_kit_i, 0) + COALESCE(precio_kit_invitado_i, 0) ELSE 0 END) AS dinero_kits,
                 SUM(CASE WHEN pago.estado_p = 'confirmado' THEN COALESCE(precio_invitado_i, 0) ELSE 0 END) AS dinero_invitados")
@@ -78,9 +80,11 @@ class EstadisticasEventoController extends Controller
                 'inscritos' => (int) ($i->inscritos ?? 0),
                 'confirmadas' => (int) ($i->confirmadas ?? 0),
                 'pendientes' => (int) ($i->pendientes ?? 0),
+                'canceladas' => (int) ($i->canceladas ?? 0),
                 'invitados' => (int) ($i->invitados ?? 0),
                 'cupos_ocupados' => (int) ($i->cupos_ocupados ?? 0),
                 'recaudado' => $recaudado,
+                'recaudado_canceladas' => round((float) ($p->recaudado_canceladas ?? 0), 2),
                 'por_validar' => round((float) ($p->por_validar ?? 0), 2),
                 'desglose' => [
                     'inscripciones' => max(0, round($recaudado - $kits - $invitados, 2)),

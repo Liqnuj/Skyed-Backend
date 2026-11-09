@@ -9,21 +9,13 @@ use Illuminate\Http\Request;
 
 class UserRoleController extends Controller
 {
-    /**
-     * Un administrador no puede cambiarle los roles a otro administrador
-     * (solo el super administrador puede). Sobre sí mismo sí puede asignar.
-     */
-    private function esOtroAdmin(User $quien, User $objetivo): bool
+    private function respuestaSinPermiso(Request $request)
     {
-        return $quien->id_u !== $objetivo->id_u
-            && !$quien->esSuperAdmin()
-            && $objetivo->esAdministrador();
-    }
-
-    private function respuestaOtroAdmin()
-    {
+        if ($request->user()->esSuperAdmin()) {
+            return null;
+        }
         return response()->json([
-            'message' => 'No puedes cambiar los roles de otro administrador.'
+            'message' => 'Solo el super administrador puede cambiar roles de usuarios.'
         ], 403);
     }
 
@@ -52,16 +44,16 @@ class UserRoleController extends Controller
      */
     public function store(AssignRoleRequest $request, $userId)
     {
+        if ($respuesta = $this->respuestaSinPermiso($request)) {
+            return $respuesta;
+        }
+
         $user = User::visiblesPara($request->user())->find($userId);
 
         if (!$user) {
             return response()->json([
                 'message' => 'Usuario no encontrado'
             ], 404);
-        }
-
-        if ($this->esOtroAdmin($request->user(), $user)) {
-            return $this->respuestaOtroAdmin();
         }
 
         $validated = $request->validated();
@@ -96,16 +88,16 @@ class UserRoleController extends Controller
      */
     public function destroy(Request $request, $userId, $rolId)
     {
+        if ($respuesta = $this->respuestaSinPermiso($request)) {
+            return $respuesta;
+        }
+
         $user = User::visiblesPara($request->user())->find($userId);
 
         if (!$user) {
             return response()->json([
                 'message' => 'Usuario no encontrado'
             ], 404);
-        }
-
-        if ($this->esOtroAdmin($request->user(), $user)) {
-            return $this->respuestaOtroAdmin();
         }
 
         $rol = Role::find($rolId);

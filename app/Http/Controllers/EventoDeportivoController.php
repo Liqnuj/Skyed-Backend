@@ -208,10 +208,15 @@ class EventoDeportivoController extends Controller
         // FIX: la tabla inscripcion tiene cascadeOnDelete hacia el evento,
         // así que borrar un evento con inscritos eliminaba en silencio sus
         // inscripciones (y fallaba con 500 si alguna ya tenía resultado).
-        $inscritos = $evento->inscripciones()->count();
-        if ($inscritos > 0) {
+        $inscripciones = $evento->inscripciones()->count();
+        if ($inscripciones > 0) {
+            $activas = $evento->inscripciones()
+                ->where('estado_i', '<>', 'cancelada')
+                ->count();
+            $sustantivo = $inscripciones === 1 ? 'inscripción' : 'inscripciones';
+            $adjetivo = $activas === 1 ? 'activa' : 'activas';
             return response()->json([
-                'message' => "Este evento tiene {$inscritos} inscripción(es). Inhabilítalo en lugar de eliminarlo para conservar el historial."
+                'message' => "Este evento conserva {$inscripciones} {$sustantivo} en su historial ({$activas} {$adjetivo}). Inhabilítalo en lugar de eliminarlo para conservar el historial."
             ], 409);
         }
 
