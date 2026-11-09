@@ -59,16 +59,23 @@ class AuthController extends Controller
      */
     public function register(RegisterRequest $request): JsonResponse
     {
-        $validated = $request->validated();
+$validated = $request->validated();
 
-        $contexto = $validated['contexto'] ?? 'deportivo';
-        unset($validated['contexto'], $validated['captcha'], $validated['captcha_id']);
+$contexto = $validated['contexto'] ?? 'deportivo';
+unset($validated['contexto']);
 
-        $validated['contrasena_u'] = Hash::make($validated['contrasena_u']);
-        $validated['estado_u'] = 'activo';
-        $validated['rh_u'] = 'N/A';
+// Las casillas se guardan como columnas propias, con la fecha de aceptación
+unset($validated['acepta_terminos'], $validated['acepta_privacidad']);
+$validated['acepta_terminos_u']       = true;
+$validated['terminos_aceptados_en']   = now();
+$validated['acepta_privacidad_u']     = true;
+$validated['privacidad_aceptada_en']  = now();
 
-        $user = User::create($validated);
+$validated['contrasena_u'] = Hash::make($validated['contrasena_u']);
+$validated['estado_u'] = 'activo';
+$validated['rh_u'] = 'N/A';
+
+$user = User::create($validated);
 
         // Primero el rol del módulo desde el que se registró...
         $nombreRol = $contexto === 'social' ? 'cliente' : 'participante';

@@ -38,20 +38,29 @@ class RegisterRequest extends FormRequest
             'contrasena_u' => ReglasUsuario::contrasena(),
             'fecha_nacimiento_u' => 'required|date|after:1900-01-01|before_or_equal:' . ReglasUsuario::fechaMaximaNacimiento(),
             'contexto' => 'sometimes|string|in:deportivo,social',
+                            'acepta_terminos'   => 'required|accepted',
+                'acepta_privacidad' => 'required|accepted',
             // Verificación "No soy un robot": la imagen (captcha_id) y lo que
             // escribió la persona (captcha). Ver App\Support\GeneradorCaptcha.
             'captcha_id' => config('services.captcha.enabled') ? ['required', 'string', 'max:64'] : ['nullable'],
             'captcha' => config('services.captcha.enabled')
                 ? ['required', 'string', 'max:20', new CaptchaValido()]
                 : ['nullable'],
+
+
         ];
     }
 
     public function messages(): array
     {
         return ReglasUsuario::mensajes() + [
+            'acepta_terminos.accepted'   => 'Debes aceptar los términos y condiciones.',
+            'acepta_terminos.required'   => 'Debes aceptar los términos y condiciones.',
+            'acepta_privacidad.accepted' => 'Debes aceptar la política de privacidad.',
+            'acepta_privacidad.required' => 'Debes aceptar la política de privacidad.',
             'captcha.required' => 'Escribe los caracteres de la imagen para confirmar que no eres un robot.',
             'captcha_id.required' => 'Carga la imagen de verificación e inténtalo de nuevo.',
+            
         ];
     }
 }

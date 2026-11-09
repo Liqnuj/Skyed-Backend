@@ -36,6 +36,10 @@ class User extends Authenticatable
         'fecha_nacimiento_u',
         'contrasena_u',
         'estado_u',
+        'acepta_terminos_u',
+        'terminos_aceptados_en',
+        'acepta_privacidad_u',
+        'privacidad_aceptada_en',
     ];
 
     protected $hidden = [
