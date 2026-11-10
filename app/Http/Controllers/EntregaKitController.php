@@ -308,13 +308,15 @@ class EntregaKitController extends Controller
             ]);
         }
 
-        $nombreEvento = EventoDeportivo::find($validated['id_e'])?->nombre_e ?? 'tu evento';
-\App\Services\NotificacionService::crearSeguro(
-    (int) $validated['id_u'],
-    'Kit entregado',
-    'Registramos la entrega de tu kit para «' . $nombreEvento . '». ¡Prepárate para la carrera!',
-    'kit'
-);
+        // FIX: usaba $validated['id_e'] y $validated['id_u'], que no vienen en la
+        // petición (solo id_i e id_inv): la entrega se guardaba pero respondía 500.
+        $nombreEvento = $inscripcion->evento->nombre_e ?? 'tu evento';
+        \App\Services\NotificacionService::crearSeguro(
+            (int) $inscripcion->id_u,
+            'Kit entregado',
+            'Registramos la entrega de tu kit para «' . $nombreEvento . '». ¡Prepárate para la carrera!',
+            'kit'
+        );
 
         return response()->json([
             'message' => 'Kit entregado correctamente',

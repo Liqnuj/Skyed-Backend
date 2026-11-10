@@ -12,6 +12,8 @@ class QrEntradaResource extends JsonResource
         return [
             'id' => $this->id_qr,
             'codigo' => $this->codigo_qr,
+            // QR para retirar el kit (null si nadie de la inscripción pidió kit).
+            'codigo_kit' => $this->codigo_kit_qr,
             'imagen' => $this->qr_imagen_qr,
             'fecha_generacion' => $this->fecha_generacion_qr,
             'fecha_uso' => $this->fecha_uso_qr,

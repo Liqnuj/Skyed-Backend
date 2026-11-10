@@ -389,6 +389,9 @@ Route::middleware('auth:sanctum')->group(function () {
         // Pagos, Validación QR, Premios y Kits
         Route::patch('/pagos/{id}/estado', [PagoController::class, 'cambiarEstado']);
         Route::post('/qr/validar', [QrEntradaController::class, 'validar']);
+        // QR del kit: ver qué kits cubre (tallas, titular/invitado) y entregarlos.
+        Route::post('/qr/kit/consultar', [QrEntradaController::class, 'consultarKit']);
+        Route::post('/qr/kit/entregar', [QrEntradaController::class, 'entregarKit']);
         Route::post('/premios', [PremioController::class, 'store']);
         Route::put('/premios/{id}', [PremioController::class, 'update']);
         Route::delete('/premios/{id}', [PremioController::class, 'destroy']);

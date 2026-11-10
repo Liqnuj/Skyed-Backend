@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\EntregaKit;
 use App\Models\QrEntrada;
+use App\Services\NotificacionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -71,6 +73,14 @@ class QrEntradaController extends Controller
                 ->first();
 
             if (!$qr) {
+                // Escanearon el QR del kit en la entrada del evento.
+                if (str_starts_with(strtoupper($validated['codigo_qr']), 'KIT-')) {
+                    return response()->json([
+                        'message' => 'Este es el QR del kit, no el de entrada. Pide el QR de "Entrada al evento".',
+                        'tipo' => 'kit',
+                    ], 422);
+                }
+
                 return response()->json([
                     'message' => 'Código QR no encontrado'
                 ], 404);
@@ -197,5 +207,206 @@ class QrEntradaController extends Controller
         });
 
         return $resultado;
+    }
+
+    /* ------------------------------------------------------------------
+     * QR del kit ("KIT-…"): con él se retira el kit, días antes del evento.
+     * Primero se consulta (para ver tallas y a quién se entrega) y luego se
+     * confirma la entrega de los kits que falten (titular y/o invitado).
+     * ------------------------------------------------------------------ */
+
+    /** POST /qr/kit/consultar { codigo_kit } — no cambia nada. */
+    public function consultarKit(Request $request)
+    {
+        $codigo = $this->codigoKit($request);
+        [$qr, $error] = $this->buscarQrKit($codigo);
+        if ($error) {
+            return $error;
+        }
+
+        $kits = $this->kitsDeInscripcion($qr->inscripcion);
+        $faltan = collect($kits)->where('estado', '!=', 'entregado')->count();
+
+        return response()->json([
+            'message' => $faltan > 0
+                ? ($faltan === 1 ? 'Hay 1 kit por entregar.' : "Hay {$faltan} kits por entregar.")
+                : 'Los kits de esta inscripción ya fueron entregados.',
+        ] + $this->resumenKit($qr, $kits));
+    }
+
+    /** POST /qr/kit/entregar { codigo_kit } — marca como entregados los kits pendientes. */
+    public function entregarKit(Request $request)
+    {
+        $codigo = $this->codigoKit($request);
+
+        return DB::transaction(function () use ($request, $codigo) {
+            [$qr, $error] = $this->buscarQrKit($codigo, bloquear: true);
+            if ($error) {
+                return $error;
+            }
+
+            $inscripcion = $qr->inscripcion;
+            $kits = $this->kitsDeInscripcion($inscripcion);
+            $pendientes = array_values(array_filter($kits, fn ($k) => $k['estado'] !== 'entregado'));
+
+            if (!$pendientes) {
+                return response()->json([
+                    'message' => 'Los kits de esta inscripción ya fueron entregados.',
+                ] + $this->resumenKit($qr, $kits), 409);
+            }
+
+            $staff = $request->user();
+            $quien = mb_substr(trim(($staff->nombre_u ?? '') . ' ' . ($staff->apellido_u ?? '')), 0, 80);
+
+            foreach ($pendientes as $k) {
+                $datos = [
+                    'estado_ek' => 'entregado',
+                    'fecha_entrega_real_ek' => now(),
+                    'persona_entrega_ek' => $quien,
+                ];
+
+                $entrega = EntregaKit::where('id_i', $inscripcion->id_i)
+                    ->where('id_inv', $k['id_inv'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($entrega) {
+                    $entrega->update($datos);
+                } else {
+                    EntregaKit::create($datos + [
+                        'id_k' => $inscripcion->evento->id_k,
+                        'id_u' => $inscripcion->id_u,
+                        'id_e' => $inscripcion->id_e,
+                        'id_i' => $inscripcion->id_i,
+                        'id_inv' => $k['id_inv'],
+                    ]);
+                }
+            }
+
+            NotificacionService::crearSeguro(
+                (int) $inscripcion->id_u,
+                'Kit entregado',
+                'Registramos la entrega de tu kit para «' . ($inscripcion->evento->nombre_e ?? 'tu evento') . '». ¡Prepárate para la carrera!',
+                'kit'
+            );
+
+            $entregados = count($pendientes);
+
+            return response()->json([
+                'message' => $entregados === 1 ? 'Kit entregado.' : "{$entregados} kits entregados.",
+                'entregados' => $entregados,
+            ] + $this->resumenKit($qr, $this->kitsDeInscripcion($inscripcion)));
+        });
+    }
+
+    /** El código escrito o escaneado, normalizado ("kit-ABC…" → "KIT-abc…"). */
+    private function codigoKit(Request $request): string
+    {
+        $datos = $request->validate([
+            'codigo_kit' => 'required|string|max:255',
+        ]);
+
+        $codigo = trim($datos['codigo_kit']);
+
+        return str_starts_with(strtoupper($codigo), 'KIT-')
+            ? 'KIT-' . strtolower(substr($codigo, 4))
+            : $codigo;
+    }
+
+    /**
+     * Busca el QR del kit y revisa que se pueda usar.
+     * Devuelve [qr, null] o [null, respuesta de error].
+     */
+    private function buscarQrKit(string $codigo, bool $bloquear = false): array
+    {
+        $consulta = QrEntrada::with(['inscripcion.usuario', 'inscripcion.evento', 'inscripcion.invitado'])
+            ->where('codigo_kit_qr', $codigo);
+        if ($bloquear) {
+            $consulta->lockForUpdate();
+        }
+        $qr = $consulta->first();
+
+        if (!$qr) {
+            $esDeEntrada = QrEntrada::where('codigo_qr', $codigo)->exists();
+            return [null, response()->json([
+                'message' => $esDeEntrada
+                    ? 'Este es el QR de entrada al evento, no el del kit. Pide el QR de "Retiro del kit".'
+                    : 'Código del kit no encontrado.',
+                'tipo' => $esDeEntrada ? 'entrada' : null,
+            ], $esDeEntrada ? 422 : 404)];
+        }
+
+        $inscripcion = $qr->inscripcion;
+        if (!$inscripcion || !$inscripcion->evento) {
+            return [null, response()->json(['message' => 'La inscripción asociada no existe.'], 404)];
+        }
+
+        if ($inscripcion->estado_i !== 'confirmada') {
+            return [null, response()->json([
+                'message' => $inscripcion->estado_i === 'cancelada'
+                    ? 'La inscripción está cancelada: no se entrega el kit.'
+                    : 'El pago de esta inscripción aún no está confirmado: no se entrega el kit.',
+                'estado_i' => $inscripcion->estado_i,
+            ], 422)];
+        }
+
+        if (!$inscripcion->evento->id_k) {
+            return [null, response()->json(['message' => 'El evento ya no tiene kit asignado.'], 422)];
+        }
+
+        return [$qr, null];
+    }
+
+    /** Kits que pidió la inscripción (titular y/o invitado) con su estado de entrega. */
+    private function kitsDeInscripcion($inscripcion): array
+    {
+        $entregas = EntregaKit::where('id_i', $inscripcion->id_i)->get();
+        $estado = function (?int $idInv) use ($entregas) {
+            $fila = $entregas->first(fn ($e) => $idInv === null
+                ? $e->id_inv === null
+                : (int) $e->id_inv === $idInv);
+            return [
+                'estado' => $fila->estado_ek ?? 'pendiente',
+                'fecha_entrega' => $fila->fecha_entrega_real_ek ?? null,
+                'entregado_por' => $fila->persona_entrega_ek ?? null,
+            ];
+        };
+
+        $kits = [];
+        $usuario = $inscripcion->usuario;
+        if ($inscripcion->desea_kit_i) {
+            $kits[] = [
+                'id_inv' => null,
+                'rol' => 'titular',
+                'nombre' => $usuario ? trim($usuario->nombre_u . ' ' . $usuario->apellido_u) : null,
+                'documento' => $usuario->documento_u ?? null,
+                'talla' => $inscripcion->talla_camiseta_i,
+            ] + $estado(null);
+        }
+
+        $invitado = $inscripcion->invitado;
+        if ($invitado && $invitado->desea_kit_inv) {
+            $kits[] = [
+                'id_inv' => $invitado->id_inv,
+                'rol' => 'invitado',
+                'nombre' => trim($invitado->nombre_inv . ' ' . $invitado->apellido_inv),
+                'documento' => $invitado->documento_inv,
+                'talla' => $invitado->talla_kit_inv,
+            ] + $estado((int) $invitado->id_inv);
+        }
+
+        return $kits;
+    }
+
+    private function resumenKit(QrEntrada $qr, array $kits): array
+    {
+        $evento = $qr->inscripcion->evento;
+
+        return [
+            'evento' => ['id' => $evento->id_e, 'nombre' => $evento->nombre_e],
+            'kit' => optional($evento->kit)->nombre_k,
+            'kits' => $kits,
+            'pendientes' => collect($kits)->where('estado', '!=', 'entregado')->count(),
+        ];
     }
 }
