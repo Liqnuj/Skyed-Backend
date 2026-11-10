@@ -25,8 +25,27 @@ function datosRegistro(array $overrides = []): array
         'contrasena_u' => CLAVE_VALIDA,
         'contrasena_u_confirmation' => CLAVE_VALIDA,
         'fecha_nacimiento_u' => '2000-01-01',
+        // Las dos casillas del formulario de registro (obligatorias).
+        'acepta_terminos' => true,
+        'acepta_privacidad' => true,
     ], $overrides);
 }
+
+it('no deja registrarse sin aceptar los términos y la política de privacidad', function () {
+    postJson('/api/register', datosRegistro(['acepta_terminos' => false, 'acepta_privacidad' => null]))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['acepta_terminos', 'acepta_privacidad']);
+});
+
+it('guarda cuándo aceptó los términos y la privacidad', function () {
+    $correo = 'acepta@example.com';
+    postJson('/api/register', datosRegistro(['correo_u' => $correo]))->assertStatus(201);
+
+    $usuario = \App\Models\User::where('correo_u', $correo)->first();
+    expect((bool) $usuario->acepta_terminos_u)->toBeTrue()
+        ->and((bool) $usuario->acepta_privacidad_u)->toBeTrue()
+        ->and($usuario->terminos_aceptados_en)->not->toBeNull();
+});
 
 /* ---------------------------------------------------------------- REGISTRO */
 

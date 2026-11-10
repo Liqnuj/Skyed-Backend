@@ -59,23 +59,24 @@ class AuthController extends Controller
      */
     public function register(RegisterRequest $request): JsonResponse
     {
-$validated = $request->validated();
+        $validated = $request->validated();
 
-$contexto = $validated['contexto'] ?? 'deportivo';
-unset($validated['contexto']);
+        $contexto = $validated['contexto'] ?? 'deportivo';
+        // El captcha ya se validó: no es un dato del usuario.
+        unset($validated['contexto'], $validated['captcha'], $validated['captcha_id']);
 
-// Las casillas se guardan como columnas propias, con la fecha de aceptación
-unset($validated['acepta_terminos'], $validated['acepta_privacidad']);
-$validated['acepta_terminos_u']       = true;
-$validated['terminos_aceptados_en']   = now();
-$validated['acepta_privacidad_u']     = true;
-$validated['privacidad_aceptada_en']  = now();
+        // Las casillas se guardan como columnas propias, con la fecha de aceptación
+        unset($validated['acepta_terminos'], $validated['acepta_privacidad']);
+        $validated['acepta_terminos_u'] = true;
+        $validated['terminos_aceptados_en'] = now();
+        $validated['acepta_privacidad_u'] = true;
+        $validated['privacidad_aceptada_en'] = now();
 
-$validated['contrasena_u'] = Hash::make($validated['contrasena_u']);
-$validated['estado_u'] = 'activo';
-$validated['rh_u'] = 'N/A';
+        $validated['contrasena_u'] = Hash::make($validated['contrasena_u']);
+        $validated['estado_u'] = 'activo';
+        $validated['rh_u'] = 'N/A';
 
-$user = User::create($validated);
+        $user = User::create($validated);
 
         // Primero el rol del módulo desde el que se registró...
         $nombreRol = $contexto === 'social' ? 'cliente' : 'participante';

@@ -20,6 +20,8 @@ function datosRegistroConCaptcha(array $extra = []): array
         'fecha_nacimiento_u' => '2000-05-10',
         'contrasena_u' => 'Segura123!',
         'contrasena_u_confirmation' => 'Segura123!',
+        'acepta_terminos' => true,
+        'acepta_privacidad' => true,
     ], $extra);
 }
 
