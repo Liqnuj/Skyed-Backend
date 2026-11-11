@@ -205,7 +205,8 @@ class ReservaController extends Controller
                     // id_u ya no se recibe: la reserva siempre queda a nombre del usuario
                     // autenticado. Antes se exigía en el body (aunque se ignoraba al guardar).
                     'id_tipo_eves' => 'required|exists:tipo_evento,id_tipo_eves', // Para saber qué tipo de evento es
-                    'fecha_evento_rese' => 'required|date|after_or_equal:today',
+                    // "Hoy" según Colombia (el servidor trabaja en UTC y a partir de las 7 p. m. ya es "mañana").
+                    'fecha_evento_rese' => 'required|date|after_or_equal:' . ReservaFechas::hoy(),
                     'invitados_rese' => 'required|integer|min:1|max:100000',
                     'presupuesto_rese' => 'required|numeric|min:0|max:9999999999',
                     'ubicacion_rese' => 'required|string|max:120',
