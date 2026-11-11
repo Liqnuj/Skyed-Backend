@@ -119,6 +119,7 @@ class InscripcionController extends Controller
             $data['entrega_kit'] = $kitTitular;
             $data['entrega_kit_invitado'] = $kitInvitado;
             $data['resultado'] = $formatoResultado($insc);
+            $data['desglose_precios'] = $insc->desglose_precios;
             return $data;
         })->values();
 
@@ -480,11 +481,6 @@ class InscripcionController extends Controller
             ]);
             $qr->usos_permitidos_qr = $invitadoId ? 2 : 1;
             $qr->usos_realizados_qr = 0;
-            // Segundo QR, solo si alguien pidió kit: con él se retira el kit
-            // (el de entrada es únicamente para la asistencia del día del evento).
-            $qr->codigo_kit_qr = $kit && ($deseaKit || ($invitadoId && $invDeseaKit))
-                ? 'KIT-' . Str::uuid()
-                : null;
             $qr->save();
 
             // Historial del participante: queda "inscrito" hasta que se

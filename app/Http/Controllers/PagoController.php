@@ -25,8 +25,9 @@ class PagoController extends Controller
     {
         $query = Pago::with([
             'inscripcion.usuario',
-            'inscripcion.evento',
+            'inscripcion.evento.kit',
             'inscripcion.qr',
+            'inscripcion.invitado',
         ]);
 
         if (!$this->esAdminDeportivo($request)) {
@@ -36,6 +37,9 @@ class PagoController extends Controller
         }
 
         $pagos = $query->paginate($this->perPage($request));
+
+        // Detalle de lo pagado (inscripción, kit, invitado y kit del invitado).
+        $pagos->getCollection()->each(fn ($pago) => $pago->inscripcion?->append('desglose_precios'));
 
         return response()->json([
             'pagos' => $pagos,
@@ -54,8 +58,9 @@ class PagoController extends Controller
     {
         $pago = Pago::with([
             'inscripcion.usuario',
-            'inscripcion.evento',
+            'inscripcion.evento.kit',
             'inscripcion.qr',
+            'inscripcion.invitado',
         ])->find($id);
 
         if (!$pago) {
@@ -63,6 +68,8 @@ class PagoController extends Controller
                 'message' => 'Pago no encontrado'
             ], 404);
         }
+
+        $pago->inscripcion?->append('desglose_precios');
 
         $esDueno = $pago->inscripcion && $pago->inscripcion->id_u === $request->user()->id_u;
         $esAdmin = $this->esAdminDeportivo($request);
