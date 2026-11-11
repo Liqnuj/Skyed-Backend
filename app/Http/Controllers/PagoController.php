@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use App\Services\NotificacionService;
 use App\Support\PermisosAsistente;
+use App\Mail\InscripcionQrMail;
+use Illuminate\Support\Facades\Mail;
 
 class PagoController extends Controller
 {
@@ -486,6 +488,18 @@ class PagoController extends Controller
                 }
             }
         });
+
+        // El correo con los QR sale solo cuando se confirma el pago.
+        if ($nuevoEstado === 'confirmado') {
+            try {
+                $inscripcionCorreo = $pago->inscripcion()->with(['usuario', 'evento', 'qr', 'invitado'])->first();
+                if ($inscripcionCorreo?->usuario?->correo_u && $inscripcionCorreo->qr) {
+                    Mail::to($inscripcionCorreo->usuario->correo_u)->send(new InscripcionQrMail($inscripcionCorreo));
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('No se pudo enviar el correo con los QR del pago ' . $pago->id_p . ': ' . $e->getMessage());
+            }
+        }
 
 
         $mensajesPorEstado = [

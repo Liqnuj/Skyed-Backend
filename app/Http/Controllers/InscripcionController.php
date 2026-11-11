@@ -481,6 +481,11 @@ class InscripcionController extends Controller
             ]);
             $qr->usos_permitidos_qr = $invitadoId ? 2 : 1;
             $qr->usos_realizados_qr = 0;
+
+            // QR para retirar el kit: solo si el titular o el invitado lo pidieron.
+            if (($kit && $deseaKit) || ($invitadoId && $kit && $invDeseaKit)) {
+                $qr->codigo_kit_qr = 'KIT-' . strtolower((string) Str::uuid());
+            }
             $qr->save();
 
             // Historial del participante: queda "inscrito" hasta que se
@@ -536,15 +541,6 @@ class InscripcionController extends Controller
             return $resultado;
         }
 
-        // FIX: la inscripción ya quedó guardada; si el correo falla (sin
-        // internet, SMTP caído) no debe responder 500, porque el usuario
-        // creería que no se inscribió y el cupo ya se descontó. El QR
-        // igual queda disponible en "Mi entrada".
-        try {
-            Mail::to($resultado->usuario->correo_u)->send(new InscripcionQrMail($resultado));
-        } catch (\Throwable $e) {
-            Log::warning('No se pudo enviar el correo con el QR de la inscripción ' . $resultado->id_i . ': ' . $e->getMessage());
-        }
         
         \App\Services\NotificacionService::crearSeguro(
     (int) $resultado->id_u,
@@ -620,6 +616,13 @@ class InscripcionController extends Controller
         if ($inscripcion->estado_i === 'cancelada') {
             return response()->json([
                 'message' => 'Esta inscripción ya estaba cancelada'
+            ], 422);
+        }
+
+        // Con el pago validado el participante ya no puede cancelar. El admin sí.
+        if ($inscripcion->estado_i === 'confirmada' && !$request->user()->hasRole('adminDeportivo')) {
+            return response()->json([
+                'message' => 'No se puede cancelar: tu pago ya fue validado.'
             ], 422);
         }
 
