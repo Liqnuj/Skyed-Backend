@@ -12,15 +12,16 @@ class QrEntrada extends Model
     protected $primaryKey = 'id_qr';
 
     protected $fillable = [
-        'codigo_qr',
-        'qr_imagen_qr',
-        'fecha_generacion_qr',
-        'fecha_uso_qr',
-        'estado_qr',
-        'id_i',
-        'usos_permitidos_qr',
-        'usos_realizados_qr',
-    ];
+    'codigo_qr',
+    'codigo_kit_qr',
+    'qr_imagen_qr',
+    'fecha_generacion_qr',
+    'fecha_uso_qr',
+    'estado_qr',
+    'id_i',
+    'usos_permitidos_qr',
+    'usos_realizados_qr',
+];
 
     protected $casts = [
         'fecha_generacion_qr' => 'datetime',
