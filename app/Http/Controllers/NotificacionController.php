@@ -12,26 +12,23 @@ class NotificacionController extends Controller
      */
 public function index(Request $request)
 {
-    $userId = $request->user()->id_u;
-    $porPagina = min(50, max(1, (int) $request->input('per_page', 15)));
+    $base = $this->consulta($request);
+    $noLeidas = (clone $base)->where('leida', false)->count();
 
-    $notificaciones = Notificacion::where('user_id', $userId)
+    $notificaciones = $base
         ->orderByDesc('created_at')
-        ->paginate($porPagina);
+        ->paginate($request->input('per_page', 15));
 
     return response()->json([
         'message' => 'Notificaciones obtenidas correctamente',
         'notificaciones' => $notificaciones,
-        // Total de no leídas (no solo las de esta página), para el contador.
-        'no_leidas' => Notificacion::where('user_id', $userId)
-            ->where('leida', false)
-            ->count(),
+        'no_leidas' => $noLeidas,
     ]);
 }
 
 public function marcarTodasLeidas(Request $request)
 {
-    $actualizadas = Notificacion::where('user_id', $request->user()->id_u)
+    $actualizadas = $this->consulta($request)
         ->where('leida', false)
         ->update(['leida' => true, 'leida_en' => now()]);
 
@@ -63,6 +60,7 @@ public function marcarTodasLeidas(Request $request)
         ]);
     }
 
+
     /**
      * Marcar una notificación como leída.
      */
@@ -89,4 +87,23 @@ public function marcarTodasLeidas(Request $request)
             'notificacion' => $notificacion->fresh()
         ]);
     }
+
+
+
+private const TIPOS_DEPORTIVO = [
+    'pago', 'inscripcion', 'kit', 'acceso', 'evento', 'resultado', 'recordatorio', 'pqr_deportivo',
+];
+
+private function consulta(Request $request)
+{
+    $q = Notificacion::where('user_id', $request->user()->id_u);
+
+    return match ($request->input('contexto')) {
+        'deportivo' => $q->whereIn('tipo', self::TIPOS_DEPORTIVO),
+        'social'    => $q->whereNotIn('tipo', self::TIPOS_DEPORTIVO),
+        default     => $q,
+    };
+}
+
+
 }

@@ -207,7 +207,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Gestión de reservas y eventos (Administrador Social).
     // Va ANTES de /reservas/{id} para que "resumen" y "calendario" no se lean como un id.
-    Route::middleware('role.context:adminSocial')->group(function () {
+    Route::middleware('role.context:adminSocial|adminDeportivo')->group(function () {
         Route::get('/reservas/resumen', [ReservaGestionController::class, 'resumen']);
         Route::get('/reservas/calendario', [ReservaGestionController::class, 'calendario']);
         Route::get('/reservas/responsables', [ReservaGestionController::class, 'responsables']);
@@ -248,11 +248,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // PQR: gestión del administrador social (el backend valida el flujo).
     Route::post('/pqr/{id}/abrir', [PqrController::class, 'abrir'])
-        ->middleware('role.context:adminSocial');
+        ->middleware('role.context:adminSocial|adminDeportivo', 'throttle:30,1');
     Route::post('/pqr/{id}/iniciar-gestion', [PqrController::class, 'iniciarGestion'])
-        ->middleware(['role.context:adminSocial', 'throttle:30,1']);
+        ->middleware(['role.context:adminSocial|adminDeportivo', 'throttle:30,1']);
     Route::post('/pqr/{id}/resolver', [PqrController::class, 'resolver'])
-        ->middleware(['role.context:adminSocial', 'throttle:30,1']);
+        ->middleware(['role.context:adminSocial|adminDeportivo', 'throttle:30,1']);
 
     // ========================================================
     // 2. ZONA GLOBAL (Cualquier Administrador)

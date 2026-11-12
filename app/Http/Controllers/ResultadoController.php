@@ -102,6 +102,16 @@ class ResultadoController extends Controller
             ]);
         }
 
+        if ($validated['estado_r'] === 'oficial') {
+    $inscripcion->loadMissing('evento');
+    \App\Services\NotificacionService::crearSeguro(
+        (int) $inscripcion->id_u,
+        'Resultado publicado',
+        'Ya está disponible tu resultado de «' . ($inscripcion->evento->nombre_e ?? 'el evento') . '».',
+        'resultado'
+    );
+}
+
         return response()->json([
             'message' => 'Resultado registrado correctamente',
             'resultado' => $resultado->fresh()->load([
@@ -130,6 +140,17 @@ class ResultadoController extends Controller
 
         // Actualizar el resultado
         $resultado->update($validated);
+
+        if (($validated['estado_r'] ?? null) === 'oficial' && $resultado->wasChanged('estado_r')) {
+    $resultado->loadMissing('inscripcion.evento');
+    \App\Services\NotificacionService::crearSeguro(
+        (int) $resultado->inscripcion->id_u,
+        'Resultado publicado',
+        'Ya está disponible tu resultado de «' . ($resultado->inscripcion->evento->nombre_e ?? 'el evento') . '».',
+        'resultado'
+    );
+}
+
 
         return response()->json([
             'message' => 'Resultado actualizado correctamente',

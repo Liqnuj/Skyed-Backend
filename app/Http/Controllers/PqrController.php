@@ -25,6 +25,7 @@ class PqrController extends Controller
     public function index(Request $request)
     {
         $esAdmin = $this->esAdmin($request);
+        $contexto = $request->input('contexto') === 'deportivo' ? 'deportivo' : 'social';
 
         $request->validate([
             'estado' => ['sometimes', Rule::in(Pqr::ESTADOS)],
@@ -40,6 +41,7 @@ class PqrController extends Controller
             }], 'created_at')
             ->orderByDesc('created_at')
             ->orderByDesc('id_pqr');
+            $query->where('contexto_pqr', $contexto);
 
         $ocultas = $request->boolean('ocultas');
 
@@ -70,6 +72,7 @@ class PqrController extends Controller
         if ($esAdmin && !$request->boolean('mias')) {
             // Conteo por fase de TODAS las PQR (no solo de la página).
             $respuesta['resumen'] = Pqr::query()
+                ->where('contexto_pqr', $contexto)
                 ->where('oculta_admin', false)
                 ->select('estado_pqr', DB::raw('count(*) as total'))
                 ->groupBy('estado_pqr')
@@ -119,6 +122,8 @@ class PqrController extends Controller
             // El formulario limita a 1000 caracteres; sin max se podían
             // guardar textos de varios MB llamando a la API directamente.
             'mensaje_pqr' => 'required|string|max:2000',
+
+            'contexto' => 'sometimes|in:social,deportivo',
         ]);
 
         $pqr = DB::transaction(function () use ($validated, $request) {
@@ -131,6 +136,7 @@ class PqrController extends Controller
                 'respondido_en_pqr' => null,
                 'creado_en_pqr' => now(),
                 'id_u' => $request->user()->id_u,
+                'contexto_pqr' => $validated['contexto'] ?? 'social',
             ]);
 
             $pqr->seguimientos()->create([
@@ -650,18 +656,36 @@ class PqrController extends Controller
             $mensaje .= ' ' . Str::limit($textoPublico, 160);
         }
 
-        NotificacionService::crear($pqr->id_u, $titulo, $mensaje, 'pqr');
+        $tipo = $pqr->contexto_pqr === 'deportivo' ? 'pqr_deportivo' : 'pqr';
+        NotificacionService::crear($pqr->id_u, $titulo, $mensaje, $tipo);
     }
 
     /* ------------------------------------------------------------ */
     /*  Utilidades                                                   */
     /* ------------------------------------------------------------ */
 
-    private function esAdmin(Request $request): bool
-    {
-        return $request->user()->hasRole('adminSocial')
-            || PermisosAsistente::puedeVer($request->user(), 'social', 'pqr');
+private function esAdmin(Request $request): bool
+{
+    $contexto = $this->contextoDe($request);
+    $rol = $contexto === 'deportivo' ? 'adminDeportivo' : 'adminSocial';
+
+    return $request->user()->hasRole($rol);
+}
+
+/** Módulo de la PQR: por el id de la ruta o, en listados, por ?contexto= */
+private function contextoDe(Request $request): string
+{
+    $id = $request->route('id');
+
+    if ($id) {
+        return Pqr::where('id_pqr', $id)->value('contexto_pqr') ?? 'social';
     }
+
+    return $request->input('contexto') === 'deportivo' ? 'deportivo' : 'social';
+}
+
+
+
 
     private function textoOpcional(?string $texto): ?string
     {

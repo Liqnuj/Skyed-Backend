@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 
+
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
@@ -76,3 +77,6 @@ Artisan::command('skyed:copia-seguridad {--conservar=14 : CuÃ¡ntas copias automÃ
 
 // Necesita que el servidor corra "php artisan schedule:run" cada minuto.
 \Illuminate\Support\Facades\Schedule::command('skyed:copia-seguridad')->dailyAt('02:00')->timezone(\App\Support\GestorCopias::ZONA_HORARIA);
+
+use Illuminate\Support\Facades\Schedule;
+Schedule::command('notificaciones:recordatorios-deportivo')->dailyAt('08:00');

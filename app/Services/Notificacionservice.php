@@ -16,7 +16,7 @@ class NotificacionService
      *                     'reserva', 'evento', 'general'...
      */
 
-    public static function crearSeguro(int $userId, string $titulo, string $mensaje, string $tipo = 'general'): void
+public static function crearSeguro(int $userId, string $titulo, string $mensaje, string $tipo = 'general'): void
 {
     try {
         self::crear($userId, $titulo, $mensaje, $tipo);

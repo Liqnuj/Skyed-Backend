@@ -163,6 +163,16 @@ class QrEntradaController extends Controller
                     'updated_at' => now(),
                 ]);
 
+
+                if ($usosRealizados === 1) {
+    NotificacionService::crearSeguro(
+        (int) $inscripcion->id_u,
+        'Ingreso registrado',
+        'Registramos tu ingreso a «' . ($evento->nombre_e ?? 'el evento') . '». ¡Disfruta la carrera!',
+        'acceso'
+    );
+}
+
             // Datos para que el admin verifique a las personas contra
             // su documento en la puerta.
             $usuario = $inscripcion->usuario;

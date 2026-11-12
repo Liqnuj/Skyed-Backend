@@ -82,6 +82,7 @@ class Pqr extends Model
         'respondido_en_pqr',
         'creado_en_pqr',
         'id_u',
+        'contexto_pqr',
     ];
 
     protected $casts = [
@@ -115,10 +116,12 @@ class Pqr extends Model
     }
 
     /** Número de radicado que ve el usuario, p. ej. SS-PQR-12. */
-    protected function radicado(): Attribute
-    {
-        return Attribute::get(fn () => 'SS-PQR-' . $this->id_pqr);
-    }
+protected function radicado(): Attribute
+{
+    return Attribute::get(
+        fn () => ($this->contexto_pqr === 'deportivo' ? 'SD-PQR-' : 'SS-PQR-') . $this->id_pqr
+    );
+}
 
     protected function estadoEtiqueta(): Attribute
     {

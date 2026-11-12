@@ -67,6 +67,7 @@ class PqrsReporte extends Reporte
     protected function consulta(array $filtros): Builder
     {
         $q = Pqr::query()
+        ->where('contexto_pqr', 'social')
             ->with('usuario:id_u,nombre_u,apellido_u,correo_u')
             ->withMax('seguimientos as ultima_actuacion_en', 'created_at')
             ->orderByDesc('created_at')
