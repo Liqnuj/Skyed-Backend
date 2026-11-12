@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\EventoDeportivo;
+use App\Models\Estacion;
 use App\Models\Inscripcion;
 use App\Models\Pago;
 use Illuminate\Http\UploadedFile;
@@ -59,6 +60,32 @@ it('deja al admin deportivo subir la imagen de un evento y devuelve la ruta', fu
 
     expect($res->json('path'))->toStartWith('deportivo/');
     Storage::disk('public')->assertExists($res->json('path'));
+});
+
+it('valida el kilómetro de una estación contra la distancia del evento y admite ambulancia', function () {
+    $evento = eventoDelPanel(['distancia_e' => '80 km']);
+    $admin = userWithRole('adminDeportivo');
+    $base = [
+        'nombre_est' => 'Ambulancia km 12',
+        'tipo_est' => 'ambulancia',
+    ];
+
+    $this->actingAs($admin)
+        ->postJson("/api/eventos/{$evento->id_e}/estaciones", $base)
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('kilometro_est');
+
+    $this->actingAs($admin)
+        ->postJson("/api/eventos/{$evento->id_e}/estaciones", $base + ['kilometro_est' => 80.1])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('kilometro_est');
+
+    $response = $this->actingAs($admin)
+        ->postJson("/api/eventos/{$evento->id_e}/estaciones", $base + ['kilometro_est' => 12.5])
+        ->assertCreated();
+
+    expect(Estacion::find($response->json('estacion.id_est'))->tipo_est)->toBe('ambulancia')
+        ->and((float) $response->json('estacion.kilometro_est'))->toBe(12.5);
 });
 
 it('no deja subir imagenes deportivas a un participante', function () {

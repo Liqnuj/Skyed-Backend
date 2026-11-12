@@ -8,6 +8,46 @@ use Illuminate\Http\Request;
 
 class RutaEventoController extends Controller
 {
+    public function disponibles(Request $request)
+    {
+        $validated = $request->validate([
+            'evento_id_e' => 'nullable|integer|exists:eventoDeportivo,id_e',
+        ]);
+
+        $query = RutaEvento::with('evento');
+        if (!empty($validated['evento_id_e'])) {
+            $query->where(function ($rutas) use ($validated) {
+                $rutas->whereNull('id_e')->orWhere('id_e', $validated['evento_id_e']);
+            });
+        } else {
+            $query->whereNull('id_e');
+        }
+
+        return response()->json($query->orderBy('nombre_re')->paginate($this->perPage($request)));
+    }
+
+    public function storeDisponible(Request $request)
+    {
+        $validated = $request->validate([
+            'nombre_re' => 'required|string|max:100',
+            'estado_re' => 'nullable|in:activo,inactivo,deshabilitado',
+            'distancia_re' => 'nullable|string|max:45',
+            'desnivel_re' => 'nullable|string|max:45',
+            'descripcion_re' => 'nullable|string|max:255',
+            'archivo_gpx_re' => 'nullable|string|max:255',
+            'precio_re' => 'nullable|numeric|min:0',
+            'id_e' => 'nullable|integer|exists:eventoDeportivo,id_e',
+        ]);
+        $validated['estado_re'] ??= 'activo';
+
+        $ruta = RutaEvento::create($validated);
+
+        return response()->json([
+            'message' => 'Ruta creada correctamente',
+            'ruta' => $ruta->load('evento'),
+        ], 201);
+    }
+
     public function index(Request $request, $eventoId)
     {
         if (!EventoDeportivo::find($eventoId)) {
@@ -84,6 +124,7 @@ class RutaEventoController extends Controller
             'descripcion_re' => 'sometimes|nullable|string|max:255',
             'archivo_gpx_re' => 'sometimes|nullable|string|max:255',
             'precio_re' => 'sometimes|nullable|numeric|min:0',
+            'id_e' => 'sometimes|nullable|integer|exists:eventoDeportivo,id_e',
         ]);
 
         $ruta->update($validated);
