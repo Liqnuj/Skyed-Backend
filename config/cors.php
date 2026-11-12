@@ -29,13 +29,13 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    'exposed_headers' => ['Content-Disposition'],
 
     'max_age' => 0,
 
     // true porque Sanctum puede necesitar enviar la cookie de sesión;
     // si el frontend solo usa el Bearer token (Authorization header),
     // esto puede quedar en false sin problema.
-    'supports_credentials' => true,
+    'supports_credentials' => false,
 
 ];
