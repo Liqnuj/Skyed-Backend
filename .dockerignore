@@ -1,0 +1,18 @@
+# Archivos que NO se envían a Docker al construir la imagen.
+# El Dockerfile solo copia .docker/php/custom.ini (el código entra por el volumen),
+# así que excluir esto hace que el "docker compose build" arranque al instante.
+.git
+.github
+vendor
+node_modules
+storage
+bootstrap/cache
+public/storage
+tests
+.env
+.env.*
+!.env.example
+*.log
+.phpunit.result.cache
+.idea
+.vscode

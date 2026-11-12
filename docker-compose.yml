@@ -1,0 +1,164 @@
+# docker-compose.yml (Repositorio: Skyed-Backend)
+#
+# Docker Compose para DESARROLLO LOCAL
+# -----------------------------------------------------------------
+# Stack: PHP 8.4 FPM + Nginx + PostgreSQL 18 + pgAdmin 4 + Redis + Mailpit
+#
+# Antes del primer arranque (una sola vez en tu PC):
+#     docker network create skyed_net
+# Y detén 'php artisan serve' / XAMPP si están usando el puerto 8000.
+
+services:
+    #--- 1. Servicio de la API (PHP-FPM) ---#
+    api:
+        # El nombre del servicio ('api') es el que usa Nginx en 'fastcgi_pass api:9000'
+        # y el de los comandos de la guía ('docker compose exec api ...'). No cambiarlo.
+        build:
+            context: .
+            dockerfile: .docker/php/Dockerfile
+            args:
+                UID: ${UID:-1000}
+                GID: ${GID:-1000}
+        container_name: skyed_api
+        restart: unless-stopped
+        working_dir: /var/www/html
+        volumes:
+            # Sincroniza tu código local con el contenedor en tiempo real
+            - ./:/var/www/html:cached
+            # vendor en un volumen de Docker: en Windows leer miles de archivos de la
+            # carpeta compartida es muy lento (2 s por petición). Se llena con
+            # "docker compose exec api composer install".
+            - skyed_vendor:/var/www/html/vendor
+        # Dentro de Docker los servicios se llaman por su nombre (db, redis, mailpit),
+        # no 127.0.0.1. Estos valores tienen prioridad sobre el .env, así el mismo .env
+        # sigue sirviendo para trabajar sin Docker (php artisan serve).
+        environment:
+            DB_CONNECTION: pgsql
+            DB_HOST: db
+            DB_PORT: 5432
+            REDIS_HOST: redis
+            REDIS_PORT: 6379
+            REDIS_PASSWORD: "null"
+            CACHE_STORE: redis
+            SESSION_DRIVER: redis
+            QUEUE_CONNECTION: redis
+            # Los correos de desarrollo van a Mailpit (http://localhost:8025), no a Gmail.
+            MAIL_MAILER: smtp
+            MAIL_HOST: mailpit
+            MAIL_PORT: 1025
+            MAIL_USERNAME: "null"
+            MAIL_PASSWORD: "null"
+            MAIL_SCHEME: smtp
+        depends_on:
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        networks:
+            - skyed_net
+
+    #--- 2. Servidor Web de la API (Nginx) ---#
+    nginx_api:
+        image: nginx:1.28-alpine
+        container_name: skyed_nginx_api
+        restart: unless-stopped
+        ports:
+            # La API responde en http://localhost:8000 (endpoints en /api)
+            - "${APP_PORT:-8000}:80"
+        volumes:
+            # Nginx solo lee los archivos: se montan en modo lectura (:ro)
+            - ./:/var/www/html:ro
+            - ./.docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+        depends_on:
+            - api
+        networks:
+            - skyed_net
+
+    #--- 3. Base de Datos (PostgreSQL 18) ---#
+    db:
+        image: postgres:18-alpine
+        container_name: skyed_db
+        restart: unless-stopped
+        ports:
+            # 5433 en tu PC -> 5432 en el contenedor (no choca con un PostgreSQL instalado en 5432).
+            # No usar 54321 (lo sugiere la guía): Windows suele reservar ese rango para Hyper-V/WSL.
+            # Solo accesible desde tu PC (127.0.0.1), no desde otros equipos de la red.
+            - "127.0.0.1:${FORWARD_DB_PORT:-5433}:5432"
+        environment:
+            POSTGRES_DB: ${DB_DATABASE:-skyed}
+            POSTGRES_USER: ${DB_USERNAME:-skyed_user}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+        volumes:
+            # ¡PostgreSQL 18 cambió la ruta! Desde la versión 18 el volumen se monta en
+            # /var/lib/postgresql (antes era /var/lib/postgresql/data, que en 18 hace que
+            # el contenedor no arranque).
+            - skyed_pgsql_data:/var/lib/postgresql
+        networks:
+            - skyed_net
+        # La API no arranca hasta que PostgreSQL acepta conexiones
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-skyed_user} -d ${DB_DATABASE:-skyed}"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    #--- 4. Gestor Web de Base de Datos (pgAdmin 4) ---#
+    pgadmin:
+        image: dpage/pgadmin4:latest
+        container_name: skyed_pgadmin
+        restart: unless-stopped
+        ports:
+            # pgAdmin en http://localhost:8081
+            - "127.0.0.1:${PGADMIN_PORT:-8081}:80"
+        environment:
+            # pgAdmin rechaza correos con dominios ".local": usa uno normal (.com, .dev...).
+            PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@skyed.com}
+            PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-secret}
+            PGADMIN_LISTEN_PORT: 80
+        volumes:
+            # Guarda los servidores registrados y las consultas de pgAdmin
+            - skyed_pgadmin_data:/var/lib/pgadmin
+        depends_on:
+            db:
+                condition: service_healthy
+        networks:
+            - skyed_net
+
+    #--- 5. Captura de Correos para Desarrollo (Mailpit) ---#
+    mailpit:
+        image: axllent/mailpit:latest
+        container_name: skyed_mailpit
+        restart: unless-stopped
+        ports:
+            - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025" # SMTP
+            - "127.0.0.1:${MAILPIT_WEB_PORT:-8025}:8025"  # Bandeja web: http://localhost:8025
+        networks:
+            - skyed_net
+
+    #--- 6. Caché, Sesiones y Colas (Redis) ---#
+    redis:
+        image: redis:7-alpine
+        container_name: skyed_redis
+        restart: unless-stopped
+        ports:
+            - "127.0.0.1:${FORWARD_REDIS_PORT:-6380}:6379"
+        networks:
+            - skyed_net
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+# --- Red externa (compartida con el Frontend) y volúmenes de datos ---
+networks:
+    skyed_net:
+        external: true # Creada con: docker network create skyed_net
+
+volumes:
+    skyed_vendor:
+        driver: local
+    skyed_pgsql_data:
+        driver: local
+    skyed_pgadmin_data:
+        driver: local
