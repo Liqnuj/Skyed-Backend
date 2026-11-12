@@ -310,13 +310,12 @@ class EntregaKitController extends Controller
 
         // FIX: usaba $validated['id_e'] y $validated['id_u'], que no vienen en la
         // petición (solo id_i e id_inv): la entrega se guardaba pero respondía 500.
-        $nombreEvento = $inscripcion->evento->nombre_e ?? 'tu evento';
-        \App\Services\NotificacionService::crearSeguro(
-            (int) $inscripcion->id_u,
-            'Kit entregado',
-            'Registramos la entrega de tu kit para «' . $nombreEvento . '». ¡Prepárate para la carrera!',
-            'kit'
-        );
+\App\Services\NotificacionService::crearSeguro(
+    (int) $inscripcion->id_u,
+    'Kit entregado',
+    'Registramos la entrega de tu kit para «' . ($inscripcion->evento->nombre_e ?? 'tu evento') . '».',
+    'kit'
+);
 
         return response()->json([
             'message' => 'Kit entregado correctamente',

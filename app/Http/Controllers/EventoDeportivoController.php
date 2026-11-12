@@ -124,7 +124,22 @@ class EventoDeportivoController extends Controller
 
         // Se guardan todos los datos del formulario (nombre, fecha, precio...),
         // no solo el estado: el formulario de editar ni siquiera lo envía.
-        $evento->update($validated);
+        $antes = [$evento->fecha_e?->toDateString(), (string) $evento->hora_e, (string) $evento->ubicacion_e];
+$evento->update($request->validated());
+$evento->refresh();
+$despues = [$evento->fecha_e?->toDateString(), (string) $evento->hora_e, (string) $evento->ubicacion_e];
+
+if ($antes !== $despues) {
+    \App\Models\Inscripcion::where('id_e', $evento->id_e)
+        ->whereIn('estado_i', ['pendiente', 'confirmada'])
+        ->pluck('id_u')->unique()
+        ->each(fn ($uid) => \App\Services\NotificacionService::crearSeguro(
+            (int) $uid,
+            'Cambió la información de tu evento',
+            'Se actualizó la fecha, hora o lugar de «' . $evento->nombre_e . '». Revísalo en tus inscripciones.',
+            'evento'
+        ));
+}
 
         $this->avisarSiSeInhabilito($evento, $estadoAnterior);
 
@@ -156,13 +171,9 @@ class EventoDeportivoController extends Controller
             'estado_e' => 'required|in:activo,inactivo,inhabilitado',
         ]);
 
-        $estadoAnterior = $evento->estado_e;
-
-        $evento->update([
-            'estado_e' => $validated['estado_e']
-        ]);
-
-        $this->avisarSiSeInhabilito($evento, $estadoAnterior);
+$estadoAnterior = $evento->estado_e;
+$evento->update(['estado_e' => $validated['estado_e']]);
+$this->avisarSiSeInhabilito($evento, $estadoAnterior);
 
         return response()->json([
             'message' => 'Estado del evento actualizado',

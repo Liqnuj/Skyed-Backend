@@ -541,8 +541,8 @@ class InscripcionController extends Controller
             return $resultado;
         }
 
-        
-        \App\Services\NotificacionService::crearSeguro(
+        $resultado->loadMissing('evento');
+\App\Services\NotificacionService::crearSeguro(
     (int) $resultado->id_u,
     'Recibimos tu inscripción',
     'Te inscribiste a «' . ($resultado->evento->nombre_e ?? 'el evento') . '». Se confirma cuando validemos tu pago.',
@@ -697,6 +697,15 @@ class InscripcionController extends Controller
                 ->where('estado_ek', 'pendiente')
                 ->delete();
         });
+
+
+        \App\Services\NotificacionService::crearSeguro(
+    (int) $inscripcion->id_u,
+    'Inscripción cancelada',
+    'Tu inscripción a «' . ($inscripcion->evento->nombre_e ?? 'el evento') . '» fue cancelada.',
+    'inscripcion'
+);
+
 
         return response()->json([
             'message' => 'Inscripción cancelada correctamente'
