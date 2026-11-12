@@ -28,6 +28,7 @@ class UpdateEventoDeportivoRequest extends FormRequest
         'cupos_disponibles_e' => 'sometimes|integer|min:0',
         'estado_e' => 'sometimes|in:activo,inactivo,inhabilitado',
         'id_k' => 'sometimes|nullable|exists:kit,id_k',
+        'ruta_id_re' => 'sometimes|required|integer|exists:ruta_evento,id_re',
     ];
     }
 }

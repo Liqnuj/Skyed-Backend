@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\EventoDeportivo;
+use App\Models\RutaEvento;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage; 
+use Illuminate\Validation\ValidationException;
 use App\Http\Requests\StoreEventoDeportivoRequest;
 use App\Http\Requests\UpdateEventoDeportivoRequest;
 use App\Http\Resources\EventoDeportivoResource;
@@ -80,6 +83,8 @@ class EventoDeportivoController extends Controller
     public function store(StoreEventoDeportivoRequest $request)
     {
         $validated = $request->validated();
+        $rutaId = (int) $validated['ruta_id_re'];
+        unset($validated['ruta_id_re']);
 
         if ($respuesta = $this->kitYaAsignado($validated['id_k'] ?? null)) {
             return $respuesta;
@@ -89,7 +94,19 @@ class EventoDeportivoController extends Controller
         $validated['creado_e'] = now();
         $validated['id_u'] = $request->user()->id_u;
 
-        $evento = EventoDeportivo::create($validated);
+        $evento = DB::transaction(function () use ($validated, $rutaId) {
+            $ruta = RutaEvento::query()->lockForUpdate()->find($rutaId);
+            if (!$ruta || $ruta->id_e !== null) {
+                throw ValidationException::withMessages([
+                    'ruta_id_re' => 'La ruta seleccionada ya está asignada a otro evento.',
+                ]);
+            }
+
+            $evento = EventoDeportivo::create($validated);
+            $ruta->update(['id_e' => $evento->id_e]);
+
+            return $evento;
+        });
 
         return response()->json([
             'message' => 'Evento creado correctamente',
@@ -115,6 +132,8 @@ class EventoDeportivoController extends Controller
         }
 
         $validated = $request->validated();
+        $rutaId = isset($validated['ruta_id_re']) ? (int) $validated['ruta_id_re'] : null;
+        unset($validated['ruta_id_re']);
 
         if ($respuesta = $this->kitYaAsignado($validated['id_k'] ?? null, $evento->id_e)) {
             return $respuesta;
@@ -140,6 +159,22 @@ if ($antes !== $despues) {
             'evento'
         ));
 }
+        DB::transaction(function () use ($evento, $validated, $rutaId): void {
+            if ($rutaId !== null) {
+                $ruta = RutaEvento::query()->lockForUpdate()->find($rutaId);
+                if (!$ruta || ($ruta->id_e !== null && $ruta->id_e !== $evento->id_e)) {
+                    throw ValidationException::withMessages([
+                        'ruta_id_re' => 'La ruta seleccionada ya está asignada a otro evento.',
+                    ]);
+                }
+            }
+
+            // Se guardan todos los datos del formulario, no solo el estado.
+            $evento->update($validated);
+            if ($rutaId !== null) {
+                $ruta->update(['id_e' => $evento->id_e]);
+            }
+        });
 
         $this->avisarSiSeInhabilito($evento, $estadoAnterior);
 

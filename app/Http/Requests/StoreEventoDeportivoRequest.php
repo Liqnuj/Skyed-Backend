@@ -28,6 +28,7 @@ class StoreEventoDeportivoRequest extends FormRequest
         'imagen_e' => 'required|string|max:120',
         'cupos_disponibles_e' => 'required|integer|min:0',
         'id_k' => 'nullable|exists:kit,id_k',
+        'ruta_id_re' => 'required|integer|exists:ruta_evento,id_re',
     ];
 }
     /**
@@ -41,6 +42,8 @@ class StoreEventoDeportivoRequest extends FormRequest
             'categoria_e.in' => 'La categoría debe ser ruta, mtb, gravel, pista o bmx.',
             'fecha_e.date' => 'La fecha no tiene un formato válido.',
             'cupos_disponibles_e.min' => 'Los cupos no pueden ser negativos.',
+            'ruta_id_re.required' => 'Debes asignar una ruta al evento.',
+            'ruta_id_re.exists' => 'La ruta seleccionada ya no está disponible.',
         ];
     }
 }

@@ -1,11 +1,14 @@
 <?php
 
 use App\Models\EventoDeportivo;
+use App\Models\RutaEvento;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 
 function datosEvento(array $overrides = []): array
 {
+    $ruta = RutaEvento::create(['nombre_re' => 'Ruta de prueba', 'estado_re' => 'activo']);
+
     return array_merge([
         'nombre_e' => 'Ciclo Ruta Boyacá',
         'categoria_e' => 'ruta',
@@ -19,6 +22,7 @@ function datosEvento(array $overrides = []): array
         'requisitos_e' => 'Casco obligatorio.',
         'imagen_e' => 'eventos/ciclo-ruta.jpg',
         'cupos_disponibles_e' => 50,
+        'ruta_id_re' => $ruta->id_re,
     ], $overrides);
 }
 
@@ -77,6 +81,31 @@ it('permite a un adminDeportivo crear un evento', function () {
 
     expect(EventoDeportivo::count())->toBe(1);
     expect($response->json('evento.estado'))->toBe('activo');
+    expect(RutaEvento::find($response->json('evento.id'))->id_e)->toBe($response->json('evento.id'));
+});
+
+it('requiere una ruta para crear el evento', function () {
+    $admin = userWithRole('adminDeportivo');
+    $datos = datosEvento();
+    unset($datos['ruta_id_re']);
+
+    $this->actingAs($admin)
+        ->postJson('/api/eventos', $datos)
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('ruta_id_re');
+
+    expect(EventoDeportivo::count())->toBe(0);
+});
+
+it('permite crear una ruta sin evento para asignarla después', function () {
+    $admin = userWithRole('adminDeportivo');
+
+    $response = $this->actingAs($admin)
+        ->postJson('/api/rutas', ['nombre_re' => 'Circuito independiente'])
+        ->assertCreated();
+
+    expect($response->json('ruta.id_e'))->toBeNull();
+    expect(RutaEvento::find($response->json('ruta.id_re'))->id_e)->toBeNull();
 });
 
 it('rechaza una categoría de evento inválida', function () {

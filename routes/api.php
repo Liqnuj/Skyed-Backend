@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\RutaGpxController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
@@ -153,6 +154,8 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('role.context:adminDeportivo|adminSocial');
     Route::post('/users/{id}/roles', [UserRoleController::class, 'store'])
         ->middleware('role.context:adminDeportivo|adminSocial');
+        Route::post('/deportivo/gpx', [RutaGpxController::class, 'store']);
+Route::get('/deportivo/gpx',  [RutaGpxController::class, 'show']);   // NUEVA
     Route::delete('/users/{id}/roles/{rolId}', [UserRoleController::class, 'destroy'])
         ->middleware('role.context:adminDeportivo|adminSocial');
 
@@ -182,7 +185,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/eventos/{eventoId}/estaciones', [EstacionController::class, 'index']);
     Route::get('/estaciones/{id}', [EstacionController::class, 'show']);
     Route::get('/eventos/{eventoId}/rutas', [RutaEventoController::class, 'index']);
-    Route::get('/rutas/{id}', [RutaEventoController::class, 'show']);
+    Route::get('/rutas/{id}', [RutaEventoController::class, 'show'])->whereNumber('id');
     Route::get('/resultados', [ResultadoController::class, 'index']);
     Route::get('/resultados/{id}', [ResultadoController::class, 'show']);
     Route::get('/tipos-evento', [TipoEventoController::class, 'index']);
@@ -343,6 +346,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Subida de la imagen de un evento deportivo (panel /deportivo/admin)
         Route::post('/deportivo/imagenes', [SocialImagenController::class, 'storeDeportivo']);
+        Route::post('/deportivo/gpx', [RutaGpxController::class, 'store']);
 
         // Inscritos y dinero recaudado por evento (tabla de eventos del panel)
         Route::get('/estadisticas/eventos-deportivos', [EstadisticasEventoController::class, 'deportivos']);
@@ -376,6 +380,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/estaciones/{id}', [EstacionController::class, 'destroy']);
 
         // Rutas, Resultados y Tipos de Evento
+        Route::get('/rutas-disponibles', [RutaEventoController::class, 'disponibles']);
+        Route::post('/rutas', [RutaEventoController::class, 'storeDisponible']);
         Route::post('/eventos/{eventoId}/rutas', [RutaEventoController::class, 'store']);
         Route::put('/rutas/{id}', [RutaEventoController::class, 'update']);
         Route::delete('/rutas/{id}', [RutaEventoController::class, 'destroy']);

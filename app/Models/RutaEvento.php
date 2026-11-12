@@ -24,6 +24,7 @@ class RutaEvento extends Model
 
     protected $casts = [
         'precio_re' => 'decimal:2',
+        'id_e' => 'integer',
     ];
 
     public function evento(): BelongsTo
