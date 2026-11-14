@@ -37,7 +37,7 @@ class Tonos
             in_array($v, ['inactivo', 'cancelada', 'cancelado', 'rechazado', 'rechazada', 'descalificado',
                 'inhabilitado', 'vencida', 'si'], true) => 'mal',
             in_array($v, ['pendiente', 'en revision', 'en proceso', 'por validar', 'en curso'], true) => 'aviso',
-            in_array($v, ['enviado', 'enviada', 'recibido', 'programado'], true) => 'info',
+            in_array($v, ['enviado', 'enviada', 'recibido', 'programado', 'finalizado', 'finalizada'], true) => 'info',
             default => 'neutro',
         };
     }

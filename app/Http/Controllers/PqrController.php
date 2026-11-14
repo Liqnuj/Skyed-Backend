@@ -411,8 +411,11 @@ class PqrController extends Controller
     /**
      * POST /pqr/{id}/responder (solo el dueño de la PQR).
      *
-     * El usuario escribe un mensaje más en su propia PQR mientras no esté
-     * resuelta ni cerrada. Queda en el historial como "respuesta_cliente".
+     * El usuario puede seguir escribiendo en su PQR hasta que ÉL la dé por
+     * resuelta (botón "Mi solicitud quedó resuelta" → POST /pqr/{id}/conforme).
+     * Solo una PQR cerrada ya no recibe mensajes. Si el equipo la había
+     * marcado «Resuelta» y el usuario escribe, se reabre «En proceso» para que
+     * el equipo la retome. Queda en el historial como "respuesta_cliente".
      */
     public function responder(Request $request, $id)
     {
@@ -431,9 +434,9 @@ class PqrController extends Controller
             ], 403);
         }
 
-        if (in_array($pqr->estado_pqr, Pqr::ESTADOS_FINALES, true)) {
+        if ($pqr->estado_pqr === 'cerrado') {
             return $this->rechazo(
-                'Esta solicitud ya fue resuelta o cerrada. '
+                'Esta solicitud ya está cerrada. '
                 . 'Si necesitas algo más, radica una nueva PQR.'
             );
         }
@@ -448,19 +451,75 @@ class PqrController extends Controller
             return $this->rechazo('Escribe tu mensaje.');
         }
 
-        $seguimiento = $pqr->seguimientos()->create([
-            'id_admin' => null,
-            'estado_anterior' => $pqr->estado_pqr,
-            'estado_nuevo' => $pqr->estado_pqr,
-            'tipo_evento' => 'respuesta_cliente',
-            'comentario_publico' => $mensaje,
-            'nota_interna' => null,
-        ]);
+        // Si estaba «Resuelta» y el usuario sigue escribiendo, no quedó resuelta para él: se reabre.
+        $estadoAnterior = $pqr->estado_pqr;
+        $reabre = $estadoAnterior === 'resuelto';
+
+        $seguimiento = DB::transaction(function () use ($pqr, $estadoAnterior, $reabre, $mensaje) {
+            if ($reabre) {
+                $pqr->update(['estado_pqr' => 'en_proceso']);
+            }
+
+            return $pqr->seguimientos()->create([
+                'id_admin' => null,
+                'estado_anterior' => $estadoAnterior,
+                'estado_nuevo' => $reabre ? 'en_proceso' : $estadoAnterior,
+                'tipo_evento' => 'respuesta_cliente',
+                'comentario_publico' => $mensaje,
+                'nota_interna' => null,
+            ]);
+        });
 
         return response()->json([
-            'message' => 'Tu mensaje fue enviado.',
+            'message' => $reabre
+                ? 'Tu mensaje fue enviado. La solicitud volvió a «En proceso» para que el equipo la revise.'
+                : 'Tu mensaje fue enviado.',
+            'reabierta' => $reabre,
+            'estado_pqr' => $pqr->estado_pqr,
             'seguimiento' => $this->presentarSeguimiento($seguimiento, false),
         ], 201);
+    }
+
+    /**
+     * POST /pqr/{id}/conforme (solo el dueño de la PQR).
+     *
+     * El usuario indica que su solicitud quedó resuelta y la cierra. Desde ahí
+     * ya no se puede escribir más (para algo nuevo, radica otra PQR).
+     */
+    public function conforme(Request $request, $id)
+    {
+        $pqr = Pqr::find($id);
+
+        if (!$pqr) {
+            return response()->json(['message' => 'PQR no encontrada'], 404);
+        }
+
+        if ((int) $pqr->id_u !== (int) $request->user()->id_u) {
+            return response()->json(['message' => 'Solo puedes cerrar tus propias solicitudes.'], 403);
+        }
+
+        if ($pqr->estado_pqr === 'cerrado') {
+            return $this->rechazo('Esta solicitud ya estaba cerrada.');
+        }
+
+        $estadoAnterior = $pqr->estado_pqr;
+
+        DB::transaction(function () use ($pqr, $estadoAnterior) {
+            $pqr->update(['estado_pqr' => 'cerrado']);
+            $pqr->seguimientos()->create([
+                'id_admin' => null,
+                'estado_anterior' => $estadoAnterior,
+                'estado_nuevo' => 'cerrado',
+                'tipo_evento' => 'cerrada_cliente',
+                'comentario_publico' => 'El usuario indicó que su solicitud quedó resuelta y la cerró.',
+                'nota_interna' => null,
+            ]);
+        });
+
+        return response()->json([
+            'message' => '¡Gracias! Tu solicitud quedó cerrada como resuelta.',
+            'pqr' => $this->cargarYPresentar($pqr->fresh(), false),
+        ]);
     }
 
     /**

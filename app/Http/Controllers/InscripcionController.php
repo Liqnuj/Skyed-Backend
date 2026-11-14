@@ -253,6 +253,13 @@ class InscripcionController extends Controller
                 ], 404);
             }
 
+            if ($evento->estado_e === 'finalizado'
+                || ($evento->fecha_e && $evento->fecha_e->toDateString() < EventoDeportivo::hoyLocal())) {
+                return response()->json([
+                    'message' => 'Este evento ya finalizó: no recibe más inscripciones.'
+                ], 422);
+            }
+
             if ($evento->estado_e !== 'activo') {
                 return response()->json([
                     'message' => 'El evento no está activo'

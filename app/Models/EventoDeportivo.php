@@ -104,4 +104,36 @@ class EventoDeportivo extends Model
             'id_e'
         );
     }
+
+    /** Zona horaria de los eventos (config/app.php está en UTC; las fechas de los eventos son de Colombia). */
+    public const ZONA_HORARIA = 'America/Bogota';
+
+    /** Estados posibles de un evento deportivo. */
+    public const ESTADOS = ['activo', 'inactivo', 'inhabilitado', 'finalizado'];
+
+    /** Fecha de hoy en Colombia (YYYY-MM-DD). */
+    public static function hoyLocal(): string
+    {
+        return now(self::ZONA_HORARIA)->toDateString();
+    }
+
+    /** ¿Ya llegó (o pasó) el día del evento? Solo entonces se puede finalizar. */
+    public function yaEsElDia(): bool
+    {
+        return $this->fecha_e !== null && $this->fecha_e->toDateString() <= self::hoyLocal();
+    }
+
+    /**
+     * Los eventos activos o inactivos cuya fecha ya pasó quedan "finalizado".
+     * Se llama al listar/consultar eventos y cada noche (eventos:finalizar),
+     * así funciona aunque el programador de tareas no esté corriendo.
+     * Los inhabilitados no se tocan: se cancelaron, no se realizaron.
+     */
+    public static function finalizarVencidos(): int
+    {
+        return static::query()
+            ->whereIn('estado_e', ['activo', 'inactivo'])
+            ->whereDate('fecha_e', '<', self::hoyLocal())
+            ->update(['estado_e' => 'finalizado', 'updated_at' => now()]);
+    }
 }

@@ -44,12 +44,27 @@ class EventoDeportivoController extends Controller
      */
     public function index(Request $request)
     {
-        $eventos = EventoDeportivo::with([
+        // Los eventos cuya fecha ya pasó quedan "finalizado" antes de listarlos.
+        EventoDeportivo::finalizarVencidos();
+
+        $consulta = EventoDeportivo::with([
             'kit',
             'creador',
             'categorias',
             'patrocinadores',
-        ])->paginate($this->perPage($request));
+        ]);
+
+        // ?disponibles=1 (páginas públicas): solo eventos activos de hoy en adelante,
+        // del más cercano al más lejano. Antes se mostraban también los inactivos,
+        // inhabilitados y pasados, y el usuario intentaba inscribirse en ellos.
+        if ($request->boolean('disponibles')) {
+            $consulta->where('estado_e', 'activo')
+                ->whereDate('fecha_e', '>=', EventoDeportivo::hoyLocal())
+                ->orderBy('fecha_e')
+                ->orderBy('hora_e');
+        }
+
+        $eventos = $consulta->paginate($this->perPage($request));
 
         return EventoDeportivoResource::collection($eventos);
     }
@@ -59,6 +74,8 @@ class EventoDeportivoController extends Controller
      */
     public function show(int $id)
     {
+        EventoDeportivo::finalizarVencidos();
+
         $evento = EventoDeportivo::with([
             'kit',
             'creador',
@@ -140,25 +157,17 @@ class EventoDeportivoController extends Controller
         }
 
         $estadoAnterior = $evento->estado_e;
-
-        // Se guardan todos los datos del formulario (nombre, fecha, precio...),
-        // no solo el estado: el formulario de editar ni siquiera lo envía.
         $antes = [$evento->fecha_e?->toDateString(), (string) $evento->hora_e, (string) $evento->ubicacion_e];
-$evento->update($request->validated());
-$evento->refresh();
-$despues = [$evento->fecha_e?->toDateString(), (string) $evento->hora_e, (string) $evento->ubicacion_e];
 
-if ($antes !== $despues) {
-    \App\Models\Inscripcion::where('id_e', $evento->id_e)
-        ->whereIn('estado_i', ['pendiente', 'confirmada'])
-        ->pluck('id_u')->unique()
-        ->each(fn ($uid) => \App\Services\NotificacionService::crearSeguro(
-            (int) $uid,
-            'Cambió la información de tu evento',
-            'Se actualizó la fecha, hora o lugar de «' . $evento->nombre_e . '». Revísalo en tus inscripciones.',
-            'evento'
-        ));
-}
+        // Un evento que ya finalizó y se reprograma para una fecha futura vuelve a quedar activo.
+        if ($estadoAnterior === 'finalizado' && isset($validated['fecha_e'])
+            && \Illuminate\Support\Carbon::parse($validated['fecha_e'])->toDateString() > EventoDeportivo::hoyLocal()) {
+            $validated['estado_e'] = 'activo';
+        }
+
+        // FIX: antes los datos se guardaban ANTES de revisar la ruta, así que con una
+        // ruta inválida el evento quedaba modificado igual. Ahora todo va en una sola
+        // transacción: si la ruta no sirve, no se guarda nada.
         DB::transaction(function () use ($evento, $validated, $rutaId): void {
             if ($rutaId !== null) {
                 $ruta = RutaEvento::query()->lockForUpdate()->find($rutaId);
@@ -175,6 +184,21 @@ if ($antes !== $despues) {
                 $ruta->update(['id_e' => $evento->id_e]);
             }
         });
+
+        // Si cambió la fecha, la hora o el lugar, se avisa a los inscritos.
+        $evento->refresh();
+        $despues = [$evento->fecha_e?->toDateString(), (string) $evento->hora_e, (string) $evento->ubicacion_e];
+        if ($antes !== $despues) {
+            \App\Models\Inscripcion::where('id_e', $evento->id_e)
+                ->whereIn('estado_i', ['pendiente', 'confirmada'])
+                ->pluck('id_u')->unique()
+                ->each(fn ($uid) => \App\Services\NotificacionService::crearSeguro(
+                    (int) $uid,
+                    'Cambió la información de tu evento',
+                    'Se actualizó la fecha, hora o lugar de «' . $evento->nombre_e . '». Revísalo en tus inscripciones.',
+                    'evento'
+                ));
+        }
 
         $this->avisarSiSeInhabilito($evento, $estadoAnterior);
 
@@ -203,15 +227,35 @@ if ($antes !== $despues) {
         }
 
         $validated = $request->validate([
-            'estado_e' => 'required|in:activo,inactivo,inhabilitado',
+            'estado_e' => 'required|in:' . implode(',', EventoDeportivo::ESTADOS),
+        ], [
+            'estado_e.in' => 'El estado debe ser activo, inactivo, inhabilitado o finalizado.',
         ]);
+        $nuevo = $validated['estado_e'];
+        $estadoAnterior = $evento->estado_e;
 
-$estadoAnterior = $evento->estado_e;
-$evento->update(['estado_e' => $validated['estado_e']]);
-$this->avisarSiSeInhabilito($evento, $estadoAnterior);
+        // Finalizar: solo desde el día del evento (antes no se ha realizado;
+        // para cancelarlo está "inhabilitado").
+        if ($nuevo === 'finalizado' && $estadoAnterior !== 'finalizado' && !$evento->yaEsElDia()) {
+            return response()->json([
+                'message' => 'Solo puedes finalizar el evento desde el día en que se realiza ('
+                    . $evento->fecha_e?->format('d/m/Y') . '). Si se canceló, márcalo como inhabilitado.',
+            ], 422);
+        }
+
+        // Un evento finalizado no vuelve a abrirse con una fecha que ya pasó:
+        // para repetirlo hay que reprogramarlo (editar la fecha).
+        if ($estadoAnterior === 'finalizado' && $nuevo !== 'finalizado' && $evento->fecha_e?->toDateString() < EventoDeportivo::hoyLocal()) {
+            return response()->json([
+                'message' => 'Este evento ya finalizó. Para volver a abrirlo, edita el evento y ponle una fecha nueva.',
+            ], 422);
+        }
+
+        $evento->update(['estado_e' => $nuevo]);
+        $this->avisarSiSeInhabilito($evento, $estadoAnterior);
 
         return response()->json([
-            'message' => 'Estado del evento actualizado',
+            'message' => $nuevo === 'finalizado' ? 'Evento finalizado' : 'Estado del evento actualizado',
             'evento' => new EventoDeportivoResource($evento)
         ]);
     }

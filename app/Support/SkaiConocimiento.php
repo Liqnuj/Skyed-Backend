@@ -286,7 +286,7 @@ GUÍA DEL PANEL ADMIN DEPORTIVO (/deportivo/admin). Menú lateral: Inicio, Event
   2. Elegir el **Evento** al que pertenece con el buscador (obligatorio).
   3. Llenar **Nombre**, **Precio del kit (COP)** (se suma al total del participante que lo pida), **Fecha de entrega**, **Lugar de entrega** y **Contenido**.
   4. Subir la foto del kit (obligatoria, mejor cuadrada) y agregar las tallas con su cantidad (al menos una). Guardar.
-  5. La tabla de Kits muestra imagen, stock, precio y evento, y se puede filtrar por stock y lugar de entrega.
+  5. La tabla de Kits muestra imagen, cantidades, precio y evento, y se puede filtrar por cantidades y lugar de entrega.
 - Validar pagos: **Inscripciones y pagos**, filtro **Pagos por validar**; el ícono del ojo (**Ver detalle**) muestra el comprobante; luego **Confirmar pago** (✓) o **Rechazar pago** (✕). Rechazar cancela la inscripción y devuelve el cupo. Al confirmar, el QR del participante queda activo.
 - Control de acceso (día del evento): **Control de acceso**, **Escanear con la cámara** o escribir el **Código del QR** para validar la entrada.
 - Resultados: **Resultados** y **Registrar resultado**: evento, participante, **Tiempo final (hh:mm:ss)**, posición general, estado y, si aplica, categoría y posición en la categoría.

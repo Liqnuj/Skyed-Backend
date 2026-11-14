@@ -133,9 +133,11 @@ class AuthController extends Controller
             ], 500);
         }
 
+        // PRIVACIDAD: antes también se devolvía 'email_real', o sea que cualquiera que
+        // escribiera un número de documento obtenía el correo completo de esa persona.
+        // Los pasos siguientes ahora aceptan el documento en lugar del correo.
         return response()->json([
             'message' => 'Código de verificación enviado con éxito',
-            'email_real' => $user->correo_u,
             'email_enmascarado' => $emailEnmascarado
         ], 200);
     }
@@ -188,11 +190,13 @@ class AuthController extends Controller
     public function verificarCodigo(Request $request): JsonResponse
     {
         $request->validate([
-            'correo_u' => 'required|email',
+            'correo_u' => 'required_without:documento_u|nullable|email',
+            'tipo_documento_u' => 'required_with:documento_u|nullable|string|max:30',
+            'documento_u' => 'required_without:correo_u|nullable|digits_between:5,12',
             'token' => 'required|string'
         ]);
 
-        $user = ReglasUsuario::buscarPorCorreo($request->correo_u);
+        $user = $this->usuarioDeRecuperacion($request->only(['correo_u', 'tipo_documento_u', 'documento_u']));
 
         if ($error = $this->validarCodigoRecuperacion($user, $request->token)) {
             return $error;
@@ -210,7 +214,7 @@ class AuthController extends Controller
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
         $validated = $request->validated();
-        $user = ReglasUsuario::buscarPorCorreo($validated['correo_u']);
+        $user = $this->usuarioDeRecuperacion($validated);
 
         if ($error = $this->validarCodigoRecuperacion($user, $validated['token'])) {
             return $error;
@@ -350,6 +354,22 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'El código ha expirado. Por favor, solicita uno nuevo.'
             ], 400);
+        }
+
+        return null;
+    }
+
+    /** Quién recupera la contraseña: por correo o por tipo y número de documento. */
+    private function usuarioDeRecuperacion(array $datos): ?User
+    {
+        if (!empty($datos['correo_u'])) {
+            return ReglasUsuario::buscarPorCorreo((string) $datos['correo_u']);
+        }
+
+        if (!empty($datos['documento_u'])) {
+            return User::where('tipo_documento_u', $datos['tipo_documento_u'] ?? '')
+                ->where('documento_u', (int) $datos['documento_u'])
+                ->first();
         }
 
         return null;

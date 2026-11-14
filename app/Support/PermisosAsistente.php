@@ -95,6 +95,8 @@ class PermisosAsistente
 
         return match (true) {
             $ruta === '/deportivo/imagenes' => ['eventos'],
+            // Resultados de todo un evento (/eventos/{id}/resultados/...) son de la sección Resultados.
+            (bool) preg_match('#^/eventos/\d+/resultados(/|$)#', $ruta) => ['resultados'],
             str_starts_with($ruta, '/eventos/') || $ruta === '/eventos',
             str_starts_with($ruta, '/categorias/') || $ruta === '/categorias',
             str_starts_with($ruta, '/patrocinadores/') || $ruta === '/patrocinadores',

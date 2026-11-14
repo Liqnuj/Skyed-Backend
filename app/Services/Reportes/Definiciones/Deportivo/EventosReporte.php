@@ -45,8 +45,8 @@ class EventosReporte extends Reporte
         return [
             'estado' => [
                 'etiqueta' => 'Estado',
-                'regla' => ['nullable', 'in:activo,inactivo,inhabilitado'],
-                'valores' => ['activo' => 'Activo', 'inactivo' => 'Inactivo', 'inhabilitado' => 'Inhabilitado'],
+                'regla' => ['nullable', 'in:activo,inactivo,inhabilitado,finalizado'],
+                'valores' => ['activo' => 'Activo', 'inactivo' => 'Inactivo', 'inhabilitado' => 'Inhabilitado', 'finalizado' => 'Finalizado'],
             ],
             'categoria' => [
                 'etiqueta' => 'Categoría',
@@ -68,6 +68,9 @@ class EventosReporte extends Reporte
 
     protected function consulta(array $filtros): Builder
     {
+        // El reporte muestra el mismo estado que el panel (los vencidos ya como "finalizado").
+        EventoDeportivo::finalizarVencidos();
+
         $q = EventoDeportivo::query()
             ->with('kit')
             ->withCount('categorias')
