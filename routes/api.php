@@ -101,6 +101,15 @@ Route::get('/ambientes/{id}', [AmbienteController::class, 'show']);
 Route::get('/eventos-sociales', [EventoRealizadoController::class, 'index']);
 Route::get('/eventos-sociales/{id}', [EventoRealizadoController::class, 'show']);
 
+// Lectura pública que necesitan las páginas sin sesión (antes respondían 401 a los visitantes):
+// la ruta del evento en su detalle, la página de Resultados (solo oficiales y sin datos
+// personales, ver ResultadoController) y las opciones del formulario de Reservar.
+Route::get('/eventos/{eventoId}/rutas', [RutaEventoController::class, 'index']);
+Route::get('/resultados', [ResultadoController::class, 'index']);
+Route::get('/resultados/{id}', [ResultadoController::class, 'show']);
+Route::get('/tipos-evento', [TipoEventoController::class, 'index']);
+Route::get('/servicios', [ServicioController::class, 'index']);
+
 // Asistente virtual SKAI (funciona para visitantes sin sesión también).
 // Throttle para no dejar la key de Gemini abierta a abuso.
 Route::post('/asistente', [SkaiController::class, 'responder'])->middleware('throttle:20,1,skai');
@@ -184,13 +193,8 @@ Route::get('/deportivo/gpx',  [RutaGpxController::class, 'show']);   // NUEVA
     Route::get('/entregas-kit/{id}', [EntregaKitController::class, 'show']);
     Route::get('/eventos/{eventoId}/estaciones', [EstacionController::class, 'index']);
     Route::get('/estaciones/{id}', [EstacionController::class, 'show']);
-    Route::get('/eventos/{eventoId}/rutas', [RutaEventoController::class, 'index']);
     Route::get('/rutas/{id}', [RutaEventoController::class, 'show'])->whereNumber('id');
-    Route::get('/resultados', [ResultadoController::class, 'index']);
-    Route::get('/resultados/{id}', [ResultadoController::class, 'show']);
-    Route::get('/tipos-evento', [TipoEventoController::class, 'index']);
     Route::get('/tipos-evento/{id}', [TipoEventoController::class, 'show']);
-    Route::get('/servicios', [ServicioController::class, 'index']);
     Route::get('/servicios/{id}', [ServicioController::class, 'show']);
     Route::get('/pagos', [PagoController::class, 'index']);
     Route::get('/pagos/{id}', [PagoController::class, 'show']);
@@ -247,7 +251,9 @@ Route::get('/deportivo/gpx',  [RutaGpxController::class, 'show']);   // NUEVA
     Route::get('/pqr/{id}', [PqrController::class, 'show']);
     Route::post('/pqr', [PqrController::class, 'store']);
     
-    Route::post('/pqr/{id}/responder', [PqrController::class, 'responder'])->middleware('throttle:20,1');
+    Route::post('/pqr/{id}/responder', [PqrController::class, 'responder'])->middleware('throttle:20,1,pqr-responder');
+    // El usuario da por resuelta su PQR y la cierra (solo él decide cuándo quedó resuelta).
+    Route::post('/pqr/{id}/conforme', [PqrController::class, 'conforme'])->middleware('throttle:20,1,pqr-conforme');
 
     // PQR: gestión del administrador social (el backend valida el flujo).
     Route::post('/pqr/{id}/abrir', [PqrController::class, 'abrir'])
@@ -386,6 +392,9 @@ Route::get('/deportivo/gpx',  [RutaGpxController::class, 'show']);   // NUEVA
         Route::put('/rutas/{id}', [RutaEventoController::class, 'update']);
         Route::delete('/rutas/{id}', [RutaEventoController::class, 'destroy']);
         Route::post('/resultados', [ResultadoController::class, 'store']);
+        // Resultados de todo un evento en una sola pantalla: posiciones automáticas por tiempo
+        Route::get('/eventos/{eventoId}/resultados/tablero', [ResultadoController::class, 'tablero'])->whereNumber('eventoId');
+        Route::post('/eventos/{eventoId}/resultados/lote', [ResultadoController::class, 'guardarLote'])->whereNumber('eventoId');
         Route::put('/resultados/{id}', [ResultadoController::class, 'update']);
         Route::delete('/resultados/{id}', [ResultadoController::class, 'destroy']);
         Route::post('/tipos-evento', [TipoEventoController::class, 'store']);

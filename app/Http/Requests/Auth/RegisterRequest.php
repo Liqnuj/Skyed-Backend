@@ -42,13 +42,31 @@ class RegisterRequest extends FormRequest
                 'acepta_privacidad' => 'required|accepted',
             // Verificación "No soy un robot": la imagen (captcha_id) y lo que
             // escribió la persona (captcha). Ver App\Support\GeneradorCaptcha.
-            'captcha_id' => config('services.captcha.enabled') ? ['required', 'string', 'max:64'] : ['nullable'],
-            'captcha' => config('services.captcha.enabled')
+            // Un administrador con sesión que crea la cuenta desde su panel no
+            // resuelve captcha (antes la creación desde el panel fallaba por eso).
+            'captcha_id' => $this->pideCaptcha() ? ['required', 'string', 'max:64'] : ['nullable'],
+            'captcha' => $this->pideCaptcha()
                 ? ['required', 'string', 'max:20', new CaptchaValido()]
                 : ['nullable'],
 
 
         ];
+    }
+
+    /**
+     * El captcha se pide en el registro público. Si quien llama es un
+     * administrador con sesión (crea la cuenta desde el panel de Usuarios),
+     * no se pide: ya está identificado y no es un robot.
+     */
+    private function pideCaptcha(): bool
+    {
+        if (!config('services.captcha.enabled')) {
+            return false;
+        }
+
+        $quien = auth('sanctum')->user();
+
+        return !($quien instanceof \App\Models\User && $quien->esAdministrador());
     }
 
     public function messages(): array

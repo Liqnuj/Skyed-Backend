@@ -19,14 +19,16 @@ class UpdateEventoDeportivoRequest extends FormRequest
         'precio_e' => 'sometimes|numeric|min:0',
         'distancia_e' => 'sometimes|nullable|string|max:30',
         'desnivel_e' => 'sometimes|nullable|string|max:30',
-        'fecha_e' => 'sometimes|date',
+        'fecha_e' => ['sometimes', 'date', new \App\Rules\FechaEventoFutura(
+            \App\Models\EventoDeportivo::find((int) $this->route('id'))?->fecha_e?->toDateString()
+        )],
         'hora_e' => 'sometimes',
         'ubicacion_e' => 'sometimes|string|max:120',
         'descripcion_e' => 'sometimes|string|max:255',
         'requisitos_e' => 'sometimes|string|max:255',
         'imagen_e' => 'sometimes|string|max:120',
         'cupos_disponibles_e' => 'sometimes|integer|min:0',
-        'estado_e' => 'sometimes|in:activo,inactivo,inhabilitado',
+        'estado_e' => 'sometimes|in:activo,inactivo,inhabilitado,finalizado',
         'id_k' => 'sometimes|nullable|exists:kit,id_k',
         'ruta_id_re' => 'sometimes|required|integer|exists:ruta_evento,id_re',
     ];

@@ -16,6 +16,16 @@ class StoreInscripcionRequest extends FormRequest
     /** "300 123-4567" o "(300) 1234567" -> "3001234567", igual que en el registro. */
     protected function prepareForValidation(): void
     {
+        // Si el evento ya finalizó se avisa de una vez, antes de revisar el
+        // formulario (no tiene sentido pedir que lo corrija para luego rechazarlo).
+        $evento = \App\Models\EventoDeportivo::find((int) $this->route('eventoId'));
+        if ($evento && ($evento->estado_e === 'finalizado'
+            || ($evento->fecha_e && $evento->fecha_e->toDateString() < \App\Models\EventoDeportivo::hoyLocal()))) {
+            throw new \Illuminate\Http\Exceptions\HttpResponseException(response()->json([
+                'message' => 'Este evento ya finalizó: no recibe más inscripciones.',
+            ], 422));
+        }
+
         $limpiar = fn ($v) => is_string($v) ? preg_replace('/[\s\-()]/', '', $v) : $v;
 
         $datos = [

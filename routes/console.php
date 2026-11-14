@@ -80,3 +80,13 @@ Artisan::command('skyed:copia-seguridad {--conservar=14 : Cuántas copias autom�
 
 use Illuminate\Support\Facades\Schedule;
 Schedule::command('notificaciones:recordatorios-deportivo')->dailyAt('08:00');
+
+// Cada noche: los eventos deportivos cuya fecha ya pasó quedan "finalizado".
+// (También se hace solo al consultar los eventos, por si el programador no corre.)
+Artisan::command('eventos:finalizar', function () {
+    $n = \App\Models\EventoDeportivo::finalizarVencidos();
+    $this->info("✓ Eventos finalizados: {$n}.");
+
+    return 0;
+})->purpose('Marca como finalizados los eventos deportivos cuya fecha ya pasó');
+Schedule::command('eventos:finalizar')->dailyAt('00:10')->timezone(\App\Models\EventoDeportivo::ZONA_HORARIA);

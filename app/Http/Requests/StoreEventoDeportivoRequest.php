@@ -20,7 +20,7 @@ class StoreEventoDeportivoRequest extends FormRequest
         'precio_e' => 'required|numeric|min:0',
         'distancia_e' => 'nullable|string|max:30',
         'desnivel_e' => 'nullable|string|max:30',
-        'fecha_e' => 'required|date',
+        'fecha_e' => ['required', 'date', new \App\Rules\FechaEventoFutura()],
         'hora_e' => 'required',
         'ubicacion_e' => 'required|string|max:120',
         'descripcion_e' => 'required|string|max:255',
@@ -40,6 +40,7 @@ class StoreEventoDeportivoRequest extends FormRequest
         return [
             'nombre_e.required' => 'El nombre del evento es obligatorio.',
             'categoria_e.in' => 'La categoría debe ser ruta, mtb, gravel, pista o bmx.',
+            'fecha_e.required' => 'La fecha del evento es obligatoria.',
             'fecha_e.date' => 'La fecha no tiene un formato válido.',
             'cupos_disponibles_e.min' => 'Los cupos no pueden ser negativos.',
             'ruta_id_re.required' => 'Debes asignar una ruta al evento.',

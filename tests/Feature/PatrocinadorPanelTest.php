@@ -70,14 +70,14 @@ it('permite al admin deportivo crear rutas y estaciones asociadas a un evento', 
             'archivo_gpx_re' => 'https://example.test/ruta.gpx',
         ])
         ->assertCreated()
-        ->assertJsonPath('ruta.id_e', (string) $evento->id_e)
+        ->assertJsonPath('ruta.id_e', $evento->id_e)
         ->assertJsonPath('ruta.nombre_re', 'Ruta corta');
 
     $this->actingAs($admin)
         ->postJson("/api/eventos/{$evento->id_e}/estaciones", [
             'nombre_est' => 'Punto de hidratación',
             'tipo_est' => 'hidratacion',
-            'kilometro_est' => '10 km',
+            'kilometro_est' => 10,
             'latitud_est' => 5.5353,
             'longitud_est' => -73.3678,
             'estado_est' => 'activa',

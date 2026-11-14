@@ -23,7 +23,7 @@ class KitsReporte extends Reporte
         return [
             new Columna('id', 'ID', Columna::ENTERO, 6),
             new Columna('nombre', 'Nombre', Columna::TEXTO, 22),
-            new Columna('stock', 'Stock', Columna::ENTERO, 8),
+            new Columna('stock', 'Cantidades', Columna::ENTERO, 8),
             new Columna('entrega', 'Entrega', Columna::FECHA, 11),
             new Columna('lugar', 'Lugar', Columna::TEXTO, 20),
             new Columna('contenido', 'Contenido', Columna::TEXTO, 34),
@@ -37,9 +37,9 @@ class KitsReporte extends Reporte
     {
         return [
             'stock' => [
-                'etiqueta' => 'Stock',
+                'etiqueta' => 'Cantidades',
                 'regla' => ['nullable', 'in:con,bajo,agotado'],
-                'valores' => ['con' => 'Con stock', 'bajo' => 'Stock bajo', 'agotado' => 'Agotado'],
+                'valores' => ['con' => 'Con cantidades disponibles', 'bajo' => 'Pocas cantidades', 'agotado' => 'Agotado'],
             ],
             'lugar' => [
                 'etiqueta' => 'Lugar de entrega',

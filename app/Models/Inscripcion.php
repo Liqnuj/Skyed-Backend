@@ -119,6 +119,16 @@ class Inscripcion extends Model
         );
     }
 
+    /** Resultado del participante en el evento (uno por inscripción). */
+    public function resultado(): HasOne
+    {
+        return $this->hasOne(
+            Resultado::class,
+            'id_i',
+            'id_i'
+        );
+    }
+
     public function pago(): HasOne
     {
         return $this->hasOne(

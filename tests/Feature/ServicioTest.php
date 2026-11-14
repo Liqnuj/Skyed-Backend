@@ -3,8 +3,14 @@
 use App\Models\Servicio;
 use function Pest\Laravel\getJson;
 
-it('requiere autenticación para listar servicios', function () {
-    getJson('/api/servicios')->assertStatus(401);
+// El catálogo de servicios es público: lo muestra la página Reservar a los visitantes.
+// Crear, editar y borrar servicios sigue siendo solo del administrador.
+it('lista los servicios sin iniciar sesión (catálogo público)', function () {
+    getJson('/api/servicios')->assertOk();
+});
+
+it('no deja crear servicios sin autenticación', function () {
+    \Pest\Laravel\postJson('/api/servicios', ['nombre_s' => 'X'])->assertStatus(401);
 });
 
 it('lista servicios paginados a un usuario autenticado', function () {
