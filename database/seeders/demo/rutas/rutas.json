@@ -1,0 +1,674 @@
+{
+  "trucha-larga": {
+    "nombre": "Ruta de la Trucha y la Cebolla — Ruta larga",
+    "distancia_km": 54.9,
+    "desnivel_m": 1068,
+    "altitud_max_m": 3468,
+    "estaciones": [
+      {
+        "tipo": "control",
+        "nombre": "Salida y control de partida",
+        "lat": 5.519492,
+        "lon": -72.883562,
+        "km": 0,
+        "ele": 3039
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 1",
+        "lat": 5.602689,
+        "lon": -72.866976,
+        "km": 16.5,
+        "ele": 3448
+      },
+      {
+        "tipo": "primeros_auxilios",
+        "nombre": "Puesto de primeros auxilios",
+        "lat": 5.530856,
+        "lon": -72.884103,
+        "km": 27.5,
+        "ele": 3021
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 2",
+        "lat": 5.494932,
+        "lon": -72.952926,
+        "km": 38.5,
+        "ele": 3026
+      },
+      {
+        "tipo": "meta",
+        "nombre": "Meta",
+        "lat": 5.519492,
+        "lon": -72.883562,
+        "km": 54.9,
+        "ele": 3039
+      }
+    ]
+  },
+  "trucha-corta": {
+    "nombre": "Ruta de la Trucha y la Cebolla — Ruta corta",
+    "distancia_km": 26.1,
+    "desnivel_m": 290,
+    "altitud_max_m": 3083,
+    "estaciones": [
+      {
+        "tipo": "control",
+        "nombre": "Salida y control de partida",
+        "lat": 5.519492,
+        "lon": -72.883562,
+        "km": 0,
+        "ele": 3039
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 1",
+        "lat": 5.489383,
+        "lon": -72.94057,
+        "km": 7.9,
+        "ele": 3045
+      },
+      {
+        "tipo": "primeros_auxilios",
+        "nombre": "Puesto de primeros auxilios",
+        "lat": 5.509124,
+        "lon": -72.967512,
+        "km": 13.1,
+        "ele": 3029
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 2",
+        "lat": 5.489385,
+        "lon": -72.93912,
+        "km": 18.4,
+        "ele": 3054
+      },
+      {
+        "tipo": "meta",
+        "nombre": "Meta",
+        "lat": 5.519492,
+        "lon": -72.883562,
+        "km": 26.1,
+        "ele": 3039
+      }
+    ]
+  },
+  "vuelta-tota": {
+    "nombre": "Vuelta al Lago de Tota",
+    "distancia_km": 61.6,
+    "desnivel_m": 1493,
+    "altitud_max_m": 3465,
+    "estaciones": [
+      {
+        "tipo": "control",
+        "nombre": "Salida y control de partida",
+        "lat": 5.519492,
+        "lon": -72.883562,
+        "km": 0,
+        "ele": 3039
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 1",
+        "lat": 5.543369,
+        "lon": -72.982369,
+        "km": 18.6,
+        "ele": 3021
+      },
+      {
+        "tipo": "primeros_auxilios",
+        "nombre": "Puesto de primeros auxilios",
+        "lat": 5.608144,
+        "lon": -72.948755,
+        "km": 30.8,
+        "ele": 3074
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 2",
+        "lat": 5.613841,
+        "lon": -72.874737,
+        "km": 43.2,
+        "ele": 3354
+      },
+      {
+        "tipo": "meta",
+        "nombre": "Meta",
+        "lat": 5.519492,
+        "lon": -72.883562,
+        "km": 61.6,
+        "ele": 3039
+      }
+    ]
+  },
+  "puerto-largo": {
+    "nombre": "Aguazul — Alto de La Sarna",
+    "distancia_km": 89.5,
+    "desnivel_m": 3862,
+    "altitud_max_m": 3404,
+    "estaciones": [
+      {
+        "tipo": "control",
+        "nombre": "Salida y control de partida",
+        "lat": 5.171115,
+        "lon": -72.551122,
+        "km": 0,
+        "ele": 283
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 1",
+        "lat": 5.261942,
+        "lon": -72.695131,
+        "km": 26.9,
+        "ele": 797
+      },
+      {
+        "tipo": "primeros_auxilios",
+        "nombre": "Puesto de primeros auxilios",
+        "lat": 5.388369,
+        "lon": -72.703315,
+        "km": 44.9,
+        "ele": 1300
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 2",
+        "lat": 5.473798,
+        "lon": -72.713808,
+        "km": 62.7,
+        "ele": 2555
+      },
+      {
+        "tipo": "meta",
+        "nombre": "Meta",
+        "lat": 5.598591,
+        "lon": -72.851172,
+        "km": 89.5,
+        "ele": 3404
+      }
+    ]
+  },
+  "mongui-oceta": {
+    "nombre": "Monguí — Páramo de Ocetá",
+    "distancia_km": 24.1,
+    "desnivel_m": 1012,
+    "altitud_max_m": 3576,
+    "estaciones": [
+      {
+        "tipo": "control",
+        "nombre": "Salida y control de partida",
+        "lat": 5.723467,
+        "lon": -72.849362,
+        "km": 0,
+        "ele": 2914
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 1",
+        "lat": 5.693931,
+        "lon": -72.825586,
+        "km": 7.3,
+        "ele": 3475
+      },
+      {
+        "tipo": "primeros_auxilios",
+        "nombre": "Puesto de primeros auxilios",
+        "lat": 5.722673,
+        "lon": -72.848236,
+        "km": 12.1,
+        "ele": 2934
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 2",
+        "lat": 5.760428,
+        "lon": -72.837606,
+        "km": 17,
+        "ele": 2812
+      },
+      {
+        "tipo": "meta",
+        "nombre": "Meta",
+        "lat": 5.723467,
+        "lon": -72.849362,
+        "km": 24.1,
+        "ele": 2914
+      }
+    ]
+  },
+  "tibasosa-firavitoba": {
+    "nombre": "Gravel Tibasosa — Firavitoba",
+    "distancia_km": 30.4,
+    "desnivel_m": 498,
+    "altitud_max_m": 2909,
+    "estaciones": [
+      {
+        "tipo": "control",
+        "nombre": "Salida y control de partida",
+        "lat": 5.74641,
+        "lon": -73.000281,
+        "km": 0,
+        "ele": 2517
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 1",
+        "lat": 5.686462,
+        "lon": -72.987626,
+        "km": 9.2,
+        "ele": 2497
+      },
+      {
+        "tipo": "primeros_auxilios",
+        "nombre": "Puesto de primeros auxilios",
+        "lat": 5.672046,
+        "lon": -72.962596,
+        "km": 15.3,
+        "ele": 2490
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 2",
+        "lat": 5.714065,
+        "lon": -72.933258,
+        "km": 21.3,
+        "ele": 2494
+      },
+      {
+        "tipo": "meta",
+        "nombre": "Meta",
+        "lat": 5.74641,
+        "lon": -73.000281,
+        "km": 30.4,
+        "ele": 2517
+      }
+    ]
+  },
+  "sogamoso-duitama": {
+    "nombre": "Sogamoso — Nobsa — Duitama",
+    "distancia_km": 21.8,
+    "desnivel_m": 345,
+    "altitud_max_m": 2764,
+    "estaciones": [
+      {
+        "tipo": "control",
+        "nombre": "Salida y control de partida",
+        "lat": 5.714622,
+        "lon": -72.933925,
+        "km": 0,
+        "ele": 2491
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 1",
+        "lat": 5.769299,
+        "lon": -72.941068,
+        "km": 6.6,
+        "ele": 2497
+      },
+      {
+        "tipo": "primeros_auxilios",
+        "nombre": "Puesto de primeros auxilios",
+        "lat": 5.784453,
+        "lon": -72.969812,
+        "km": 11,
+        "ele": 2500
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 2",
+        "lat": 5.802279,
+        "lon": -72.989981,
+        "km": 15.3,
+        "ele": 2483
+      },
+      {
+        "tipo": "meta",
+        "nombre": "Meta",
+        "lat": 5.826699,
+        "lon": -73.033099,
+        "km": 21.8,
+        "ele": 2532
+      }
+    ]
+  },
+  "sochagota": {
+    "nombre": "Recreativa Lago Sochagota",
+    "distancia_km": 15.5,
+    "desnivel_m": 122,
+    "altitud_max_m": 2546,
+    "estaciones": [
+      {
+        "tipo": "control",
+        "nombre": "Salida y control de partida",
+        "lat": 5.780291,
+        "lon": -73.11738,
+        "km": 0,
+        "ele": 2509
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 1",
+        "lat": 5.757497,
+        "lon": -73.125882,
+        "km": 4.7,
+        "ele": 2526
+      },
+      {
+        "tipo": "primeros_auxilios",
+        "nombre": "Puesto de primeros auxilios",
+        "lat": 5.769383,
+        "lon": -73.106959,
+        "km": 7.8,
+        "ele": 2496
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 2",
+        "lat": 5.772393,
+        "lon": -73.093889,
+        "km": 10.9,
+        "ele": 2492
+      },
+      {
+        "tipo": "meta",
+        "nombre": "Meta",
+        "lat": 5.780291,
+        "lon": -73.11738,
+        "km": 15.5,
+        "ele": 2509
+      }
+    ]
+  },
+  "gran-fondo-tota": {
+    "nombre": "Gran Fondo Lago de Tota",
+    "distancia_km": 84.8,
+    "desnivel_m": 1688,
+    "altitud_max_m": 3467,
+    "estaciones": [
+      {
+        "tipo": "control",
+        "nombre": "Salida y control de partida",
+        "lat": 5.714622,
+        "lon": -72.933925,
+        "km": 0,
+        "ele": 2491
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 1",
+        "lat": 5.550477,
+        "lon": -72.987018,
+        "km": 25.5,
+        "ele": 2961
+      },
+      {
+        "tipo": "primeros_auxilios",
+        "nombre": "Puesto de primeros auxilios",
+        "lat": 5.506861,
+        "lon": -72.901886,
+        "km": 42.4,
+        "ele": 3053
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 2",
+        "lat": 5.597817,
+        "lon": -72.855575,
+        "km": 59.4,
+        "ele": 3396
+      },
+      {
+        "tipo": "meta",
+        "nombre": "Meta",
+        "lat": 5.714622,
+        "lon": -72.933925,
+        "km": 84.8,
+        "ele": 2491
+      }
+    ]
+  },
+  "aquitania-playa-blanca": {
+    "nombre": "Aquitania — Playa Blanca",
+    "distancia_km": 26.1,
+    "desnivel_m": 290,
+    "altitud_max_m": 3083,
+    "estaciones": [
+      {
+        "tipo": "control",
+        "nombre": "Salida y control de partida",
+        "lat": 5.519492,
+        "lon": -72.883562,
+        "km": 0,
+        "ele": 3039
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 1",
+        "lat": 5.489383,
+        "lon": -72.94057,
+        "km": 7.9,
+        "ele": 3045
+      },
+      {
+        "tipo": "primeros_auxilios",
+        "nombre": "Puesto de primeros auxilios",
+        "lat": 5.509124,
+        "lon": -72.967512,
+        "km": 13.1,
+        "ele": 3029
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 2",
+        "lat": 5.489385,
+        "lon": -72.93912,
+        "km": 18.4,
+        "ele": 3054
+      },
+      {
+        "tipo": "meta",
+        "nombre": "Meta",
+        "lat": 5.519492,
+        "lon": -72.883562,
+        "km": 26.1,
+        "ele": 3039
+      }
+    ]
+  },
+  "iza-pesca": {
+    "nombre": "Gravel Iza — Pesca",
+    "distancia_km": 37.8,
+    "desnivel_m": 242,
+    "altitud_max_m": 2633,
+    "estaciones": [
+      {
+        "tipo": "control",
+        "nombre": "Salida y control de partida",
+        "lat": 5.611721,
+        "lon": -72.978892,
+        "km": 0,
+        "ele": 2533
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 1",
+        "lat": 5.592531,
+        "lon": -73.029669,
+        "km": 11.4,
+        "ele": 2566
+      },
+      {
+        "tipo": "primeros_auxilios",
+        "nombre": "Puesto de primeros auxilios",
+        "lat": 5.580507,
+        "lon": -73.035566,
+        "km": 19,
+        "ele": 2570
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 2",
+        "lat": 5.634379,
+        "lon": -73.000235,
+        "km": 26.5,
+        "ele": 2502
+      },
+      {
+        "tipo": "meta",
+        "nombre": "Meta",
+        "lat": 5.611721,
+        "lon": -72.978892,
+        "km": 37.8,
+        "ele": 2533
+      }
+    ]
+  },
+  "villa-leyva-candelaria": {
+    "nombre": "Villa de Leyva — Desierto de La Candelaria",
+    "distancia_km": 48.8,
+    "desnivel_m": 446,
+    "altitud_max_m": 2173,
+    "estaciones": [
+      {
+        "tipo": "control",
+        "nombre": "Salida y control de partida",
+        "lat": 5.63383,
+        "lon": -73.525217,
+        "km": 0,
+        "ele": 2137
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 1",
+        "lat": 5.603264,
+        "lon": -73.636258,
+        "km": 14.8,
+        "ele": 2103
+      },
+      {
+        "tipo": "primeros_auxilios",
+        "nombre": "Puesto de primeros auxilios",
+        "lat": 5.544396,
+        "lon": -73.636356,
+        "km": 24.5,
+        "ele": 2142
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 2",
+        "lat": 5.604445,
+        "lon": -73.635676,
+        "km": 34.2,
+        "ele": 2099
+      },
+      {
+        "tipo": "meta",
+        "nombre": "Meta",
+        "lat": 5.63383,
+        "lon": -73.525217,
+        "km": 48.8,
+        "ele": 2137
+      }
+    ]
+  },
+  "tunja-puente-boyaca": {
+    "nombre": "Tunja — Puente de Boyacá",
+    "distancia_km": 33.3,
+    "desnivel_m": 908,
+    "altitud_max_m": 2960,
+    "estaciones": [
+      {
+        "tipo": "control",
+        "nombre": "Salida y control de partida",
+        "lat": 5.535256,
+        "lon": -73.368169,
+        "km": 0,
+        "ele": 2813
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 1",
+        "lat": 5.463122,
+        "lon": -73.38988,
+        "km": 10,
+        "ele": 2803
+      },
+      {
+        "tipo": "primeros_auxilios",
+        "nombre": "Puesto de primeros auxilios",
+        "lat": 5.452816,
+        "lon": -73.363028,
+        "km": 16.7,
+        "ele": 2409
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 2",
+        "lat": 5.465262,
+        "lon": -73.389332,
+        "km": 23.4,
+        "ele": 2817
+      },
+      {
+        "tipo": "meta",
+        "nombre": "Meta",
+        "lat": 5.535256,
+        "lon": -73.368169,
+        "km": 33.3,
+        "ele": 2813
+      }
+    ]
+  },
+  "nocturna-aquitania": {
+    "nombre": "Ruta nocturna Aquitania",
+    "distancia_km": 8.2,
+    "desnivel_m": 57,
+    "altitud_max_m": 3080,
+    "estaciones": [
+      {
+        "tipo": "control",
+        "nombre": "Salida y control de partida",
+        "lat": 5.519492,
+        "lon": -72.883562,
+        "km": 0,
+        "ele": 3039
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 1",
+        "lat": 5.507439,
+        "lon": -72.900752,
+        "km": 2.5,
+        "ele": 3043
+      },
+      {
+        "tipo": "primeros_auxilios",
+        "nombre": "Puesto de primeros auxilios",
+        "lat": 5.500551,
+        "lon": -72.91339,
+        "km": 4.1,
+        "ele": 3075
+      },
+      {
+        "tipo": "hidratacion",
+        "nombre": "Punto de hidratación 2",
+        "lat": 5.507913,
+        "lon": -72.900371,
+        "km": 5.8,
+        "ele": 3044
+      },
+      {
+        "tipo": "meta",
+        "nombre": "Meta",
+        "lat": 5.519492,
+        "lon": -72.883562,
+        "km": 8.2,
+        "ele": 3039
+      }
+    ]
+  }
+}
